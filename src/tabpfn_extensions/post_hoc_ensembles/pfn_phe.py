@@ -13,7 +13,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 from typing import Literal
 
-from tabpfn import TabPFNClassifier, TabPFNRegressor
+from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
 from .greedy_weighted_ensemble import (
     GreedyWeightedEnsembleClassifier,
     GreedyWeightedEnsembleRegressor,

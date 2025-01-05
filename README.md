@@ -16,6 +16,10 @@ Looking for the main TabPFN package? Check out [TabPFN](https://github.com/prior
 pip install -e .
 ```
 
+Depending on if you have a GPU available and would like to run locally or via web client use
+pip install tabpfn
+or pip install tabpfn-client
+
 ## 🤔 What is TabPFN Extensions?
 
 **TabPFN Extensions** is a collection of community-driven extensions and tools built around TabPFN, the state-of-the-art

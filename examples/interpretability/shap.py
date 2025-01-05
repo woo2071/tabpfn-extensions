@@ -6,8 +6,8 @@ import numpy as np
 from sklearn.datasets import load_breast_cancer, load_iris
 from sklearn.model_selection import train_test_split
 from tabpfn_extensions import interpretability
-from tabpfn_extensions.rf_pfn import RandomForestTabPFNClassifier
-from typing import List, Optional, Tuple, Union
+from tabpfn_extensions import TabPFNClassifier
+from typing import List, Optional, Tuple
 
 
 def analyze_feature_importance(
@@ -36,7 +36,7 @@ def analyze_feature_importance(
     )
 
     # Initialize and train model
-    clf = RandomForestTabPFNClassifier(random_state=random_state)
+    clf = TabPFNClassifier()
     clf.fit(X_train, y_train)
 
     # Calculate SHAP values

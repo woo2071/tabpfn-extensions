@@ -14,12 +14,11 @@ from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 from sklearn.utils import check_random_state
-from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.validation import check_is_fitted, check_X_y
 from typing import Literal, Optional
 
-from src.tabpfn_extensions.hpo.search_space import get_param_grid_hyperopt
-from tabpfn import TabPFNClassifier, TabPFNRegressor
+from tabpfn_extensions.hpo.search_space import get_param_grid_hyperopt
+from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
 
 logger = logging.getLogger(__name__)
 

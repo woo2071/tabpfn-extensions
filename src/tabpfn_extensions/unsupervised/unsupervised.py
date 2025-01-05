@@ -12,7 +12,8 @@ from tqdm import tqdm
 from typing import Optional
 
 from .. import utils_todo
-from ..utils import TabPFNRegressor, TabPFNClassifier
+from tabpfn_extensions import TabPFNRegressor, TabPFNClassifier
+from tabpfn_extensions.utils import USE_TABPFN_LOCAL
 
 
 class TabPFNUnsupervisedModel(BaseEstimator):
@@ -79,6 +80,8 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         self.tabpfn_clf = tabpfn_clf
         self.tabpfn_reg = tabpfn_reg
         self.estimators = [self.tabpfn_clf, self.tabpfn_reg]
+
+        a
 
         self.categorical_features = []
 

@@ -4,8 +4,7 @@
 import torch
 from sklearn.datasets import load_breast_cancer
 from tabpfn_extensions import unsupervised
-
-from tabpfn import TabPFNClassifier
+from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
 
 # Load data
 df = load_breast_cancer(return_X_y=False)
@@ -13,8 +12,8 @@ X, y = df["data"], df["target"]
 attribute_names = df["feature_names"]
 
 # Initialize models
-clf = TabPFNClassifier(device="cpu", N_ensemble_configurations=3)
-reg = TabPFNClassifier(device="cpu", N_ensemble_configurations=3)
+clf = TabPFNClassifier(device="cpu", N_ensemble_configurations=4)
+reg = TabPFNRegressor(device="cpu", N_ensemble_configurations=4)
 model_unsupervised = unsupervised.TabPFNUnsupervisedModel(
     tabpfn_clf=clf, tabpfn_reg=reg
 )

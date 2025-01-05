@@ -5,8 +5,7 @@ import numpy as np
 import torch
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from tabpfn.scripts.transformer_prediction_interface import TabPFNClassifier
+from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
 from tabpfn_extensions import unsupervised
 
 # Load the breast cancer dataset

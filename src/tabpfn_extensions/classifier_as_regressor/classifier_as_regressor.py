@@ -6,7 +6,7 @@ import torch
 from sklearn.base import RegressorMixin
 from sklearn.preprocessing import LabelEncoder
 
-from tabpfn import TabPFNRegressor
+from tabpfn_extensions import TabPFNRegressor
 from tabpfn.model.bar_distribution import BarDistribution
 
 
@@ -33,7 +33,7 @@ class ClassifierAsRegressor(RegressorMixin):
     ```python title="Example"
     >>> from sklearn.datasets import load_diabetes
     >>> from sklearn.model_selection import train_test_split
-    >>> from tabpfn.scripts.estimator import ManyClassClassifier, TabPFNClassifier, ClassifierAsRegressor
+    >>> from tabpfn_extensions import ManyClassClassifier, TabPFNClassifier, ClassifierAsRegressor
     >>> x, y = load_diabetes(return_X_y=True)
     >>> x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=42)
     >>> clf = TabPFNClassifier()

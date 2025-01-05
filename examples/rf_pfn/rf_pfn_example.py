@@ -16,10 +16,10 @@ from tabpfn_extensions.rf_pfn import (
     RandomForestTabPFNRegressor,
 )
 
-import tabpfn
+from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
 
-clf_base = tabpfn.TabPFNClassifier()
-reg_base = tabpfn.TabPFNRegressor()
+clf_base = TabPFNClassifier()
+reg_base = TabPFNRegressor()
 
 # Binary
 X, y = load_breast_cancer(return_X_y=True)

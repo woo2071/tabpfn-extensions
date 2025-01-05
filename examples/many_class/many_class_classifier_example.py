@@ -6,8 +6,7 @@ from sklearn.datasets import make_classification
 from sklearn.metrics import accuracy_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 from tabpfn_extensions.many_class import ManyClassClassifier
-
-import tabpfn
+from tabpfn_extensions import TabPFNClassifier
 
 # Create synthetic dataset with 20 classes
 n_classes = 20
@@ -27,7 +26,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # Initialize base TabPFN classifier
-clf_base = tabpfn.TabPFNClassifier()
+clf_base = TabPFNClassifier()
 
 # Initialize ManyClassClassifier with TabPFN as base estimator
 clf = ManyClassClassifier(

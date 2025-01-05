@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import BaseDecisionTree, DecisionTreeClassifier, DecisionTreeRegressor
 
-from ..utils import TabPFNRegressor, TabPFNClassifier
+from tabpfn_extensions import TabPFNRegressor, TabPFNClassifier
 
 
 class DecisionTreeTabPFNBase(BaseDecisionTree):

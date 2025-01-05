@@ -5,5 +5,6 @@ try:
 except PackageNotFoundError:
     __version__ = "0.1.0.dev0"
 
-from . import utils
+from .utils import is_tabpfn
+
 from . import utils_todo
