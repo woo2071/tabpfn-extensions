@@ -7,8 +7,8 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Discord](https://img.shields.io/discord/1285598202732482621?color=7289da&label=Discord&logo=discord&logoColor=ffffff)](https://discord.com/channels/1285598202732482621/)
 [![Twitter Follow](https://img.shields.io/twitter/follow/PriorLabs?style=social)](https://twitter.com/PriorLabs)
-[Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)
-[Last Commit](https://img.shields.io/github/last-commit/automl/tabpfn-client)
+![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)
+![Last Commit](https://img.shields.io/github/last-commit/automl/tabpfn-client)
 
 Looking for the main TabPFN package? Check out [TabPFN](https://github.com/priorlabs/tabpfn).
 
@@ -61,7 +61,7 @@ Here are some highlighted community extensions:
 - Scalable for larger datasets
 - Parallel processing support
 
-And many more! Browse the [full list of extensions](https://github.com/priorlabs/tabpfn_extensions/tree/main/src).
+And many more! Browse the [full list of extensions](https://github.com/priorlabs/tabpfn-extensions/tree/main/src).
 
 ## 📦 Repository Structure
 
@@ -90,19 +90,6 @@ Quick start:
 2. Create your package under `src/`
 3. Add examples
 4. Submit a PR
-
-## 📖 Documentation
-
-- [Getting Started](https://docs.priorlabs.ai/getting-started)
-- [API Reference](https://docs.priorlabs.ai/api)
-- [Examples](https://docs.priorlabs.ai/examples)
-- [Contributing Guide](CONTRIBUTING.md)
-
-## 🌟 Community
-
-- Join our [Discord](https://discord.gg/tabpfn)
-- Follow us on [Twitter](https://twitter.com/PriorLabs)
-- Read our [Blog](https://blog.priorlabs.ai)
 
 ## 🤝 License
 
