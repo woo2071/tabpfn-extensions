@@ -29,21 +29,22 @@ def is_tabpfn(estimator: Any) -> bool:
 def get_tabpfn_models() -> Tuple[Type[TabPFNEstimator], Type[TabPFNEstimator]]:
     """Get TabPFN models with fallback between local and client versions."""
     USE_TABPFN_LOCAL = os.getenv("USE_TABPFN_LOCAL", "true").lower() == "true"
-    print(USE_TABPFN_LOCAL, 'USE_TABPFN_LOCAL')
 
     if USE_TABPFN_LOCAL:
         try:
             from tabpfn import TabPFNClassifier, TabPFNRegressor
-            return TabPFNClassifier, TabPFNRegressor
+            from tabpfn.preprocessing import PreprocessorConfig
+            return TabPFNClassifier, TabPFNRegressor, PreprocessorConfig
         except ImportError:
             pass
 
     try:
         from tabpfn_client import TabPFNClassifier, TabPFNRegressor
-        return TabPFNClassifier, TabPFNRegressor
+        from tabpfn_client.estimator import PreprocessorConfig
+        return TabPFNClassifier, TabPFNRegressor, PreprocessorConfig
     except ImportError:
         raise ImportError(
             "Neither local TabPFN nor TabPFN client could be imported. Install with:\npip install tabpfn\nor\npip install tabpfn-client")
 
 
-TabPFNClassifier, TabPFNRegressor = get_tabpfn_models()
+TabPFNClassifier, TabPFNRegressor, PreprocessorConfig = get_tabpfn_models()

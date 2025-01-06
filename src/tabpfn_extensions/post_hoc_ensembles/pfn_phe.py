@@ -8,7 +8,8 @@ import logging
 import numpy as np
 import warnings
 from enum import Enum
-from sklearn.base import BaseEstimator, check_array, check_X_y
+from sklearn.base import BaseEstimator
+from sklearn.utils import check_array, check_X_y
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 from typing import Literal

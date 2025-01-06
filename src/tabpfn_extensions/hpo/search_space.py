@@ -5,11 +5,10 @@ from __future__ import annotations
 
 from hyperopt import hp
 from pathlib import Path
+from tabpfn_extensions import PreprocessorConfig
 
 
 def enumerate_preprocess_transforms():
-    from tabpfn.preprocessing import PreprocessorConfig
-
     transforms = []
     for names in [
         ["safepower"],
