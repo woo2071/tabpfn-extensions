@@ -194,6 +194,12 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
         self.adaptive_tree_skip_class_missing = adaptive_tree_skip_class_missing
         self.n_estimators = n_estimators
 
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "classifier"
+        return tags
+
     def init_base_estimator(self):
         return DecisionTreeTabPFNClassifier(
             tabpfn=self.tabpfn,

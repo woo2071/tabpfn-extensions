@@ -8,26 +8,31 @@ from typing import Any, Type, Tuple, Protocol
 
 
 class TabPFNEstimator(Protocol):
-    def fit(self, X: Any, y: Any) -> Any: ...
+    def fit(self, X: Any, y: Any) -> Any:
+        ...
 
-    def predict(self, X: Any) -> Any: ...
+    def predict(self, X: Any) -> Any:
+        ...
 
 
 def is_tabpfn(estimator: Any) -> bool:
     """Check if an estimator is a TabPFN model."""
     try:
-        return any([
-            "TabPFN" in str(estimator.__class__),
-            "TabPFN" in str(estimator.__class__.__bases__),
-            any("TabPFN" in str(b) for b in estimator.__class__.__bases__),
-            "tabpfn.base_model.TabPFNBaseModel" in str(estimator.__class__.mro())
-        ])
+        return any(
+            [
+                "TabPFN" in str(estimator.__class__),
+                "TabPFN" in str(estimator.__class__.__bases__),
+                any("TabPFN" in str(b) for b in estimator.__class__.__bases__),
+                "tabpfn.base_model.TabPFNBaseModel" in str(estimator.__class__.mro()),
+            ]
+        )
     except (AttributeError, TypeError):
         return False
 
 
 from typing import Tuple, Type
 import os
+
 
 def get_tabpfn_models() -> Tuple[Type, Type, Type]:
     """Get TabPFN models with fallback between local and client versions."""
@@ -37,13 +42,19 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
         try:
             from tabpfn import TabPFNClassifier, TabPFNRegressor
             from tabpfn.preprocessing import PreprocessorConfig
+
             return TabPFNClassifier, TabPFNRegressor, PreprocessorConfig
         except ImportError:
             pass
 
     try:
-        from tabpfn_client import TabPFNClassifier as ClientTabPFNClassifier, TabPFNRegressor as ClientTabPFNRegressor
-        from tabpfn_client.estimator import PreprocessorConfig as ClientPreprocessorConfig
+        from tabpfn_client import (
+            TabPFNClassifier as ClientTabPFNClassifier,
+            TabPFNRegressor as ClientTabPFNRegressor,
+        )
+        from tabpfn_client.estimator import (
+            PreprocessorConfig as ClientPreprocessorConfig,
+        )
 
         # Wrapper classes to add device parameter
         class TabPFNClassifier(ClientTabPFNClassifier):

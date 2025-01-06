@@ -56,7 +56,5 @@ X, y = data.data, data.target
 feature_names = data.feature_names
 
 # Analyze feature importance
-shap_values, shap_fig = analyze_feature_importance(
-    X, y, feature_names, random_state=42
-)
+shap_values, shap_fig = analyze_feature_importance(X, y, feature_names, random_state=42)
 shap_fig.savefig("feature_importance.png")

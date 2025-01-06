@@ -70,6 +70,12 @@ class AutoTabPFNClassifier(BaseEstimator, ClassifierMixin):
         self.phe_init_args = phe_init_args
         self.categorical_feature_indices = categorical_feature_indices
 
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "classifier"
+        return tags
+
     def fit(self, X, y, categorical_feature_indices: list[int] | None = None):
         if categorical_feature_indices is not None:
             self.categorical_feature_indices = categorical_feature_indices
@@ -171,6 +177,12 @@ class AutoTabPFNRegressor(BaseEstimator, RegressorMixin):
         self.random_state = random_state
         self.phe_init_args = phe_init_args
         self.categorical_feature_indices = categorical_feature_indices
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "regressor"
+        return tags
 
     def fit(self, X, y, categorical_feature_indices: list[int] | None = None):
         if categorical_feature_indices is not None:

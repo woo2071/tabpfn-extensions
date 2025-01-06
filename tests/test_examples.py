@@ -37,5 +37,5 @@ def test_example(example_file):
         pytest.fail(f"Failed to import {example_file}: {str(e)}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main([__file__])
