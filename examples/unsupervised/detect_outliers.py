@@ -12,8 +12,8 @@ X, y = df["data"], df["target"]
 attribute_names = df["feature_names"]
 
 # Initialize models
-clf = TabPFNClassifier(device="cpu", n_estimators=4)
-reg = TabPFNRegressor(device="cpu", n_estimators=4)
+clf = TabPFNClassifier(n_estimators=4)
+reg = TabPFNRegressor(n_estimators=4)
 model_unsupervised = unsupervised.TabPFNUnsupervisedModel(
     tabpfn_clf=clf, tabpfn_reg=reg
 )

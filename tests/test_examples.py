@@ -7,7 +7,8 @@ from typing import Generator, List
 
 def get_example_files() -> List[Path]:
     """Get all Python files from the examples directory."""
-    examples_dir = Path("examples")
+    package_root = Path(__file__).parent.parent
+    examples_dir = package_root / "examples"
     return list(examples_dir.glob("**/*.py"))
 
 

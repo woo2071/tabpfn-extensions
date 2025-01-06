@@ -41,18 +41,7 @@ def _feature_selection(
     #  and predict
     CV_FOLDS = 5
 
-    from tabpfn.scripts.estimator.scoring_utils import get_score_survival_model
-    from tabpfn.scripts.tabular_metrics import survival_c_index_metric
-
-    if estimator.task_type in ["classification", "regression"]:
-        score_all = cross_val_score(estimator, X, y, cv=CV_FOLDS)
-    elif estimator.task_type == "survival":
-        scoring = get_score_survival_model(
-            survival_c_index_metric,
-            inv_predictions=not type(estimator).__name__ == "TabPFNSurvivalRegressor",
-        )
-
-        score_all = cross_val_score(estimator, X, y, cv=CV_FOLDS, scoring=scoring)
+    score_all = cross_val_score(estimator, X, y, cv=CV_FOLDS)
 
     # TODO: Feature selection is done without CV, i.e. final CV scores might be biased (too good)
     sfs = SequentialFeatureSelector(
@@ -62,17 +51,7 @@ def _feature_selection(
     sfs.get_support()
     X_transformed = sfs.transform(X)
 
-    if estimator.task_type in ["classification", "regression"]:
-        score_selected = cross_val_score(estimator, X_transformed, y, cv=CV_FOLDS)
-    elif estimator.task_type == "survival":
-        scoring = get_score_survival_model(
-            survival_c_index_metric,
-            inv_predictions=not type(estimator).__name__ == "TabPFNSurvivalRegressor",
-        )
-
-        score_selected = cross_val_score(
-            estimator, X_transformed, y, cv=CV_FOLDS, scoring=scoring
-        )
+    score_selected = cross_val_score(estimator, X_transformed, y, cv=CV_FOLDS)
 
     print(f"Score with all features: {score_all.mean()} +/- {score_all.std()}")
     print(

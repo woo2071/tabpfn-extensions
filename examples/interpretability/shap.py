@@ -29,7 +29,7 @@ def analyze_feature_importance(
     """
     # Split data
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.3, random_state=random_state
+        X, y, test_size=0.5, random_state=random_state
     )
 
     # Initialize and train model
@@ -38,8 +38,8 @@ def analyze_feature_importance(
 
     # Calculate SHAP values
     shap_values = interpretability.shap.get_shap_values(
-        model=clf,
-        X=X_test[:n_samples],
+        estimator=clf,
+        test_x=X_test[:n_samples],
         attribute_names=feature_names,
         algorithm="permutation",
     )
