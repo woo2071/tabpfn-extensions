@@ -26,7 +26,10 @@ def is_tabpfn(estimator: Any) -> bool:
         return False
 
 
-def get_tabpfn_models() -> Tuple[Type[TabPFNEstimator], Type[TabPFNEstimator]]:
+from typing import Tuple, Type
+import os
+
+def get_tabpfn_models() -> Tuple[Type, Type, Type]:
     """Get TabPFN models with fallback between local and client versions."""
     USE_TABPFN_LOCAL = os.getenv("USE_TABPFN_LOCAL", "true").lower() == "true"
 
@@ -39,12 +42,29 @@ def get_tabpfn_models() -> Tuple[Type[TabPFNEstimator], Type[TabPFNEstimator]]:
             pass
 
     try:
-        from tabpfn_client import TabPFNClassifier, TabPFNRegressor
-        from tabpfn_client.estimator import PreprocessorConfig
-        return TabPFNClassifier, TabPFNRegressor, PreprocessorConfig
+        from tabpfn_client import TabPFNClassifier as ClientTabPFNClassifier, TabPFNRegressor as ClientTabPFNRegressor
+        from tabpfn_client.estimator import PreprocessorConfig as ClientPreprocessorConfig
+
+        # Wrapper classes to add device parameter
+        class TabPFNClassifier(ClientTabPFNClassifier):
+            def __init__(self, *args, device=None, **kwargs):
+                super().__init__(*args, **kwargs)
+                # Ignoring the device parameter for now
+
+        class TabPFNRegressor(ClientTabPFNRegressor):
+            def __init__(self, *args, device=None, **kwargs):
+                super().__init__(*args, **kwargs)
+                # Ignoring the device parameter for now
+
+        return TabPFNClassifier, TabPFNRegressor, ClientPreprocessorConfig
+
     except ImportError:
         raise ImportError(
-            "Neither local TabPFN nor TabPFN client could be imported. Install with:\npip install tabpfn\nor\npip install tabpfn-client")
+            "Neither local TabPFN nor TabPFN client could be imported. Install with:\n"
+            "pip install tabpfn\n"
+            "or\n"
+            "pip install tabpfn-client"
+        )
 
 
 TabPFNClassifier, TabPFNRegressor, PreprocessorConfig = get_tabpfn_models()
