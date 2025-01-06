@@ -11,7 +11,7 @@ from tabpfn_extensions import PreprocessorConfig
 def enumerate_preprocess_transforms():
     transforms = []
 
-    names = [
+    names_list = [
         ["safepower"],
         ["quantile_uni_coarse"],
         ["quantile_norm_coarse"],
@@ -27,7 +27,7 @@ def enumerate_preprocess_transforms():
     try:
         from kditransform import KDITransformer
 
-        names += [
+        names_list += [
             ["kdi_uni"],
             ["kdi_alpha_0.3"],
             ["kdi_alpha_3.0"],
@@ -36,7 +36,7 @@ def enumerate_preprocess_transforms():
     except:
         pass
 
-    for names in []:
+    for names in names_list:
         for categorical_name in [
             "numeric",
             "ordinal_very_common_categories_shuffled",

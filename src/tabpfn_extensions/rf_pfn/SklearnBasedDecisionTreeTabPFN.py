@@ -713,7 +713,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree):
         return y_eval_prob
 
 
-class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
+class DecisionTreeTabPFNClassifier(ClassifierMixin, DecisionTreeTabPFNBase):
     """Class that implements a DT-TabPFN model based on sklearn package"""
 
     task_type = "multiclass"
@@ -787,7 +787,7 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
         )
 
 
-class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
+class DecisionTreeTabPFNRegressor(RegressorMixin, DecisionTreeTabPFNBase):
     """Class that implements a DT-TabPFN model based on sklearn package"""
 
     task_type = "regression"

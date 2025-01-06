@@ -18,7 +18,7 @@ from .pfn_phe import (
 )
 
 
-class AutoTabPFNClassifier(BaseEstimator, ClassifierMixin):
+class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
     """Automatic Post Hoc Ensemble Classifier for TabPFN models.
 
     Parameters
@@ -126,7 +126,7 @@ class AutoTabPFNClassifier(BaseEstimator, ClassifierMixin):
         return {"allow_nan ": True}
 
 
-class AutoTabPFNRegressor(BaseEstimator, RegressorMixin):
+class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
     """Automatic Post Hoc Ensemble Regressor for TabPFN models.
 
     Parameters
