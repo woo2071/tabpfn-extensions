@@ -6,7 +6,7 @@
 [![Downloads](https://pepy.tech/badge/tabpfn)](https://pepy.tech/project/tabpfn)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Discord](https://img.shields.io/discord/1285598202732482621?color=7289da&label=Discord&logo=discord&logoColor=ffffff)](https://discord.com/channels/1285598202732482621/)
-[![Twitter Follow](https://img.shields.io/twitter/follow/PriorLabs?style=social)](https://twitter.com/PriorLabs)
+[![Twitter Follow](https://img.shields.io/twitter/follow/Prior_Labs?style=social)](https://twitter.com/Prior_Labs)
 ![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)
 ![Last Commit](https://img.shields.io/github/last-commit/automl/tabpfn-client)
 
@@ -99,23 +99,6 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE.txt](LI
 
 [![tabpfn-extensions contributors](https://contrib.rocks/image?repo=priorlabs/tabpfn-extensions&max=2000)](https://github.com/priorlabs/tabpfn-extensions/graphs/contributors)
 
-## 📚 Citation
-
-```bibtex
-@article{hollmann2024tabpfn,
-  title={Accurate predictions on small data with a tabular foundation model},
-  author={Hollmann, Noah and M{\"u}ller, Samuel and Purucker, Lennart and 
-          Krishnakumar, Arjun and K{\"o}rfer, Max and Hoo, Shi Bin and 
-          Schirrmeister, Robin Tibor and Hutter, Frank},
-  journal={Nature},
-  year={2024},
-  month={01},
-  day={09},
-  doi={10.1038/s41586-024-08328-6},
-  publisher={Springer Nature},
-  url={https://doi.org/10.1038/s41586-024-08328-6},
-}
-```
 ---
 
 Built with ❤️ by the TabPFN community
