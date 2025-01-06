@@ -19,8 +19,8 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # Initialize TabPFN models
-clf = TabPFNClassifier(device="cpu", N_ensemble_configurations=3)
-reg = TabPFNClassifier(device="cpu", N_ensemble_configurations=3)
+clf = TabPFNClassifier(device="cpu", n_estimators=3)
+reg = TabPFNClassifier(device="cpu", n_estimators=3)
 
 # Initialize unsupervised model
 model_unsupervised = unsupervised.TabPFNUnsupervisedModel(

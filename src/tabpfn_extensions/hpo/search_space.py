@@ -92,20 +92,20 @@ def get_param_grid_hyperopt(task_type: str) -> dict:
 
     if task_type == "multiclass":
         model_paths = [
-            str(local_dir / "tabpfn-v2-classification.ckpt"),
-            str(local_dir / "tabpfn-v2-classification-od3j1g5m.ckpt"),
-            str(local_dir / "tabpfn-v2-classification-gn2p4bpt.ckpt"),
-            str(local_dir / "tabpfn-v2-classification-znskzxi4.ckpt"),
-            str(local_dir / "tabpfn-v2-classification-llderlii.ckpt"),
-            str(local_dir / "tabpfn-v2-classification-vutqq28w.ckpt"),
+            str(local_dir / "tabpfn-v2-classifier.ckpt"),
+            str(local_dir / "tabpfn-v2-classifier-od3j1g5m.ckpt"),
+            str(local_dir / "tabpfn-v2-classifier-gn2p4bpt.ckpt"),
+            str(local_dir / "tabpfn-v2-classifier-znskzxi4.ckpt"),
+            str(local_dir / "tabpfn-v2-classifier-llderlii.ckpt"),
+            str(local_dir / "tabpfn-v2-classifier-vutqq28w.ckpt"),
         ]
     elif task_type == "regression":
         model_paths = [
-            str(local_dir / "tabpfn-v2-regression-09gpqh39.ckpt"),
-            str(local_dir / "tabpfn-v2-regression.ckpt"),
-            str(local_dir / "tabpfn-v2-regression-2noar4o2.ckpt"),
-            str(local_dir / "tabpfn-v2-regression-wyl4o83o.ckpt"),
-            str(local_dir / "tabpfn-v2-regression-5wof9ojf.ckpt"),
+            str(local_dir / "tabpfn-v2-regressor-09gpqh39.ckpt"),
+            str(local_dir / "tabpfn-v2-regressor.ckpt"),
+            str(local_dir / "tabpfn-v2-regressor-2noar4o2.ckpt"),
+            str(local_dir / "tabpfn-v2-regressor-wyl4o83o.ckpt"),
+            str(local_dir / "tabpfn-v2-regressor-5wof9ojf.ckpt"),
         ]
         search_space["inference_config/REGRESSION_Y_PREPROCESS_TRANSFORMS"] = hp.choice(
             "REGRESSION_Y_PREPROCESS_TRANSFORMS",

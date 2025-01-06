@@ -5,8 +5,10 @@
 [![PyPI version](https://badge.fury.io/py/tabpfn.svg)](https://badge.fury.io/py/tabpfn)
 [![Downloads](https://pepy.tech/badge/tabpfn)](https://pepy.tech/project/tabpfn)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Discord](https://img.shields.io/discord/1234567890?color=7289da&label=Discord&logo=discord&logoColor=ffffff)](https://discord.com/channels/1285598202732482621/)
+[![Discord](https://img.shields.io/discord/1285598202732482621?color=7289da&label=Discord&logo=discord&logoColor=ffffff)](https://discord.com/channels/1285598202732482621/)
 [![Twitter Follow](https://img.shields.io/twitter/follow/PriorLabs?style=social)](https://twitter.com/PriorLabs)
+[Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)
+[Last Commit](https://img.shields.io/github/last-commit/automl/tabpfn-client)
 
 Looking for the main TabPFN package? Check out [TabPFN](https://github.com/priorlabs/tabpfn).
 

@@ -11,7 +11,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from sklearn.model_selection import train_test_split
-from tabpfn_system.post_hoc_ensembles.sklearn_interface import (
+from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
     AutoTabPFNClassifier,
     AutoTabPFNRegressor,
 )

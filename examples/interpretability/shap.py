@@ -1,6 +1,3 @@
-#  Copyright (c) Prior Labs GmbH 2025.
-#  Licensed under the Apache License, Version 2.0
-
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.datasets import load_breast_cancer, load_iris
@@ -53,18 +50,13 @@ def analyze_feature_importance(
     return shap_values, fig
 
 
-def main():
-    # Load example dataset
-    data = load_breast_cancer()
-    X, y = data.data, data.target
-    feature_names = data.feature_names
+# Load example dataset
+data = load_breast_cancer()
+X, y = data.data, data.target
+feature_names = data.feature_names
 
-    # Analyze feature importance
-    shap_values, shap_fig = analyze_feature_importance(
-        X, y, feature_names, random_state=42
-    )
-    shap_fig.savefig("feature_importance.png")
-
-
-if __name__ == "__main__":
-    main()
+# Analyze feature importance
+shap_values, shap_fig = analyze_feature_importance(
+    X, y, feature_names, random_state=42
+)
+shap_fig.savefig("feature_importance.png")

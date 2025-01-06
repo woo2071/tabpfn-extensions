@@ -81,8 +81,6 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         self.tabpfn_reg = tabpfn_reg
         self.estimators = [self.tabpfn_clf, self.tabpfn_reg]
 
-        a
-
         self.categorical_features = []
 
     def set_categorical_features(self, categorical_features):
