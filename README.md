@@ -61,7 +61,7 @@ Here are some highlighted community extensions:
 - Scalable for larger datasets
 - Parallel processing support
 
-And many more! Browse the [full list of extensions](https://github.com/priorlabs/tabpfn-extensions/tree/main/src).
+And many more! Browse the [full list of extensions](https://github.com/priorlabs/tabpfn-extensions/tree/main/src/tabpfn_extensions).
 
 ## 📦 Repository Structure
 
