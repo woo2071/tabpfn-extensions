@@ -32,12 +32,10 @@ def is_tabpfn(estimator: Any) -> bool:
 
 from typing import Tuple, Type
 import os
-
+USE_TABPFN_LOCAL = os.getenv("USE_TABPFN_LOCAL", "true").lower() == "true"
 
 def get_tabpfn_models() -> Tuple[Type, Type, Type]:
     """Get TabPFN models with fallback between local and client versions."""
-    USE_TABPFN_LOCAL = os.getenv("USE_TABPFN_LOCAL", "true").lower() == "true"
-
     if USE_TABPFN_LOCAL:
         try:
             from tabpfn import TabPFNClassifier, TabPFNRegressor
