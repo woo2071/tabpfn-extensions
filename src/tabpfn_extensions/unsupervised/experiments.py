@@ -261,35 +261,38 @@ class OutlierDetectionUnsupervisedExperiment(Experiment):
         overwrite_tabpfn_cache=True,
         **kwargs,
     ):
-        X, y = copy.deepcopy(kwargs.get("X")), copy.deepcopy(kwargs.get("y"))
-        attribute_names = kwargs.get("attribute_names")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
 
-        indices = kwargs.get("indices", list(range(X.shape[1])))
-        n_permutations = kwargs.get("n_permutations", 3)
+            X, y = copy.deepcopy(kwargs.get("X")), copy.deepcopy(kwargs.get("y"))
+            attribute_names = kwargs.get("attribute_names")
 
-        self.X = X
-        self.X = self.X[:, indices]
-        old_features_names = attribute_names
-        self.feature_names = [attribute_names[i] for i in indices]
-        # generate subset of categorical indices
-        categorical_features = [
-            self.feature_names.index(name)
-            for name in old_features_names
-            if name in self.feature_names
-        ]
-        tabpfn.set_categorical_features(categorical_features)
+            indices = kwargs.get("indices", list(range(X.shape[1])))
+            n_permutations = kwargs.get("n_permutations", 3)
 
-        tabpfn.fit(self.X)
-        self.p = tabpfn.outliers(self.X, n_permutations=n_permutations)
+            self.X = X
+            self.X = self.X[:, indices]
+            old_features_names = attribute_names
+            self.feature_names = [attribute_names[i] for i in indices]
+            # generate subset of categorical indices
+            categorical_features = [
+                self.feature_names.index(name)
+                for name in old_features_names
+                if name in self.feature_names
+            ]
+            tabpfn.set_categorical_features(categorical_features)
 
-        p_rank = self.p.argsort().argsort()
+            tabpfn.fit(self.X)
+            self.p = tabpfn.outliers(self.X, n_permutations=n_permutations)
 
-        self.data = pd.DataFrame(
-            torch.cat(
-                [self.p[:, np.newaxis], p_rank[:, np.newaxis], self.X], dim=1
-            ).numpy(),
-            columns=["p"] + ["p_rank"] + self.feature_names,
-        )
+            p_rank = self.p.argsort().argsort()
 
-        if kwargs.get("should_plot", True):
-            self.plot_two()
+            self.data = pd.DataFrame(
+                torch.cat(
+                    [self.p[:, np.newaxis], p_rank[:, np.newaxis], self.X], dim=1
+                ).numpy(),
+                columns=["p"] + ["p_rank"] + self.feature_names,
+            )
+
+            if kwargs.get("should_plot", True):
+                self.plot_two()

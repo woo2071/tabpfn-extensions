@@ -58,7 +58,7 @@ def _feature_selection(
         f"Score with selected features: {score_selected.mean()} +/- {score_selected.std()}"
     )
 
-    if feature_names:
+    if feature_names is not None:
         print(
             "Features selected by forward sequential selection: "
             f"{np.array(feature_names)[sfs.get_support()].tolist()}"
