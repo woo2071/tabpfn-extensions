@@ -34,7 +34,7 @@ Choose the right TabPFN implementation for your needs:
 
 - **TabPFN Client (this repo)**: Easy-to-use API client for cloud-based inference
 - **[TabPFN Extensions](https://github.com/priorlabs/tabpfn-extensions)**: Community extensions and integrations
-- **[TabPFN](https://github.com/priorlabs/tabpfn)*: Core implementation for local deployment and research
+- **[TabPFN](https://github.com/priorlabs/tabpfn)**: Core implementation for local deployment and research
 
 ## 🤔 What is TabPFN Extensions?
 
