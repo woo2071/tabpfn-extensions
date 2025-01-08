@@ -7,6 +7,7 @@ import pandas as pd
 import seaborn as sns
 import torch
 from functools import partial
+import warnings
 
 from ..benchmarking import Experiment
 
@@ -104,69 +105,70 @@ class GenerateSyntheticDataExperiment(Experiment):
             indices: list of indices from X features to use
         :return:
         """
-        results = []
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
 
-        X, y = copy.deepcopy(kwargs.get("X")), copy.deepcopy(kwargs.get("y"))
-        attribute_names = kwargs.get("attribute_names")
+            X, y = copy.deepcopy(kwargs.get("X")), copy.deepcopy(kwargs.get("y"))
+            attribute_names = kwargs.get("attribute_names")
 
-        indices = kwargs.get("indices", list(range(X.shape[1])))
+            indices = kwargs.get("indices", list(range(X.shape[1])))
 
-        temp = kwargs.get("temp", 1.0)
-        n_samples = kwargs.get("n_samples", X.shape[0])
+            temp = kwargs.get("temp", 1.0)
+            n_samples = kwargs.get("n_samples", X.shape[0])
 
-        self.X, self.y = X, y
-        self.X = self.X[:, indices]
-        old_features_names = attribute_names
-        self.feature_names = [attribute_names[i] for i in indices]
-        # generate subset of categorical indices
-        categorical_features = [
-            self.feature_names.index(name)
-            for name in old_features_names
-            if name in self.feature_names
-        ]
-        tabpfn.set_categorical_features(categorical_features)
-        tabpfn.fit(self.X)
+            self.X, self.y = X, y
+            self.X = self.X[:, indices]
+            old_features_names = attribute_names
+            self.feature_names = [attribute_names[i] for i in indices]
+            # generate subset of categorical indices
+            categorical_features = [
+                self.feature_names.index(name)
+                for name in old_features_names
+                if name in self.feature_names
+            ]
+            tabpfn.set_categorical_features(categorical_features)
+            tabpfn.fit(self.X)
 
-        self.synthetic_X = tabpfn.generate_synthetic_data(n_samples=n_samples, t=temp)
+            self.synthetic_X = tabpfn.generate_synthetic_data(n_samples=n_samples, t=temp)
 
-        data_real = pd.DataFrame(
-            {
-                **dict(
-                    zip(
-                        self.feature_names,
-                        [self.X[:, i] for i in range(0, self.X.shape[1])],
-                    )
-                ),
-                "real_or_synthetic": "Actual samples",
-            }
-        )
-        data_synthetic = pd.DataFrame(
-            {
-                **dict(
-                    zip(
-                        self.feature_names,
-                        [
-                            self.synthetic_X[:, i]
-                            for i in range(0, self.synthetic_X.shape[1])
-                        ],
-                    )
-                ),
-                "real_or_synthetic": "Generated samples",
-            }
-        )
-        self.data_real = data_real
-        self.data_synthetic = data_synthetic
-        if self.data_real.shape[0] < self.data_synthetic.shape[0]:
-            self.data_real = self.data_real.sample(
-                n=self.data_synthetic.shape[0], replace=True
+            data_real = pd.DataFrame(
+                {
+                    **dict(
+                        zip(
+                            self.feature_names,
+                            [self.X[:, i] for i in range(0, self.X.shape[1])],
+                        )
+                    ),
+                    "real_or_synthetic": "Actual samples",
+                }
             )
-        elif self.data_synthetic.shape[0] < self.data_real.shape[0]:
-            self.data_synthetic = self.data_synthetic.sample(
-                n=self.data_real.shape[0], replace=True
+            data_synthetic = pd.DataFrame(
+                {
+                    **dict(
+                        zip(
+                            self.feature_names,
+                            [
+                                self.synthetic_X[:, i]
+                                for i in range(0, self.synthetic_X.shape[1])
+                            ],
+                        )
+                    ),
+                    "real_or_synthetic": "Generated samples",
+                }
             )
-        self.data = pd.concat([self.data_real, self.data_synthetic])
+            self.data_real = data_real
+            self.data_synthetic = data_synthetic
+            if self.data_real.shape[0] < self.data_synthetic.shape[0]:
+                self.data_real = self.data_real.sample(
+                    n=self.data_synthetic.shape[0], replace=True
+                )
+            elif self.data_synthetic.shape[0] < self.data_real.shape[0]:
+                self.data_synthetic = self.data_synthetic.sample(
+                    n=self.data_real.shape[0], replace=True
+                )
+            self.data = pd.concat([self.data_real, self.data_synthetic])
 
-        self.plot()
+            self.plot()
 
 
 class OutlierDetectionUnsupervisedExperiment(Experiment):

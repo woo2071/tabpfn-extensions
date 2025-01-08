@@ -19,7 +19,7 @@ sfs = interpretability.feature_selection.feature_selection(
     estimator=clf,
     X=X,
     y=y,
-    n_features_to_select=5,
+    n_features_to_select=5, # How many features to select
     feature_names=feature_names
 )
 

@@ -95,10 +95,6 @@ Quick start:
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE.txt](LICENSE.txt) file for details.
 
-## 🌟 Contributors
-
-[![tabpfn-extensions contributors](https://contrib.rocks/image?repo=priorlabs/tabpfn-extensions&max=2000)](https://github.com/priorlabs/tabpfn-extensions/graphs/contributors)
-
 ---
 
 Built with ❤️ by the TabPFN community
