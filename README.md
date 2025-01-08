@@ -15,12 +15,26 @@ Looking for the main TabPFN package? Check out [TabPFN](https://github.com/prior
 ## Quick Install
 
 ```bash
-pip install -e .
+# Clone and install the repository
+git clone https://github.com/priorlabs/tabpfn-extensions.git
+pip install -e tabpfn-extensions
+
+# Choose one of the following installation options:
+
+# 1. For GPU-accelerated local inference:
+pip install tabpfn
+
+# 2. For cloud-based inference via API:
+pip install tabpfn-client
 ```
 
-Depending on if you have a GPU available and would like to run locally or via web client use
-pip install tabpfn
-or pip install tabpfn-client
+## 🌐 TabPFN Ecosystem
+
+Choose the right TabPFN implementation for your needs:
+
+- **TabPFN Client (this repo)**: Easy-to-use API client for cloud-based inference
+- **[TabPFN Extensions](https://github.com/priorlabs/tabpfn-extensions)**: Community extensions and integrations
+- **[TabPFN](https://github.com/priorlabs/tabpfn)**: Core implementation for local deployment and research
 
 ## 🤔 What is TabPFN Extensions?
 
