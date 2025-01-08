@@ -16,7 +16,7 @@ def enumerate_preprocess_transforms():
         ["quantile_uni_coarse"],
         ["quantile_norm_coarse"],
         ["adaptive"],
-        ["norm_and_kdi"],
+        #["norm_and_kdi"],
         ["quantile_uni"],
         ["none"],
         ["robust"],
