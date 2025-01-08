@@ -24,17 +24,17 @@ def enumerate_preprocess_transforms():
         ["none", "power"],
     ]
 
-    try:
-        from kditransform import KDITransformer
-
-        names_list += [
-            ["kdi_uni"],
-            ["kdi_alpha_0.3"],
-            ["kdi_alpha_3.0"],
-            ["kdi", "quantile_uni"],
-        ]
-    except:
-        pass
+    # try:
+    #     from kditransform import KDITransformer
+    #
+    #     names_list += [
+    #         ["kdi_uni"],
+    #         ["kdi_alpha_0.3"],
+    #         ["kdi_alpha_3.0"],
+    #         ["kdi", "quantile_uni"],
+    #     ]
+    # except:
+    #     pass
 
     for names in names_list:
         for categorical_name in [
@@ -125,11 +125,11 @@ def get_param_grid_hyperopt(task_type: str) -> dict:
                 ("power",),
                 ("safepower",),
                 ("adaptive",),
-                ("kdi_alpha_0.3",),
-                ("kdi_alpha_1.0",),
-                ("kdi_alpha_1.5",),
-                ("kdi_alpha_0.6",),
-                ("kdi_alpha_3.0",),
+                # ("kdi_alpha_0.3",),
+                # ("kdi_alpha_1.0",),
+                # ("kdi_alpha_1.5",),
+                # ("kdi_alpha_0.6",),
+                # ("kdi_alpha_3.0",),
                 ("quantile_uni",),
             ],
         )
