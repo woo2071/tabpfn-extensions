@@ -44,9 +44,8 @@ classifiers = [
 ]
 license = { file = "LICENSE" }
 
-dependencies = [
-  "shap", "kditransform>=0.2.0"
-]
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
 
 [project.urls]
 documentation = "https://priorlabs.ai/docs"
