@@ -438,7 +438,7 @@ def _get_base_models_from_random_search(
     bm_list = []
     first_non_rf_pfn = None
     for i in range(random_portfolio_size):
-        model_seed = int(bm_model_rng.integers(0, 2**32 - 1))
+        model_seed = int(bm_model_rng.integers(0, np.iinfo(np.int32).max))
 
         param = (
             {}
