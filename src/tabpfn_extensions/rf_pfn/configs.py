@@ -1,8 +1,10 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
 
-from dataclasses import dataclass, field, asdict
-from typing import Optional, Union, Tuple, Any, Dict, List, Literal
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Literal
 
 
 @dataclass

@@ -7,6 +7,8 @@ Author: Lukas Schweizer <schweizer.lukas@web.de>
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
 
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 

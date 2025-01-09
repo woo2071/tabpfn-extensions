@@ -3,6 +3,8 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
 
+from __future__ import annotations
+
 import logging
 import numpy as np
 import time
