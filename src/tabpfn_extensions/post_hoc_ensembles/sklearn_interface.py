@@ -17,6 +17,8 @@ from .pfn_phe import (
     TaskType,
 )
 
+MAX_INT = int(np.iinfo(np.int32).max)
+
 
 class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
     """Automatic Post Hoc Ensemble Classifier for TabPFN models.
@@ -84,9 +86,9 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
         rnd = check_random_state(self.random_state)
 
         # Torch reproducibility bomb
-        torch.manual_seed(rnd.randint(0, 2**32 - 1))
-        random.seed(rnd.randint(0, 2**32 - 1))
-        np.random.seed(rnd.randint(0, 2**32 - 1))  # noqa: NPY002
+        torch.manual_seed(rnd.randint(0, MAX_INT))
+        random.seed(rnd.randint(0, MAX_INT))
+        np.random.seed(rnd.randint(0, MAX_INT))  # noqa: NPY002
 
         task_type = (
             TaskType.MULTICLASS if len(unique_labels(y)) > 2 else TaskType.BINARY
@@ -97,8 +99,8 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
             max_time=self.max_time,
             ges_scoring_string=self.ges_scoring_string,
             device=self.device,
-            bm_random_state=rnd.randint(0, 2**32 - 1),
-            ges_random_state=rnd.randint(0, 2**32 - 1),
+            bm_random_state=rnd.randint(0, MAX_INT),
+            ges_random_state=rnd.randint(0, MAX_INT),
             **self.phe_init_args_,
         )
 
@@ -192,9 +194,9 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
         rnd = check_random_state(self.random_state)
 
         # Torch reproducibility bomb
-        torch.manual_seed(rnd.randint(0, 2**32 - 1))
-        random.seed(rnd.randint(0, 2**32 - 1))
-        np.random.seed(rnd.randint(0, 2**32 - 1))  # noqa: NPY002
+        torch.manual_seed(rnd.randint(0, MAX_INT))
+        random.seed(rnd.randint(0, MAX_INT))
+        np.random.seed(rnd.randint(0, MAX_INT))  # noqa: NPY002
 
         self.predictor_ = AutoPostHocEnsemblePredictor(
             preset=self.preset,
@@ -202,8 +204,8 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
             max_time=self.max_time,
             ges_scoring_string=self.ges_scoring_string,
             device=self.device,
-            bm_random_state=rnd.randint(0, 2**32 - 1),
-            ges_random_state=rnd.randint(0, 2**32 - 1),
+            bm_random_state=rnd.randint(0, MAX_INT),
+            ges_random_state=rnd.randint(0, MAX_INT),
             **self.phe_init_args_,
         )
 

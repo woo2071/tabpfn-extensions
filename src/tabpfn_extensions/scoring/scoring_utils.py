@@ -157,12 +157,17 @@ def score_regression(
          ValueError: If an unknown metric is specified.
     """
     if optimize_metric == "rmse":
-        return -mean_squared_error(
+        try:
+            return -mean_squared_error(
             y_true,
             y_pred,
             sample_weight=sample_weight,
             squared=False,
-        )
+            )
+        except TypeError:
+            # Newer python version
+            from sklearn.metrics import root_mean_squared_error
+            return -root_mean_squared_error(y_true, y_pred, sample_weight=sample_weight)
     elif optimize_metric == "mse":
         return -mean_squared_error(y_true, y_pred, sample_weight=sample_weight)
     elif optimize_metric == "mae":
