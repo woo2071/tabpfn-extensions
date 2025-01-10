@@ -411,6 +411,25 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             X, t=t, condition_on_all_features=False, n_permutations=n_permutations
         )
 
+    def get_embeddings(self, X: torch.tensor, per_column: bool = False) -> torch.tensor:
+        """
+        Get the transformer embeddings for the test data X.
+
+        Args:
+            X:
+
+        Returns:
+            torch.Tensor of shape (n_samples, embedding_dim)
+        """
+        raise NotImplementedError(
+            "This method is not implemented currently. During the main TabPFN refactor this functionality was removed, please see: https://github.com/PriorLabs/TabPFN/issues/111"
+        )
+
+        if per_column:
+            return self.get_embeddings_per_column(X)
+        else:
+            return self.get_embeddings_(X)
+
     def get_embeddings_(self, X: torch.tensor) -> torch.tensor:
         model = self.tabpfn_reg
         model.fit(
@@ -422,20 +441,6 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         embs = model.get_embeddings(X, additional_y=None)
         return embs.reshape(X.shape[0], -1)
 
-    def get_embeddings(self, X: torch.tensor, per_column: bool = False) -> torch.tensor:
-        """
-        Get the transformer embeddings for the test data X.
-
-        Args:
-            X:
-
-        Returns:
-            torch.Tensor of shape (n_samples, embedding_dim)
-        """
-        if per_column:
-            return self.get_embeddings_per_column(X)
-        else:
-            return self.get_embeddings_(X)
 
     def get_embeddings_per_column(self, X: torch.tensor) -> torch.tensor:
         """

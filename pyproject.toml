@@ -24,6 +24,10 @@ authors = [
     { name = "Shi Bin Hoo" },
     { name = "Robin Tibor Schirrmeister" },
     { name = "Frank Hutter", email = "fh@cs.uni-freiburg.de" },
+
+    { name = "Eddie Bergman"},
+
+    { name = "Leo Grinsztajn"}
 ]
 readme = "README.md"
 description = "TabPFN: Foundation model for tabular data"
