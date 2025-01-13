@@ -147,8 +147,9 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
             TabPFNRegressor as ClientTabPFNRegressor,
         )
 
+
         # Wrapper classes to add device parameter
-        class TabPFNClassifier(ClientTabPFNClassifier, BaseEstimator):
+        class TabPFNClassifierWrapper(ClientTabPFNClassifier):
             def __init__(
                 self,
                 device: str | None = None,
@@ -163,7 +164,7 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                 inference_config: Optional[Dict] = None,
                 paper_version: bool = False,
             ) -> None:
-                self.device = device  # This will appear in get_params
+                self.device = device
                 super().__init__(
                     model_path=model_path,
                     n_estimators=n_estimators,
@@ -177,7 +178,17 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                     paper_version=paper_version,
                 )
 
-        class TabPFNRegressor(ClientTabPFNRegressor, BaseEstimator):
+            def get_params(self, deep: bool = True) -> Dict[str, Any]:
+                """
+                Return parameters for this estimator.
+                """
+                params = super().get_params(deep=deep)
+                params.pop("device")
+                # Add any parameters that are stored only in this class.
+                return params
+
+
+        class TabPFNRegressorWrapper(ClientTabPFNRegressor):
             def __init__(
                 self,
                 device: str | None = None,
@@ -191,8 +202,7 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                 inference_config: Optional[Dict] = None,
                 paper_version: bool = False,
             ) -> None:
-                self.device = device  # Keep this for get_params() compatibility
-                # Pass all recognized arguments to the parent constructor.
+                self.device = device
                 super().__init__(
                     model_path=model_path,
                     n_estimators=n_estimators,
@@ -205,7 +215,15 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                     paper_version=paper_version,
                 )
 
-        return TabPFNClassifier, TabPFNRegressor, PreprocessorConfigDefault
+            def get_params(self, deep: bool = True) -> Dict[str, Any]:
+                """
+                Return parameters for this estimator.
+                """
+                params = super().get_params(deep=deep)
+                params.pop("device")
+                return params
+
+        return TabPFNClassifierWrapper, TabPFNRegressorWrapper, PreprocessorConfigDefault
 
     except ImportError:
         raise ImportError(
