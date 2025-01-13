@@ -1,4 +1,4 @@
-# 🎯 TabPFN Extensions
+# TabPFN Extensions
 
 ⚡ Build powerful extensions for the world's most efficient tabular foundation model ⚡
 
