@@ -4,9 +4,11 @@
 import os
 
 import os
-from typing import Any, Type, Tuple, Protocol, Literal
+from typing import Any, Type, Tuple, Protocol, Literal, Optional, Union, Dict
 from dataclasses import dataclass
 from typing_extensions import override
+from sklearn.base import BaseEstimator
+import numpy as np
 
 class TabPFNEstimator(Protocol):
     def fit(self, X: Any, y: Any) -> Any:
@@ -30,7 +32,8 @@ def is_tabpfn(estimator: Any) -> bool:
     except (AttributeError, TypeError):
         return False
     
-
+#TODO: this should be in a common utils package shared
+# by the local interface and the client interface
 @dataclass
 class PreprocessorConfigDefault:
     """Configuration for data preprocessors.
@@ -145,15 +148,62 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
         )
 
         # Wrapper classes to add device parameter
-        class TabPFNClassifier(ClientTabPFNClassifier):
-            def __init__(self, *args, device=None, **kwargs):
-                super().__init__(*args, **kwargs)
-                # Ignoring the device parameter for now
+        class TabPFNClassifier(ClientTabPFNClassifier, BaseEstimator):
+            def __init__(
+                self,
+                device: str | None = None,
+                model_path: str = "default",
+                n_estimators: int = 4,
+                softmax_temperature: float = 0.9,
+                balance_probabilities: bool = False,
+                average_before_softmax: bool = False,
+                ignore_pretraining_limits: bool = False,
+                inference_precision: Literal["autocast", "auto"] = "auto",
+                random_state: Optional[Union[int, np.random.RandomState, np.random.Generator]] = None,
+                inference_config: Optional[Dict] = None,
+                paper_version: bool = False,
+            ) -> None:
+                self.device = device  # This will appear in get_params
+                super().__init__(
+                    model_path=model_path,
+                    n_estimators=n_estimators,
+                    softmax_temperature=softmax_temperature,
+                    balance_probabilities=balance_probabilities,
+                    average_before_softmax=average_before_softmax,
+                    ignore_pretraining_limits=ignore_pretraining_limits,
+                    inference_precision=inference_precision,
+                    random_state=random_state,
+                    inference_config=inference_config,
+                    paper_version=paper_version,
+                )
 
-        class TabPFNRegressor(ClientTabPFNRegressor):
-            def __init__(self, *args, device=None, **kwargs):
-                super().__init__(*args, **kwargs)
-                # Ignoring the device parameter for now
+        class TabPFNRegressor(ClientTabPFNRegressor, BaseEstimator):
+            def __init__(
+                self,
+                device: str | None = None,
+                model_path: str = "default",
+                n_estimators: int = 8,
+                softmax_temperature: float = 0.9,
+                average_before_softmax: bool = False,
+                ignore_pretraining_limits: bool = False,
+                inference_precision: Literal["autocast", "auto"] = "auto",
+                random_state: Optional[Union[int, np.random.RandomState, np.random.Generator]] = None,
+                inference_config: Optional[Dict] = None,
+                paper_version: bool = False,
+            ) -> None:
+                self.device = device  # Keep this for get_params() compatibility
+                # Pass all recognized arguments to the parent constructor.
+                super().__init__(
+                    model_path=model_path,
+                    n_estimators=n_estimators,
+                    softmax_temperature=softmax_temperature,
+                    average_before_softmax=average_before_softmax,
+                    ignore_pretraining_limits=ignore_pretraining_limits,
+                    inference_precision=inference_precision,
+                    random_state=random_state,
+                    inference_config=inference_config,
+                    paper_version=paper_version,
+                )
 
         return TabPFNClassifier, TabPFNRegressor, PreprocessorConfigDefault
 
