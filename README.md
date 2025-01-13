@@ -1,7 +1,5 @@
 # TabPFN Extensions
 
-⚡ Build powerful extensions for the world's most efficient tabular foundation model ⚡
-
 [![PyPI version](https://badge.fury.io/py/tabpfn.svg)](https://badge.fury.io/py/tabpfn)
 [![Downloads](https://pepy.tech/badge/tabpfn)](https://pepy.tech/project/tabpfn)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
