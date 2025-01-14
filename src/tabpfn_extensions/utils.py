@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing_extensions import override
 from sklearn.base import BaseEstimator
 import numpy as np
+import warnings
 
 class TabPFNEstimator(Protocol):
     def fit(self, X: Any, y: Any) -> Any:
@@ -31,100 +32,6 @@ def is_tabpfn(estimator: Any) -> bool:
         )
     except (AttributeError, TypeError):
         return False
-    
-#TODO: this should be in a common utils package shared
-# by the local interface and the client interface
-@dataclass
-class PreprocessorConfigDefault:
-    """Configuration for data preprocessors.
-
-    Attributes:
-        name: Name of the preprocessor.
-        categorical_name:
-            Name of the categorical encoding method.
-            Options: "none", "numeric", "onehot", "ordinal", "ordinal_shuffled", "none".
-        append_original: Whether to append original features to the transformed features
-        subsample_features: Fraction of features to subsample. -1 means no subsampling.
-        global_transformer_name: Name of the global transformer to use.
-    """
-
-    name: Literal[
-        "per_feature",  # a different transformation for each feature
-        "power",  # a standard sklearn power transformer
-        "safepower",  # a power transformer that prevents some numerical issues
-        "power_box",
-        "safepower_box",
-        "quantile_uni_coarse",  # quantile transformations with few quantiles up to many
-        "quantile_norm_coarse",
-        "quantile_uni",
-        "quantile_norm",
-        "quantile_uni_fine",
-        "quantile_norm_fine",
-        "robust",  # a standard sklearn robust scaler
-        "kdi",
-        "none",  # no transformation (only standardization in transformer)
-        "kdi_random_alpha",
-        "kdi_uni",
-        "kdi_random_alpha_uni",
-        "adaptive",
-        "norm_and_kdi",
-        # KDI with alpha collection
-        "kdi_alpha_0.3_uni",
-        "kdi_alpha_0.5_uni",
-        "kdi_alpha_0.8_uni",
-        "kdi_alpha_1.0_uni",
-        "kdi_alpha_1.2_uni",
-        "kdi_alpha_1.5_uni",
-        "kdi_alpha_2.0_uni",
-        "kdi_alpha_3.0_uni",
-        "kdi_alpha_5.0_uni",
-        "kdi_alpha_0.3",
-        "kdi_alpha_0.5",
-        "kdi_alpha_0.8",
-        "kdi_alpha_1.0",
-        "kdi_alpha_1.2",
-        "kdi_alpha_1.5",
-        "kdi_alpha_2.0",
-        "kdi_alpha_3.0",
-        "kdi_alpha_5.0",
-    ]
-    categorical_name: Literal[
-        # categorical features are pretty much treated as ordinal, just not resorted
-        "none",
-        # categorical features are treated as numeric,
-        # that means they are also power transformed for example
-        "numeric",
-        # "onehot": categorical features are onehot encoded
-        "onehot",
-        # "ordinal": categorical features are sorted and encoded as
-        # integers from 0 to n_categories - 1
-        "ordinal",
-        # "ordinal_shuffled": categorical features are encoded as integers
-        # from 0 to n_categories - 1 in a random order
-        "ordinal_shuffled",
-        "ordinal_very_common_categories_shuffled",
-    ] = "none"
-    append_original: bool = False
-    subsample_features: float = -1
-    global_transformer_name: str | None = None
-
-    @override
-    def __str__(self) -> str:
-        return (
-            f"{self.name}_cat:{self.categorical_name}"
-            + ("_and_none" if self.append_original else "")
-            + (
-                f"_subsample_feats_{self.subsample_features}"
-                if self.subsample_features > 0
-                else ""
-            )
-            + (
-                f"_global_transformer_{self.global_transformer_name}"
-                if self.global_transformer_name is not None
-                else ""
-            )
-        )
-
 
 from typing import Tuple, Type
 import os
@@ -146,13 +53,16 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
             TabPFNClassifier as ClientTabPFNClassifier,
             TabPFNRegressor as ClientTabPFNRegressor,
         )
+        from tabpfn_client.tabpfn_common_utils.utils import PreprocessorConfig
 
 
         # Wrapper classes to add device parameter
+        # we can't use *args because scikit-learn needs to know the parameters of the constructor
         class TabPFNClassifierWrapper(ClientTabPFNClassifier):
             def __init__(
                 self,
-                device: str | None = None,
+                device: Union[str, None] = None,
+                categorical_features_indices: Optional[list[int]] = None,
                 model_path: str = "default",
                 n_estimators: int = 4,
                 softmax_temperature: float = 0.9,
@@ -165,8 +75,24 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                 paper_version: bool = False,
             ) -> None:
                 self.device = device
+                #TODO: we should support this argument in the client version
+                self.categorical_features_indices = categorical_features_indices
+                if categorical_features_indices is not None:
+                    warnings.warn(
+                        "categorical_features_indices is not supported in the client version of TabPFN and will be ignored",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                if "/" in model_path:
+                    model_name = model_path.split("/")[-1].split("-")[-1].split(".")[0]
+                    if model_name == "classifier":
+                        model_name = "default"
+                    self.model_path = model_name
+                else:
+                    self.model_path = model_path
+
                 super().__init__(
-                    model_path=model_path,
+                    model_path=self.model_path,
                     n_estimators=n_estimators,
                     softmax_temperature=softmax_temperature,
                     balance_probabilities=balance_probabilities,
@@ -179,19 +105,17 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                 )
 
             def get_params(self, deep: bool = True) -> Dict[str, Any]:
-                """
-                Return parameters for this estimator.
-                """
+                """Return parameters for this estimator."""
                 params = super().get_params(deep=deep)
                 params.pop("device")
-                # Add any parameters that are stored only in this class.
+                params.pop("categorical_features_indices")
                 return params
-
 
         class TabPFNRegressorWrapper(ClientTabPFNRegressor):
             def __init__(
                 self,
-                device: str | None = None,
+                device: Union[str, None] = None,
+                categorical_features_indices: Optional[list[int]] = None,
                 model_path: str = "default",
                 n_estimators: int = 8,
                 softmax_temperature: float = 0.9,
@@ -203,6 +127,13 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                 paper_version: bool = False,
             ) -> None:
                 self.device = device
+                self.categorical_features_indices = categorical_features_indices
+                if categorical_features_indices is not None:
+                    warnings.warn(
+                        "categorical_features_indices is not supported in the client version of TabPFN and will be ignored",
+                        UserWarning,
+                        stacklevel=2,
+                    )
                 super().__init__(
                     model_path=model_path,
                     n_estimators=n_estimators,
@@ -221,9 +152,10 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                 """
                 params = super().get_params(deep=deep)
                 params.pop("device")
+                params.pop("categorical_features_indices")
                 return params
 
-        return TabPFNClassifierWrapper, TabPFNRegressorWrapper, PreprocessorConfigDefault
+        return TabPFNClassifierWrapper, TabPFNRegressorWrapper, PreprocessorConfig
 
     except ImportError:
         raise ImportError(
