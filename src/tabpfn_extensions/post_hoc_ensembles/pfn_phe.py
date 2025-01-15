@@ -110,6 +110,7 @@ class AutoPostHocEnsemblePredictor(BaseEstimator):
         n_folds: int | None = None,
         holdout_fraction: float = 0.33,
         ges_n_iterations: int = 25,
+        ignore_pretraining_limits: bool = False,
     ) -> None:
         """Builds a PostHocEnsembleConfig with default values for the given parameters.
 
@@ -139,6 +140,7 @@ class AutoPostHocEnsemblePredictor(BaseEstimator):
             n_folds: The number of folds to use for cross-validation. Pas None in the holdout setting.
             holdout_fraction: The fraction of the data to use for holdout validation.
             ges_n_iterations: The number of iterations to use for the greedy ensemble search.
+            ignore_pretraining_limits: Whether to ignore the pretraining limits of the TabPFN models.
         """
         # Task Type and User Input
         self.preset = preset
@@ -148,6 +150,7 @@ class AutoPostHocEnsemblePredictor(BaseEstimator):
         self.device = device
         self.bm_random_state = bm_random_state
         self.ges_random_state = ges_random_state
+        self.ignore_pretraining_limits = ignore_pretraining_limits
 
         # Model Source
         self.tabpfn_base_model_source = tabpfn_base_model_source
@@ -353,6 +356,7 @@ class AutoPostHocEnsemblePredictor(BaseEstimator):
                 device=self.device,
                 random_state=self.bm_random_state,
                 categorical_indices=categorical_feature_indices,
+                ignore_pretraining_limits=self.ignore_pretraining_limits,
             )
         else:
             raise ValueError(
@@ -419,6 +423,7 @@ def _get_base_models_from_random_search(
     categorical_indices: list[int],
     random_portfolio_size: int = 100,
     start_with_default_pfn: bool = True,
+    ignore_pretraining_limits: bool = False,
 ) -> list[tuple[str, object]]:
     # TODO: switch to config space to not depend on hyperopt
     from hyperopt.pyll import stochastic
@@ -460,6 +465,7 @@ def _get_base_models_from_random_search(
         param["device"] = device
         param["random_state"] = model_seed
         param["categorical_features_indices"] = categorical_indices
+        param["ignore_pretraining_limits"] = ignore_pretraining_limits
         n_ensemble_repeats = param.pop("n_ensemble_repeats", None)
         model_is_rf_pfn = param.pop("model_type", "no") == "dt_pfn"
         if model_is_rf_pfn:

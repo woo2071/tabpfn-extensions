@@ -38,6 +38,8 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
             Controls both the randomness base models and the post hoc ensembling method.
         categorical_feature_indices: list[int] or None, default=None
             The indices of the categorical features in the input data. Can also be passed to `fit()`.
+        ignore_pretraining_limits: bool, default=False
+            Whether to ignore the pretraining limits of the TabPFN base models.
         phe_init_args : dict | None, default=None
             The initialization arguments for the post hoc ensemble predictor.
             See post_hoc_ensembles.pfn_phe.AutoPostHocEnsemblePredictor for more options and all details.
@@ -62,6 +64,7 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
         device: Literal["cpu", "cuda"] = "cpu",
         random_state: int | None | np.random.RandomState = None,
         categorical_feature_indices: list[int] | None = None,
+        ignore_pretraining_limits: bool = False,
         phe_init_args: dict | None = None,
     ):
         self.max_time = max_time
@@ -71,6 +74,7 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
         self.random_state = random_state
         self.phe_init_args = phe_init_args
         self.categorical_feature_indices = categorical_feature_indices
+        self.ignore_pretraining_limits = ignore_pretraining_limits
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -101,6 +105,7 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
             device=self.device,
             bm_random_state=rnd.randint(0, MAX_INT),
             ges_random_state=rnd.randint(0, MAX_INT),
+            ignore_pretraining_limits=self.ignore_pretraining_limits,
             **self.phe_init_args_,
         )
 
@@ -146,6 +151,8 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
             Controls both the randomness base models and the post hoc ensembling method.
         categorical_feature_indices: list[int] or None, default=None
             The indices of the categorical features in the input data. Can also be passed to `fit()`.
+        ignore_pretraining_limits: bool, default=False
+            Whether to ignore the pretraining limits of the TabPFN base models.
         phe_init_args : dict | None, default=None
             The initialization arguments for the post hoc ensemble predictor.
             See post_hoc_ensembles.pfn_phe.AutoPostHocEnsemblePredictor for more options and all details.
@@ -170,6 +177,7 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
         device: Literal["cpu", "cuda"] = "cpu",
         random_state: int | None | np.random.RandomState = None,
         categorical_feature_indices: list[int] | None = None,
+        ignore_pretraining_limits: bool = False,
         phe_init_args: dict | None = None,
     ):
         self.max_time = max_time
@@ -179,6 +187,7 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
         self.random_state = random_state
         self.phe_init_args = phe_init_args
         self.categorical_feature_indices = categorical_feature_indices
+        self.ignore_pretraining_limits = ignore_pretraining_limits
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -206,6 +215,7 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
             device=self.device,
             bm_random_state=rnd.randint(0, MAX_INT),
             ges_random_state=rnd.randint(0, MAX_INT),
+            ignore_pretraining_limits=self.ignore_pretraining_limits,
             **self.phe_init_args_,
         )
 
