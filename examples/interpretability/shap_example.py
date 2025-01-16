@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.datasets import load_breast_cancer, load_iris
 from sklearn.model_selection import train_test_split
 from tabpfn_extensions import interpretability
+from tabpfn_extensions import TabPFNClassifier
 from typing import List, Optional, Tuple
 
 # Load example dataset
