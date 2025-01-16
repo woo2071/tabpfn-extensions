@@ -16,6 +16,10 @@ Looking for the main TabPFN package? Check out [TabPFN](https://github.com/prior
 # Clone and install the repository
 git clone https://github.com/priorlabs/tabpfn-extensions.git
 pip install -e tabpfn-extensions
+# Optional: Install specific extensions
+# pip install -e ".[post_hoc_ensembles]"
+# or install all extensions
+# pip install -e ".[extra]"
 
 # Choose one of the following installation options:
 
