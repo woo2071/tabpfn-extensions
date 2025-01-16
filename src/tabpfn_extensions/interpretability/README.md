@@ -1,6 +1,12 @@
-### Please Cite
+# TabPFN Interpretability
 
-**shapiq**:
+## TabPFN shapiq
+
+``shapiq`` is a library for computing Shapley-based explanations like Shapley values or Shapley 
+interactions for machine learning models. ``shapiq`` offers native support for interpreting TabPFN
+by utilizing a remove-and-recontextualize paradigm of model interpretation. The library extends the
+well-known SHAP library by providing a more efficient and scalable implementation of Shapley values
+and Shapley interactions. The ``shapiq`` library can be cited as follows:
 
 ```bibtext
 @inproceedings{muschalik2024shapiq,
@@ -13,13 +19,20 @@
 }
 ```
 
-**shap**:
+## TabPFN SHAP
+
+``shap`` is a library for computing Shapley values explanations for machine learning models. 
+``shap`` constructs these explanations by imputing missing values with randomly drawn samples from
+a background distribution. The ``shap`` library can be cited as follows:
 
 ```bibtext
-@article{lundberg2017unified,
-  title={A unified approach to interpreting model predictions},
-  author={Lundberg, Scott},
-  journal={arXiv preprint arXiv:1705.07874},
-  year={2017}
+@inproceedings{DBLP:conf/nips/LundbergL17,
+  author       = {Scott M. Lundberg and
+                  Su{-}In Lee},
+  title        = {A Unified Approach to Interpreting Model Predictions},
+  booktitle    = {Advances in Neural Information Processing Systems 30},
+  pages        = {4765--4774},
+  year         = {2017},
+  url          = {https://proceedings.neurips.cc/paper/2017/hash/8a20a8621978632d76c43dfd28b67767-Abstract.html},
 }
 ```
