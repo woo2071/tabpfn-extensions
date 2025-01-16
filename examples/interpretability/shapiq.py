@@ -12,7 +12,7 @@ feature_names = data.feature_names
 
 # Set the number of model evaluations for the explanation, Note this number is very low for
 # demonstration and testing purposes and should be increased for a real use cases
-n_model_evals = 100
+n_model_evals = 200
 
 # Split data
 X_train, X_test, y_train, y_test = train_test_split(
@@ -24,23 +24,7 @@ x_explain = X_test[0]
 clf = TabPFNClassifier()
 clf.fit(X_train, y_train)
 
-# Get a TabPFNExplainer
-explainer = interpretability.shapiq.get_tabpfn_explainer(
-    model=clf,
-    data=X_train,
-    labels=y_train,
-    index="SV",      # SV: Shapley Value (like in shap)
-    verbose=True,    # show a progress bar during explanation
-)
-
-# Get shap values
-print("Calculating SHAP values...")
-shapley_values = explainer.explain(x=x_explain, budget=n_model_evals)
-
-# plot the force plot
-shapley_values.plot_force(feature_names=feature_names)
-
-# Get an Shapley Interaction Explainer (here we use the Faithful Shapley Interaction Index)
+# Get a Shapley Interaction Explainer (here we use the Faithful Shapley Interaction Index)
 explainer = interpretability.shapiq.get_tabpfn_explainer(
     model=clf,
     data=X_train,
@@ -49,10 +33,21 @@ explainer = interpretability.shapiq.get_tabpfn_explainer(
     max_order=2,     # maximum order of the Shapley interactions (2 for pairwise interactions)
     verbose=True,    # show a progress bar during explanation
 )
-
-# Get shapley interaction values
-print("Calculating Shapley interaction values...")
 shapley_interaction_values = explainer.explain(x=x_explain, budget=n_model_evals)
+shapley_interaction_values.plot_upset(feature_names=feature_names)  # plot an upset plot
 
-# Plot the upset plot for visualizing the interactions
-shapley_interaction_values.plot_upset(feature_names=feature_names)
+# Initialize and train model (we need to contextualize the model with the whole training data again)
+clf = TabPFNClassifier()
+clf.fit(X_train, y_train)
+
+# Get a TabPFNExplainer and explain the model
+explainer = interpretability.shapiq.get_tabpfn_imputation_explainer(
+    model=clf,
+    data=X_test[:50],   # use a subset of the test data for the background data
+    imputer="marginal",  # use marginal imputation
+    index="SV",          # SV: Shapley Value (like in shap)
+    verbose=True,        # show a progress bar during explanation
+)
+
+shapley_values = explainer.explain(x=x_explain, budget=n_model_evals)
+shapley_values.plot_force(feature_names=feature_names)  # plot the force plot

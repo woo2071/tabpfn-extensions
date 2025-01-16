@@ -1,6 +1,6 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
-from typing import Optional, Union, Literal
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,7 @@ def get_tabpfn_explainer(
     model: Union[tabpfn.TabPFNRegressor, tabpfn.TabPFNClassifier],
     data: Union[pd.DataFrame, np.ndarray],
     labels: Union[pd.DataFrame, np.ndarray],
-    index: Union[Literal["SV"], Literal["k-SII"], Literal["FSII"], Literal["STII"], Literal["SII"]] = "k-SII",
+    index: str = "k-SII",
     max_order: int = 2,
     class_index: Optional[int] = None,
     **kwargs
@@ -30,13 +30,9 @@ def get_tabpfn_explainer(
 
         labels (pd.DataFrame or np.ndarray): The labels for the background data.
 
-        index: The index to use for the explanation. Options are:
-            - ``"SV"``: Shapley values, similar to SHAP.
-            - ``SII``: Shapley interaction index (not efficient, i.e. values do not add up to the
-                model prediciton).
-            - ``FSII``: Faithful Shapley interaction index.
-            - ``k-SII``: k-Shapley interaction index.
-            - ``STII``: Shapley-Taylor interaction index.
+        index: The index to use for the explanation. See shapiq documentation for more information
+            and an up-to-date list of available indices. Defaults to "k-SII" and "SV" (Shapley
+            Values like SHAP) with ``max_order=1``.
 
         max_order (int): The maximum order of interactions to consider. Defaults to 2.
 
@@ -71,6 +67,67 @@ def get_tabpfn_explainer(
         labels=labels,
         index=index,
         max_order=max_order,
+        class_index=class_index,
+        **kwargs,
+    )
+
+
+def get_tabpfn_imputation_explainer(
+    model: Union[tabpfn.TabPFNRegressor, tabpfn.TabPFNClassifier],
+    data: Union[pd.DataFrame, np.ndarray],
+    index: str = "k-SII",
+    max_order: int = 2,
+    imputer: str = "marginal",
+    class_index: Optional[int] = None,
+    **kwargs
+):
+    """Gets a TabularExplainer from shapiq with using imputation.
+
+    This function returns the TabularExplainer from the shapiq[1]_[2]_ library. The explainer uses an
+    imputation-based paradigm of feature removal for the explanations similar to SHAP[3]_. See
+    ``shapiq.TabularExplainer`` documentation for more information regarding the explainer object.
+
+    Args:
+        model (tabpfn.TabPFNRegressor or tabpfn.TabPFNClassifier): The TabPFN model to explain.
+
+        data (pd.DataFrame or np.ndarray): The background data to use for the explainer.
+
+        index: The index to use for the explanation. See shapiq documentation for more information
+            and an up-to-date list of available indices. Defaults to "k-SII" and "SV" (Shapley
+            Values like SHAP) with ``max_order=1``.
+
+        max_order (int): The maximum order of interactions to consider. Defaults to 2.
+
+        imputer: The imputation method to use. See ``shapiq.TabularExplainer`` documentation for
+            more information and an up-to-date list of available imputation methods.
+
+        class_index (int, optional): The class index of the model to explain. If not provided, the
+            class index will be set to 1 per default for classification models. This argument is
+            ignored for regression models. Defaults to None.
+
+        **kwargs: Additional keyword arguments to pass to the explainer.
+
+    Returns:
+        shapiq.TabularExplainer: The TabularExplainer.
+
+    References:
+        .. [1] shapiq repository: https://github.com/mmschlk/shapiq
+        .. [2] Muschalik, M., Baniecki, H., Fumagalli, F., Kolpaczki, P., Hammer, B., Hüllermeier, E. (2024). shapiq: Shapley Interactions for Machine Learning. In: The Thirty-eight Conference on Neural Information Processing Systems Datasets and Benchmarks Track. url: https://openreview.net/forum?id=knxGmi6SJi
+        .. [3] Lundberg, S. M., & Lee, S. I. (2017). A Unified Approach to Interpreting Model Predictions. Advances in Neural Information Processing Systems 30 (pp. 4765--4774).
+
+    """
+    import shapiq
+
+    # make data to array if it is a pandas DataFrame
+    if isinstance(data, pd.DataFrame):
+        data = data.values
+
+    return shapiq.TabularExplainer(
+        model=model,
+        data=data,
+        index=index,
+        max_order=max_order,
+        imputer=imputer,
         class_index=class_index,
         **kwargs,
     )
