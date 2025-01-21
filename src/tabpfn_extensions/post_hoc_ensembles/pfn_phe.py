@@ -378,7 +378,7 @@ class AutoPostHocEnsemblePredictor(BaseEstimator):
         for _, bm in bm_list:
             if isinstance(
                 bm,
-                RandomForestTabPFNClassifier | RandomForestTabPFNClassifier,
+                (RandomForestTabPFNClassifier, RandomForestTabPFNRegressor),
             ):
                 mf = "rf-pfn" + str(bm.tabpfn.model_path)
             elif isinstance(bm, (TabPFNClassifier, TabPFNRegressor)):
