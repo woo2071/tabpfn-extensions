@@ -42,9 +42,8 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
     if USE_TABPFN_LOCAL:
         try:
             from tabpfn import TabPFNClassifier, TabPFNRegressor
-            from tabpfn.preprocessing import PreprocessorConfig
 
-            return TabPFNClassifier, TabPFNRegressor, PreprocessorConfig
+            return TabPFNClassifier, TabPFNRegressor
         except ImportError:
             pass
 
@@ -53,7 +52,6 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
             TabPFNClassifier as ClientTabPFNClassifier,
             TabPFNRegressor as ClientTabPFNRegressor,
         )
-        from tabpfn_client.tabpfn_common_utils.utils import PreprocessorConfig
 
 
         # Wrapper classes to add device parameter
@@ -155,7 +153,7 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                 params.pop("categorical_features_indices")
                 return params
 
-        return TabPFNClassifierWrapper, TabPFNRegressorWrapper, PreprocessorConfig
+        return TabPFNClassifierWrapper, TabPFNRegressorWrapper
 
     except ImportError:
         raise ImportError(
@@ -166,4 +164,4 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
         )
 
 
-TabPFNClassifier, TabPFNRegressor, PreprocessorConfig = get_tabpfn_models()
+TabPFNClassifier, TabPFNRegressor = get_tabpfn_models()
