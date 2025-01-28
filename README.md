@@ -1,4 +1,4 @@
-# TabPFN Extensions
+# TabPFN Community Contributions
 
 [![PyPI version](https://badge.fury.io/py/tabpfn.svg)](https://badge.fury.io/py/tabpfn)
 [![Downloads](https://pepy.tech/badge/tabpfn)](https://pepy.tech/project/tabpfn)
