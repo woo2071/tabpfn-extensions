@@ -37,47 +37,8 @@ Choose the right TabPFN implementation for your needs:
 - **[TabPFN Client](https://github.com/automl/tabpfn-client)**: Easy-to-use API client for cloud-based inference
 - **TabPFN Extensions (this repo)**: Community extensions and integrations
 - **[TabPFN](https://github.com/priorlabs/tabpfn)**: Core implementation for local deployment and research
+Browse the [full list of extensions](https://github.com/priorlabs/tabpfn-extensions/tree/main/src/tabpfn_extensions).
 
-## 🤔 What is TabPFN Extensions?
-
-**TabPFN Extensions** is a collection of community-driven extensions and tools built around TabPFN, the state-of-the-art
-foundation model for tabular data. This repository makes it easy to:
-
-- Build domain-specific extensions
-- Create integrations with other frameworks
-- Share utilities and tools
-- Contribute example applications
-- Develop custom solutions
-
-## 🚀 Featured Extensions
-
-Here are some highlighted community extensions:
-
-**🔮 Unsupervised Learning**
-
-- Data generation capabilities
-- Outlier detection
-- Distribution modeling
-
-**🔍 Interpretability**
-
-- Feature importance analysis
-- Model explanation tools
-- Decision boundary visualization
-
-**⚡ AutoTabPFN**
-
-- Post-hoc ensemble techniques
-- Automatic hyperparameter tuning
-- Optimized performance
-
-**🌲 Random Forest PFN**
-
-- Random forest adaptation of TabPFN
-- Scalable for larger datasets
-- Parallel processing support
-
-And many more! Browse the [full list of extensions](https://github.com/priorlabs/tabpfn-extensions/tree/main/src/tabpfn_extensions).
 
 ## 📦 Repository Structure
 
