@@ -14,8 +14,8 @@
 
 ```bash
 # Clone and install the repository
-git clone https://github.com/priorlabs/tabpfn-extensions.git
-pip install -e tabpfn-extensions
+git clone https://github.com/priorlabs/tabpfn-community.git
+pip install -e tabpfn-community
 # Optional: Install specific extensions
 # pip install -e ".[post_hoc_ensembles]"
 # or install all extensions
@@ -35,7 +35,7 @@ pip install tabpfn-client
 Choose the right TabPFN implementation for your needs:
 
 - **[TabPFN Client](https://github.com/automl/tabpfn-client)**: Easy-to-use API client for cloud-based inference
-- **TabPFN Extensions (this repo)**: Community extensions and integrations
+- **TabPFN Community Contributions (this repo)**: Community extensions and integrations
 - **[TabPFN](https://github.com/priorlabs/tabpfn)**: Core implementation for local deployment and research
 Browse the [full list of extensions](https://github.com/priorlabs/tabpfn-extensions/tree/main/src/tabpfn_extensions).
 
