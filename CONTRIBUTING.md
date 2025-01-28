@@ -1,4 +1,4 @@
-# Contributing to TabPFN Systems
+# Contributing
 
 Welcome to TabPFN Systems! This repository is a collection of community-contributed packages that extend and enhance
 TabPFN. We welcome all contributions and aim to make contributing as simple as possible.
