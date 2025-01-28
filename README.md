@@ -8,8 +8,6 @@
 ![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)
 ![Last Commit](https://img.shields.io/github/last-commit/automl/tabpfn-client)
 
-Looking for the main TabPFN package? Check out [TabPFN](https://github.com/priorlabs/tabpfn).
-
 <img src="tabpfn_summary.webp" width="650" alt="TabPFN Summary">
 
 ## Quick Install
