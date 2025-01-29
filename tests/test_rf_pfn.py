@@ -50,7 +50,7 @@ def test_sklearn_compatibility(model_class):
     (DecisionTreeTabPFNRegressor, TabPFNRegressor)
 ])
 def test_with_nan(model_class):
-    """Test handling of float64 data with NaN values for sklearn < 1.6."""
+    """Test handling of NaN values for sklearn < 1.6."""
     # Generate sample data with NaN values
     rng = np.random.RandomState(42)
     X = rng.rand(100, 4)
@@ -78,3 +78,33 @@ def test_with_nan(model_class):
         assert np.all(np.isin(pred, [0, 1]))
     else:
         assert pred.dtype == np.float64
+
+# @parametrize_with_checks([RandomForestTabPFNClassifier(tabpfn=TabPFNClassifier(), n_estimators=2, max_depth=2)])
+# def test_sklearn_rf_classifier_checks(estimator, check):
+#     """Test if RandomForestTabPFNClassifier complies with scikit-learn's estimator API."""
+#     if "sample_weight" in check.func.__name__:  # type: ignore
+#         pytest.xfail("Sample weights not supported")
+#     check(estimator)
+
+# @parametrize_with_checks([RandomForestTabPFNRegressor(tabpfn=TabPFNRegressor(), n_estimators=2, max_depth=2)])
+# def test_sklearn_rf_regressor_checks(estimator, check):
+#     """Test if RandomForestTabPFNRegressor complies with scikit-learn's estimator API."""
+#     if "sample_weight" in check.func.__name__:  # type: ignore
+#         pytest.xfail("Sample weights not supported")
+#     check(estimator)
+
+# @parametrize_with_checks([DecisionTreeTabPFNClassifier(tabpfn=TabPFNClassifier(), max_depth=2)])
+# def test_sklearn_dt_classifier_checks(estimator, check):
+#     """Test if DecisionTreeTabPFNClassifier complies with scikit-learn's estimator API."""
+#     if "sample_weight" in check.func.__name__:  # type: ignore
+#         pytest.xfail("Sample weights not supported")
+#     check(estimator)
+
+# #@parametrize_with_checks([DecisionTreeTabPFNRegressor(tabpfn=TabPFNRegressor(), max_depth=2)])
+# #def test_sklearn_dt_regressor_checks(estimator, check):
+# #    """Test if DecisionTreeTabPFNRegressor complies with scikit-learn's estimator API."""
+# #    if "sample_weight" in check.func.__name__:  # type: ignore
+# #        pytest.xfail("Sample weights not supported")
+# #    check(estimator)
+
+
