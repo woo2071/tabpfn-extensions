@@ -41,21 +41,6 @@ def softmax_numpy(logits):
 class RandomForestTabPFNBase:
     """Base Class for common functionalities."""
 
-    def _validate_X_predict(self, X):
-        """Validate X whenever one tries to predict, apply, predict_proba."""
-        return X
-
-    def _validate_data(
-        self,
-        X,
-        y,
-        reset=True,
-        validate_separately=False,
-        **check_params,
-    ):
-        """Validate X and y whenever one tries to fit, predict, apply, predict_proba."""
-        return X, y
-
     def get_n_estimators(self, X):
         return self.n_estimators
 
