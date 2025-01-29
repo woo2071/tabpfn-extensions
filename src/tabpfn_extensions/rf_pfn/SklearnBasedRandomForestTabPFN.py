@@ -44,9 +44,6 @@ class RandomForestTabPFNBase:
     def get_n_estimators(self, X):
         return self.n_estimators
 
-    def _more_tags(self):
-        return {"multilabel": True, "allow_nan": True}
-
     def set_categorical_features(self, categorical_features):
         """Sets categorical features
         :param categorical_features: Categorical features
@@ -307,9 +304,15 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
 
 
 class RandomForestTabPFNRegressor(RandomForestTabPFNBase, RandomForestRegressor):
-    """RandomForestTabPFNClassifier."""
+    """RandomForestTabPFNRegressor."""
 
     task_type = "regression"
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "regressor"
+        return tags
 
     def __init__(
         self,
