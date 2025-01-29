@@ -47,10 +47,6 @@ class RandomForestTabPFNBase:
     def _more_tags(self):
         return {"multilabel": True, "allow_nan": True}
 
-    def _fit(self, X, y, sample_weight=None):
-        self.X = X
-        self.fit(X, y, sample_weight=sample_weight)
-
     def set_categorical_features(self, categorical_features):
         """Sets categorical features
         :param categorical_features: Categorical features
