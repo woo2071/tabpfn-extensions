@@ -4,15 +4,16 @@ from tabpfn_extensions.rf_pfn import (
     RandomForestTabPFNClassifier,
     DecisionTreeTabPFNClassifier,
     RandomForestTabPFNRegressor,
-    #DecisionTreeTabPFNRegressor, #broken
+    DecisionTreeTabPFNRegressor,
 )
 from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
+from sklearn.utils.estimator_checks import check_estimator, parametrize_with_checks
 
 @pytest.mark.parametrize("model_class", [
     (RandomForestTabPFNClassifier, TabPFNClassifier),
     (RandomForestTabPFNRegressor, TabPFNRegressor),
     (DecisionTreeTabPFNClassifier, TabPFNClassifier),
-    #(DecisionTreeTabPFNRegressor, TabPFNRegressor)
+    (DecisionTreeTabPFNRegressor, TabPFNRegressor)
 ])
 def test_sklearn_compatibility(model_class):
     """Test RandomForestTabPFN compatibility with different sklearn versions."""
@@ -46,7 +47,7 @@ def test_sklearn_compatibility(model_class):
     (RandomForestTabPFNClassifier, TabPFNClassifier),
     (RandomForestTabPFNRegressor, TabPFNRegressor),
     (DecisionTreeTabPFNClassifier, TabPFNClassifier),
-    #(DecisionTreeTabPFNRegressor, TabPFNRegressor)
+    (DecisionTreeTabPFNRegressor, TabPFNRegressor)
 ])
 def test_with_nan(model_class):
     """Test handling of float64 data with NaN values for sklearn < 1.6."""
@@ -77,4 +78,3 @@ def test_with_nan(model_class):
         assert np.all(np.isin(pred, [0, 1]))
     else:
         assert pred.dtype == np.float64
-
