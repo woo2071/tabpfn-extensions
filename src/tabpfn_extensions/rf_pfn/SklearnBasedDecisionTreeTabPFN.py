@@ -794,6 +794,67 @@ class DecisionTreeTabPFNRegressor(RegressorMixin, DecisionTreeTabPFNBase):
 
     task_type = "regression"
 
+    def __init__(
+        self,
+        *,
+        # Decision Tree Arguments
+        criterion="squared_error",
+        splitter="best",
+        max_depth=None,
+        min_samples_split=1000,
+        min_samples_leaf=1,
+        min_weight_fraction_leaf=0.0,
+        max_features=None,
+        random_state=None,
+        max_leaf_nodes=None,
+        min_impurity_decrease=0.0,
+        ccp_alpha=0.0,
+        monotonic_cst=None,
+        # TabPFN Arguments
+        tabpfn=None,
+        categorical_features=None,
+        verbose=False,
+        show_progress=False,
+        fit_nodes=True,
+        tree_seed=0,
+        adaptive_tree=True,
+        adaptive_tree_min_train_samples=50,
+        adaptive_tree_max_train_samples=2000,
+        adaptive_tree_min_valid_samples_fraction_of_train=0.2,
+        adaptive_tree_overwrite_metric=None,
+        adaptive_tree_test_size=0.2,
+        average_logits=True,
+        adaptive_tree_skip_class_missing=True,
+    ):
+        super().__init__(
+            criterion=criterion,
+            splitter=splitter,
+            max_depth=max_depth,
+            min_samples_split=min_samples_split,
+            min_samples_leaf=min_samples_leaf,
+            min_weight_fraction_leaf=min_weight_fraction_leaf,
+            max_features=max_features,
+            random_state=random_state,
+            max_leaf_nodes=max_leaf_nodes,
+            min_impurity_decrease=min_impurity_decrease,
+            ccp_alpha=ccp_alpha,
+            monotonic_cst=monotonic_cst,
+            tabpfn=tabpfn,
+            categorical_features=categorical_features,
+            verbose=verbose,
+            show_progress=show_progress,
+            fit_nodes=fit_nodes,
+            tree_seed=tree_seed,
+            adaptive_tree=adaptive_tree,
+            adaptive_tree_min_train_samples=adaptive_tree_min_train_samples,
+            adaptive_tree_max_train_samples=adaptive_tree_max_train_samples,
+            adaptive_tree_min_valid_samples_fraction_of_train=adaptive_tree_min_valid_samples_fraction_of_train,
+            adaptive_tree_overwrite_metric=adaptive_tree_overwrite_metric,
+            adaptive_tree_test_size=adaptive_tree_test_size,
+            average_logits=average_logits,
+            adaptive_tree_skip_class_missing=adaptive_tree_skip_class_missing,
+        )
+
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
         tags.input_tags.allow_nan = True
