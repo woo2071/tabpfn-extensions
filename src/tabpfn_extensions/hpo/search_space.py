@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from hyperopt import hp
 from pathlib import Path
-from tabpfn_extensions import PreprocessorConfig
 
 
 def enumerate_preprocess_transforms():
@@ -15,7 +14,6 @@ def enumerate_preprocess_transforms():
         ["safepower"],
         ["quantile_uni_coarse"],
         ["quantile_norm_coarse"],
-        ["adaptive"],
         #["norm_and_kdi"],
         ["quantile_uni"],
         ["none"],
@@ -48,13 +46,13 @@ def enumerate_preprocess_transforms():
                     for global_transformer_name in [None, "svd"]:
                         transforms += [
                             [
-                                PreprocessorConfig(
-                                    name=name,
-                                    global_transformer_name=global_transformer_name,
-                                    subsample_features=subsample_features,
-                                    categorical_name=categorical_name,
-                                    append_original=append_original,
-                                )
+                                {
+                                    "name": name,
+                                    "global_transformer_name": global_transformer_name,
+                                    "subsample_features": subsample_features,
+                                    "categorical_name": categorical_name,
+                                    "append_original": append_original,
+                                }
                                 for name in names
                             ],
                         ]
@@ -124,7 +122,6 @@ def get_param_grid_hyperopt(task_type: str) -> dict:
                 (None, "power"),
                 ("power",),
                 ("safepower",),
-                ("adaptive",),
                 # ("kdi_alpha_0.3",),
                 # ("kdi_alpha_1.0",),
                 # ("kdi_alpha_1.5",),
