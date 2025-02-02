@@ -44,9 +44,6 @@ classifiers = [
 ]
 license = { file = "LICENSE" }
 
-[tool.setuptools.dynamic]
-dependencies = { file = ["requirements.txt"] }
-
 [project.urls]
 documentation = "https://priorlabs.ai/docs"
 source = "https://github.com/priorlabs/tabpfn-extensions"
