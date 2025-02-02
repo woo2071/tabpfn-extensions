@@ -14,12 +14,8 @@
 
 ```bash
 # Clone and install the repository
-git clone https://github.com/priorlabs/tabpfn-community.git
-pip install -e tabpfn-community
-# Optional: Install specific extensions
-# pip install -e ".[post_hoc_ensembles]"
-# or install all extensions
-# pip install -e ".[extra]"
+!git clone https://github.com/PriorLabs/tabpfn-community
+!pip install -e tabpfn-community[post_hoc_ensembles,interpretability,hpo]
 
 # Choose one of the following installation options:
 
