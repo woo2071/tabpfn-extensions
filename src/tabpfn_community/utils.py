@@ -132,8 +132,17 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                         UserWarning,
                         stacklevel=2,
                     )
+
+                if "/" in model_path:
+                    model_name = model_path.split("/")[-1].split("-")[-1].split(".")[0]
+                    if model_name == "regressor":
+                        model_name = "default"
+                    self.model_path = model_name
+                else:
+                    self.model_path = model_path
+
                 super().__init__(
-                    model_path=model_path,
+                    model_path=self.model_path,
                     n_estimators=n_estimators,
                     softmax_temperature=softmax_temperature,
                     average_before_softmax=average_before_softmax,
