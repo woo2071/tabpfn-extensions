@@ -297,7 +297,7 @@ class AutoPostHocEnsemblePredictor(BaseEstimator):
             raise ValueError(f"Unknown task type {self.task_type}!")
         logger.info(f"Using task type: {self.task_type}", stacklevel=2)
 
-        if self.validation_method == "cv" and self.task_type not in [
+        if self.validation_method == "cv" and self.task_type in [
             "multiclass_classification",
             "binary_classification",
         ]:
