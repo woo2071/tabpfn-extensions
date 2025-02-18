@@ -19,7 +19,7 @@ def enumerate_preprocess_transforms():
         ["none"],
         ["robust"],
         ["safepower", "quantile_uni"],
-        ["none", "power"],
+        ["none", "safepower"],
     ]
 
     # try:
@@ -119,8 +119,7 @@ def get_param_grid_hyperopt(task_type: str) -> dict:
             "REGRESSION_Y_PREPROCESS_TRANSFORMS",
             [
                 (None,),
-                (None, "power"),
-                ("power",),
+                (None, "safepower"),
                 ("safepower",),
                 # ("kdi_alpha_0.3",),
                 # ("kdi_alpha_1.0",),
