@@ -8,7 +8,7 @@ import random
 from sklearn.ensemble import StackingClassifier, BaggingClassifier, VotingClassifier
 
 from . import configs
-from .rf_pfn import (
+from tabpfn_extensions.rf_pfn import (
     RandomForestTabPFNClassifier,
     RandomForestTabPFNRegressor,
 )
