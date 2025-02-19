@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tabpfn-community"
+name = "tabpfn-extensions"
 version = "0.0.4"
 dependencies = [
     "seaborn==0.12.2",
@@ -50,7 +50,7 @@ license = { file = "LICENSE" }
 
 [project.urls]
 documentation = "https://priorlabs.ai/docs"
-source = "https://github.com/PriorLabs/tabpfn-community"
+source = "https://github.com/PriorLabs/tabpfn-extensions"
 
 [project.optional-dependencies]
 interpretability = [
