@@ -62,7 +62,7 @@ def enumerate_preprocess_transforms():
 def get_param_grid_hyperopt(task_type: str) -> dict:
     search_space = {
         # Custom HPs
-        "model_type": hp.choice("model_type", ["single", "dt_pfn"]),
+        "model_type": hp.choice("model_type", ["single"]), # TODO: reenable "dt_pfn" in hpo search space
         "n_ensemble_repeats": hp.choice("n_ensemble_repeats", [4]),
         # -- Model HPs
         "average_before_softmax": hp.choice("average_before_softmax", [True, False]),
