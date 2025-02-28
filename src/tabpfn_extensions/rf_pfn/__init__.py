@@ -1,4 +1,5 @@
-from .SklearnBasedDecisionTreeTabPFN import (
+from .configs import TabPFNRFConfig
+from .sklearn_based_decision_tree_tabpfn import (
     DecisionTreeTabPFNClassifier,
     DecisionTreeTabPFNRegressor,
 )
@@ -6,7 +7,6 @@ from .SklearnBasedRandomForestTabPFN import (
     RandomForestTabPFNClassifier,
     RandomForestTabPFNRegressor,
 )
-from .configs import TabPFNRFConfig
 
 __all__ = [
     "DecisionTreeTabPFNClassifier",
