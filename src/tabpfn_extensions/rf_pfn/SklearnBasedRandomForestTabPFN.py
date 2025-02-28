@@ -6,14 +6,11 @@
 from __future__ import annotations
 
 import logging
-import numpy as np
 import time
+
+import numpy as np
 import torch
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.ensemble._base import _partition_estimators
-from sklearn.utils.validation import (
-    check_is_fitted,
-)
 
 from .SklearnBasedDecisionTreeTabPFN import (
     DecisionTreeTabPFNClassifier,
@@ -44,13 +41,6 @@ class RandomForestTabPFNBase:
     def get_n_estimators(self, X):
         return self.n_estimators
 
-    def set_categorical_features(self, categorical_features):
-        """Sets categorical features
-        :param categorical_features: Categorical features
-        :return: None.
-        """
-        self.categorical_features = categorical_features
-
     def fit(self, X, y, sample_weight=None):
         """Fits RandomForestTabPFN
         :param X: Feature training data
@@ -59,24 +49,61 @@ class RandomForestTabPFNBase:
         :return: None.
         """
         self.estimator = self.init_base_estimator()
-        self.estimator.set_categorical_features(self.categorical_features)
-
         self.X = X
         self.n_estimators = self.get_n_estimators(X)
-
         time.time()
+
+        # Convert tensors to numpy if needed
+        if torch.is_tensor(X):
+            X = X.numpy()
+        if torch.is_tensor(y):
+            y = y.numpy()
+
+        # Special case for depth 0 - just use TabPFN directly
         if self.max_depth == 0:
             self.tabpfn.fit(X, y)
-        else:
-            try:
-                if torch.is_tensor(X):
-                    X = X.numpy()
-                if torch.is_tensor(y):
-                    y = y.numpy()
-                super().fit(X, y)
-            except TypeError as e:
-                print("Error in fit with data", X, y)
-                raise e
+            return self
+
+        # Initialize the tree estimators
+        n_estimators = self.n_estimators
+        if n_estimators <= 0:
+            raise ValueError(
+                f"n_estimators must be greater than zero, got {n_estimators}"
+            )
+
+        # Initialize estimators list
+        self.estimators_ = []
+
+        # Generate bootstrapped datasets and fit trees
+        for i in range(n_estimators):
+            # Clone the base estimator
+            tree = self.init_base_estimator()
+
+            # Bootstrap sample if requested (like in RandomForest)
+            if self.bootstrap:
+                n_samples = X.shape[0]
+                indices = np.random.choice(
+                    n_samples,
+                    size=n_samples
+                    if self.max_samples is None
+                    else int(self.max_samples * n_samples),
+                    replace=True,
+                )
+                X_boot = X[indices]
+                y_boot = y[indices]
+            else:
+                X_boot = X
+                y_boot = y
+
+            # Fit the tree on bootstrapped data
+            tree.fit(X_boot, y_boot)
+            self.estimators_.append(tree)
+
+        # Track features seen during fit
+        self.n_features_in_ = X.shape[1]
+
+        # Set flag to indicate successful fit
+        self._fitted = True
 
         return self
 
@@ -175,9 +202,20 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
         self.n_estimators = n_estimators
 
     def __sklearn_tags__(self):
-        tags = super().__sklearn_tags__()
-        tags.input_tags.allow_nan = True
-        tags.estimator_type = "classifier"
+        # Create a dictionary of tags directly (without relying on parent __sklearn_tags__)
+        # This avoids issues with sklearn's internal estimation of "allow_nan" which
+        # tries to create a new base estimator without tabpfn
+        tags = {
+            "allow_nan": True,
+            "estimator_type": "classifier",
+            "poor_score": False,
+            "no_validation": False,
+            "multioutput": False,
+            "requires_positive_X": False,
+            "requires_positive_y": False,
+            "X_types": ["2darray"],
+            "preserves_dtype": [],
+        }
         return tags
 
     def init_base_estimator(self):
@@ -212,32 +250,21 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
         Parameters
         ----------
         X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            The input samples. Internally, its dtype will be converted to
-            ``dtype=np.float32``. If a sparse matrix is provided, it will be
-            converted into a sparse ``csr_matrix``.
+            The input samples.
 
         Returns:
         -------
-        y : ndarray of shape (n_samples,) or (n_samples, n_outputs)
+        y : ndarray of shape (n_samples,)
             The predicted classes.
         """
+        # Get class probabilities
         proba = self.predict_proba(X)
 
-        if self.n_outputs_ == 1:
+        # Return class with highest probability
+        if hasattr(self, "classes_"):
             return self.classes_.take(np.argmax(proba, axis=1), axis=0)
-
-        n_samples = proba[0].shape[0]
-        # all dtypes should be the same, so just take the first
-        class_type = self.classes_[0].dtype
-        predictions = np.empty((n_samples, self.n_outputs_), dtype=class_type)
-
-        for k in range(self.n_outputs_):
-            predictions[:, k] = self.classes_[k].take(
-                np.argmax(proba[k], axis=1),
-                axis=0,
-            )
-
-        return predictions
+        else:
+            return np.argmax(proba, axis=1)
 
     def _final_proba(self, all_proba, evaluated_estimators):
         for proba in all_proba:
@@ -256,51 +283,70 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
 
         The predicted class probabilities of an input sample are computed as
         the mean predicted class probabilities of the trees in the forest.
-        The class probability of a single tree is the fraction of samples of
-        the same class in a leaf.
 
         Parameters
         ----------
         X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            The input samples. Internally, its dtype will be converted to
-            ``dtype=np.float32``. If a sparse matrix is provided, it will be
-            converted into a sparse ``csr_matrix``.
+            The input samples.
 
         Returns:
         -------
-        p : ndarray of shape (n_samples, n_classes), or a list of such arrays
-            The class probabilities of the input samples. The order of the
-            classes corresponds to that in the attribute :term:`classes_`.
+        p : ndarray of shape (n_samples, n_classes)
+            The class probabilities of the input samples.
         """
-        check_is_fitted(self)
-        # Check data
-        X = self._validate_X_predict(X)
-
-        # Assign chunk of trees to jobs
-        n_jobs, _, _ = _partition_estimators(self.n_estimators, self.n_jobs)
-
-        # avoid storing the output of every estimator by summing them here
-        all_proba = [
-            np.zeros((X.shape[0], j), dtype=np.float64)
-            for j in np.atleast_1d(self.n_classes_)
-        ]
-
-        start_time = time.time()
-        evaluated_estimators = 0
-        for e in self.estimators_:
-            _accumulate_prediction(
-                e.predict_proba,
-                X,
-                all_proba,
-                accumulate_logits=self.rf_average_logits,
+        # Check if fitted
+        if not hasattr(self, "_fitted") or not self._fitted:
+            raise ValueError(
+                "This RandomForestTabPFNClassifier instance is not fitted yet. "
+                "Call 'fit' with appropriate arguments before using this estimator."
             )
 
-            time_elapsed = time.time() - start_time
+        # Convert input if needed
+        if torch.is_tensor(X):
+            X = X.numpy()
+
+        # Special case for depth 0
+        if self.max_depth == 0:
+            return self.tabpfn.predict_proba(X)
+
+        # Get number of classes from first estimator
+        if not hasattr(self, "n_classes_") and len(self.estimators_) > 0:
+            self.n_classes_ = len(np.unique(self.estimators_[0].classes_))
+            self.classes_ = self.estimators_[0].classes_
+
+        # Initialize probabilities array
+        n_samples = X.shape[0]
+        all_proba = np.zeros((n_samples, self.n_classes_), dtype=np.float64)
+
+        # Accumulate predictions from trees
+        start_time = time.time()
+        evaluated_estimators = 0
+
+        for estimator in self.estimators_:
+            # Get predictions from this tree
+            proba = estimator.predict_proba(X)
+
+            # Convert to logits if needed
+            if self.rf_average_logits:
+                proba = np.log(proba + 1e-10)  # Add small constant to avoid log(0)
+
+            # Accumulate
+            all_proba += proba
+
+            # Check timeout
             evaluated_estimators += 1
+            time_elapsed = time.time() - start_time
             if time_elapsed > self.max_predict_time and self.max_predict_time > 0:
                 break
 
-        return self._final_proba(all_proba, evaluated_estimators)
+        # Average probabilities
+        all_proba /= evaluated_estimators
+
+        # Convert back from logits if needed
+        if self.rf_average_logits:
+            all_proba = softmax_numpy(all_proba)
+
+        return all_proba
 
 
 class RandomForestTabPFNRegressor(RandomForestTabPFNBase, RandomForestRegressor):
@@ -309,9 +355,20 @@ class RandomForestTabPFNRegressor(RandomForestTabPFNBase, RandomForestRegressor)
     task_type = "regression"
 
     def __sklearn_tags__(self):
-        tags = super().__sklearn_tags__()
-        tags.input_tags.allow_nan = True
-        tags.estimator_type = "regressor"
+        # Create a dictionary of tags directly (without relying on parent __sklearn_tags__)
+        # This avoids issues with sklearn's internal estimation of "allow_nan" which
+        # tries to create a new base estimator without tabpfn
+        tags = {
+            "allow_nan": True,
+            "estimator_type": "regressor",
+            "poor_score": False,
+            "no_validation": False,
+            "multioutput": False,
+            "requires_positive_X": False,
+            "requires_positive_y": False,
+            "X_types": ["2darray"],
+            "preserves_dtype": [],
+        }
         return tags
 
     def __init__(
@@ -423,39 +480,51 @@ class RandomForestTabPFNRegressor(RandomForestTabPFNBase, RandomForestRegressor)
         Parameters
         ----------
         X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            The input samples. Internally, its dtype will be converted to
-            ``dtype=np.float32``. If a sparse matrix is provided, it will be
-            converted into a sparse ``csr_matrix``.
+            The input samples.
 
         Returns:
         -------
         y : ndarray of shape (n_samples,) or (n_samples, n_outputs)
             The predicted values.
         """
-        check_is_fitted(self)
-        # Check data
-        X = self._validate_X_predict(X)
+        # Check if fitted
+        if not hasattr(self, "_fitted") or not self._fitted:
+            raise ValueError(
+                "This RandomForestTabPFNRegressor instance is not fitted yet. "
+                "Call 'fit' with appropriate arguments before using this estimator."
+            )
 
-        # Assign chunk of trees to jobs
-        n_jobs, _, _ = _partition_estimators(self.n_estimators, self.n_jobs)
+        # Convert input if needed
+        if torch.is_tensor(X):
+            X = X.numpy()
 
-        # avoid storing the output of every estimator by summing them here
-        y_hat = (
-            np.zeros((X.shape[0], self.n_outputs_), dtype=np.float64)
-            if self.n_outputs_ > 1
-            else np.zeros(X.shape[0], dtype=np.float64)
-        )
+        # Special case for depth 0
+        if self.max_depth == 0:
+            return self.tabpfn.predict(X)
 
+        # Initialize output array
+        n_samples = X.shape[0]
+        self.n_outputs_ = 1  # Only supporting single output for now
+        y_hat = np.zeros(n_samples, dtype=np.float64)
+
+        # Accumulate predictions from trees
         start_time = time.time()
         evaluated_estimators = 0
 
-        for e in self.estimators_:
-            _accumulate_prediction(e.predict, X, [y_hat])
-            time_elapsed = time.time() - start_time
+        for estimator in self.estimators_:
+            # Get predictions from this tree
+            pred = estimator.predict(X)
+
+            # Accumulate
+            y_hat += pred
+
+            # Check timeout
             evaluated_estimators += 1
+            time_elapsed = time.time() - start_time
             if time_elapsed > self.max_predict_time and self.max_predict_time > 0:
                 break
 
+        # Average predictions
         y_hat /= evaluated_estimators
 
         return y_hat
