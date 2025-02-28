@@ -68,7 +68,7 @@ class RandomForestTabPFNBase:
         n_estimators = self.n_estimators
         if n_estimators <= 0:
             raise ValueError(
-                f"n_estimators must be greater than zero, got {n_estimators}"
+                f"n_estimators must be greater than zero, got {n_estimators}",
             )
 
         # Initialize estimators list
@@ -298,7 +298,7 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
         if not hasattr(self, "_fitted") or not self._fitted:
             raise ValueError(
                 "This RandomForestTabPFNClassifier instance is not fitted yet. "
-                "Call 'fit' with appropriate arguments before using this estimator."
+                "Call 'fit' with appropriate arguments before using this estimator.",
             )
 
         # Convert input if needed
@@ -491,7 +491,7 @@ class RandomForestTabPFNRegressor(RandomForestTabPFNBase, RandomForestRegressor)
         if not hasattr(self, "_fitted") or not self._fitted:
             raise ValueError(
                 "This RandomForestTabPFNRegressor instance is not fitted yet. "
-                "Call 'fit' with appropriate arguments before using this estimator."
+                "Call 'fit' with appropriate arguments before using this estimator.",
             )
 
         # Convert input if needed
