@@ -1,4 +1,4 @@
-# TabPFN Community Contributions
+# TabPFN Extensions ⚡
 
 [![PyPI version](https://badge.fury.io/py/tabpfn.svg)](https://badge.fury.io/py/tabpfn)
 [![Downloads](https://pepy.tech/badge/tabpfn)](https://pepy.tech/project/tabpfn)
@@ -10,33 +10,76 @@
 
 <img src="tabpfn_summary.webp" width="650" alt="TabPFN Summary">
 
-## Quick Install
+## 📋 Overview
+
+TabPFN Extensions is a collection of utilities and extensions for [TabPFN](https://github.com/priorlabs/tabpfn), a foundation model for tabular data. These extensions enhance TabPFN's capabilities with:
+
+- 🧪 **Post-hoc ensembles**: Combine multiple TabPFN models for better performance
+- 🔍 **Interpretability**: Understand model decisions with SHAP and feature selection
+- 🎯 **Hyperparameter optimization**: Automatically tune TabPFN for best results
+- 🔄 **Adaptation tools**: Convert classifiers to regressors and handle multi-class problems
+- 🌳 **Tree-based ensembles**: Combine TabPFN with decision trees and random forests
+
+## ⚙️ Installation
 
 ```bash
-# Clone and install the repository
-pip install "tabpfn-extensions[post_hoc_ensembles,interpretability,hpo] @ git+https://github.com/PriorLabs/tabpfn-community.git"
-# or choose below method if you need to have source code
-# git clone https://github.com/PriorLabs/tabpfn-community
-# pip install -e "tabpfn-extensions[post_hoc_ensembles,interpretability,hpo]"
+# Basic installation with core dependencies
+pip install tabpfn-extensions
 
-# Choose one of the following installation options:
+# Install specific extension modules
+pip install "tabpfn-extensions[interpretability,hpo]"
 
-# 1. For GPU-accelerated local inference:
-pip install tabpfn
+# Install all extensions
+pip install "tabpfn-extensions[all]"
 
-# 2. For cloud-based inference via API:
-pip install tabpfn-client
+# Development installation
+pip install -e ".[dev,all]"
 ```
 
-## 🌐 TabPFN Ecosystem
+### 🔄 Backend Options
 
-Choose the right TabPFN implementation for your needs:
+TabPFN Extensions works with two TabPFN implementations:
 
-- **[TabPFN Client](https://github.com/automl/tabpfn-client)**: Easy-to-use API client for cloud-based inference
-- **TabPFN Extensions Contributions (this repo)**: Community extensions and integrations
-- **[TabPFN](https://github.com/priorlabs/tabpfn)**: Core implementation for local deployment and research
-Browse the [full list of extensions](https://github.com/priorlabs/tabpfn-extensions/tree/main/src/tabpfn_extensions).
+1. **🖥️ TabPFN Package** - Full PyTorch implementation for local inference:
+   ```bash
+   pip install tabpfn
+   ```
 
+2. **☁️ TabPFN Client** - Lightweight API client for cloud-based inference:
+   ```bash
+   pip install tabpfn-client
+   ```
+
+Choose the backend that fits your needs - most extensions work with either option!
+
+## 🚀 Quick Start
+
+```python
+from tabpfn_extensions.many_class import ManyClassClassifier
+from tabpfn import TabPFNClassifier  # or from tabpfn_client import TabPFNClassifier
+
+# Create a base TabPFN classifier
+base_clf = TabPFNClassifier()
+
+# Wrap it to handle more than 10 classes
+many_class_clf = ManyClassClassifier(estimator=base_clf, alphabet_size=10)
+
+# Fit and predict as usual
+many_class_clf.fit(X_train, y_train)
+y_pred = many_class_clf.predict(X_test)
+```
+
+## 🛠️ Available Extensions
+
+- **post_hoc_ensembles**: Improve performance with model combination
+- **interpretability**: Explain TabPFN predictions with SHAP values and feature selection
+- **many_class**: Handle classification with more classes than TabPFN's default limit
+- **classifier_as_regressor**: Use TabPFN's classifier for regression tasks
+- **hpo**: Automatic hyperparameter tuning for TabPFN
+- **rf_pfn**: Combine TabPFN with decision trees and random forests
+- **unsupervised**: Data generation and outlier detection
+
+Detailed documentation for each extension is available in the respective module directories.
 
 ## 📦 Repository Structure
 
@@ -45,17 +88,15 @@ Each extension lives in its own subpackage:
 ```
 tabpfn-extensions/
 ├── src/
-│   └── tabpfn_extensions/  
-│       └── your_package/      # Your extension code
+│   └── tabpfn_extensions/
+│       └── your_package/      # Extension implementation
 ├── examples/
 │   └── your_package/          # Usage examples
-├── tests/
-│   └── your_package/          # Tests
-└── requirements/
-    └── your_package.txt       # Dependencies (optional)
+└── tests/
+    └── your_package/          # Tests
 ```
 
-## 🛠️ Contributing
+## 🤝 Contributing
 
 We welcome all contributions! See our [Contributing Guide](CONTRIBUTING.md) for details.
 
@@ -63,12 +104,13 @@ Quick start:
 
 1. Fork the repository
 2. Create your package under `src/`
-3. Add examples
-4. Submit a PR
+3. Ensure compatibility with both TabPFN implementations
+4. Add examples and tests
+5. Submit a PR
 
-## 🤝 License
+## 📝 License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE.txt](LICENSE.txt) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ---
 

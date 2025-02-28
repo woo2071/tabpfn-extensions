@@ -1,96 +1,160 @@
-# Contributing
+# Contributing to TabPFN Extensions
 
-Welcome to TabPFN Systems! This repository is a collection of community-contributed packages that extend and enhance
-TabPFN. We welcome all contributions and aim to make contributing as simple as possible.
+Welcome to TabPFN Extensions! This repository is a collection of community-contributed packages that extend and enhance TabPFN, a foundation model for tabular data. We welcome all contributions and aim to make the process as simple as possible.
 
-## Quick Start
+## 📋 Quick Start
 
-1. Install for development:
+1. **Setup your development environment**:
 
 ```bash
+# Clone the repository
+git clone https://github.com/PriorLabs/tabpfn-extensions.git
+cd tabpfn-extensions
+
+# Create a virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -e .
+
+# Install for development with all dependencies
+pip install -e ".[dev,all]"
+
+# Install pre-commit hooks
+pre-commit install
 ```
 
-2. Create your package:
+2. **Create your extension package**:
 
 ```bash
-mkdir src/your_package examples/your_package
+mkdir -p src/tabpfn_extensions/your_package examples/your_package tests/
 ```
 
-3. Start coding!
+3. **Start coding**:
+   - Implement your extension in `src/tabpfn_extensions/your_package/`
+   - Create examples in `examples/your_package/`
+   - Write tests in `tests/test_your_package.py`
 
-## Repository Structure
+4. **Test your code**:
 
-TabPFN Systems uses a modular structure where each contribution lives in its own subpackage:
+```bash
+# Run all tests
+pytest
+
+# Run tests for your package
+pytest tests/test_your_package.py
+```
+
+## 🔄 TabPFN Compatibility
+
+TabPFN Extensions supports two different TabPFN implementations:
+
+1. **TabPFN Package** - Full PyTorch implementation for local inference
+2. **TabPFN Client** - Lightweight API client for cloud-based inference
+
+To ensure your extension works with both backends:
+
+1. **Import TabPFN in a flexible way**:
+
+```python
+try:
+    # Try standard TabPFN package first
+    from tabpfn import TabPFNClassifier, TabPFNRegressor
+except ImportError:
+    # Fall back to TabPFN client
+    from tabpfn_client import TabPFNClassifier, TabPFNRegressor
+```
+
+2. **Use common parameters** that are available in both implementations.
+
+3. **Add appropriate test markers** in your tests:
+   - `client_compatible` if your extension works with TabPFN client
+   - `requires_tabpfn` if it requires the full TabPFN package
+
+## 📁 Repository Structure
+
+TabPFN Extensions uses a modular structure where each contribution lives in its own subpackage:
 
 ```
-tabpfn_system/
+tabpfn-extensions/
 ├── src/
-│   └── your_package/          # Your package code
+│   └── tabpfn_extensions/
+│       └── your_package/       # Your extension code
 ├── examples/
-│   └── your_package/          # Usage examples
-├── tests/
-│   └── your_package/          # Tests (optional)
-└── requirements/
-    └── your_package.txt       # Additional dependencies (if needed)
+│   └── your_package/           # Usage examples
+└── tests/
+    └── test_your_package.py    # Tests for your extension
 ```
 
-## Guidelines
+## 📝 Code Guidelines
 
-### Package Requirements
+### Requirements
 
-- Python 3.8+
-- TabPFN 1.0+
-- Keep dependencies minimal and document them
-- Avoid large data files (>10MB)
-- Include license headers in source files
+- Python 3.9+ compatibility
+- Support for both TabPFN and TabPFN-client when possible
+- Minimize dependencies and document them in pyproject.toml
+- Follow scikit-learn API conventions when appropriate
+- Document all public functions and classes
 
 ### Documentation
 
-Each package should include:
+Each extension should include:
 
-- README.md with:
-    - Package description
-    - Basic usage example
-    - Requirements
-    - Author(s)
-- Docstrings for public functions
-- At least one example notebook/script
+- Clear docstrings using Google style format
+- Type hints for all function parameters and return values
+- At least one example script in the examples directory
+- Comments explaining non-obvious code sections
 
-### Naming & Structure
+### Testing
 
-- Follow standard Python package structure
-- One package per contribution
+- Write tests using pytest
+- Use appropriate markers: `client_compatible`, `requires_tabpfn`, `requires_any_tabpfn`
+- Test both TabPFN and TabPFN-client compatibility where appropriate
+- Use the fixtures provided in conftest.py for TabPFN instances
 
-## Checklist
+## ✅ Contribution Checklist
 
-- [ ] Added package under src/
-- [ ] Included example(s)
-- [ ] Added requirements.txt (if needed)
-- [ ] Created README.md
+- [ ] Added extension under src/tabpfn_extensions/
+- [ ] Included example(s) in examples/
+- [ ] Added appropriate dependencies to pyproject.toml
+- [ ] Written tests in tests/
+- [ ] Documented all public functions and classes
+- [ ] Ensured compatibility with both TabPFN backends (when possible)
+- [ ] Run all linting and type checking tools
 
-## Legal & Security
+## 📜 Legal & Security
 
 - Only contribute code you have rights to
 - Don't include sensitive or private data
 - All contributions must be Apache 2.0 licensed
+- No machine learning models or large datasets in the repository
 
-## Example Package Structure
+## 📦 Example Extension Structure
 
-Here's a minimal example:
+Here's a minimal example of a complete extension:
 
 ```
-
-src/interpretability/
+src/tabpfn_extensions/sample_extension/
 ├── __init__.py
-├── shap.py
+├── core.py
 └── utils.py
 
-examples/interpretability/
-├── basic_usage.ipynb
-└── README.md
+examples/sample_extension/
+├── basic_usage.py
+└── advanced_features.py
 
-requirements/
-└── interpretability.txt
+tests/
+└── test_sample_extension.py
+```
+
+## 🧪 Versioning and Releases
+
+We follow [Semantic Versioning](https://semver.org/), with version numbers in the format MAJOR.MINOR.PATCH:
+
+- MAJOR: Incompatible API changes
+- MINOR: New functionality in a backwards compatible manner
+- PATCH: Backwards compatible bug fixes
+
+## 🛠️ Need Help?
+
+- Join our [Discord](https://discord.com/channels/1285598202732482621/) for questions
+- Open an issue for bug reports
+- Check out existing extensions for examples
