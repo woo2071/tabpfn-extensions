@@ -5,25 +5,26 @@ from __future__ import annotations
 
 import copy
 import random
-from sklearn.ensemble import StackingClassifier, BaggingClassifier, VotingClassifier
 
-from . import configs
+from sklearn.ensemble import BaggingClassifier, StackingClassifier, VotingClassifier
+
 from tabpfn_extensions.rf_pfn import (
     RandomForestTabPFNClassifier,
     RandomForestTabPFNRegressor,
 )
+
+from . import configs
 from .weighted_ensemble import WeightedAverageEnsemble
 
 
 class TabPFNEnsemble(VotingClassifier):
     def set_categorical_features(self, categorical_features):
-        for model_name, model in self.estimators:
+        for _model_name, model in self.estimators:
             model.set_categorical_features(categorical_features)
 
 
 def get_tabpfn_outer_ensemble(config: configs.TabPFNConfig, **kwargs):
-    """
-    This will create a model very similar to our standard TabPFN estimators,
+    """This will create a model very similar to our standard TabPFN estimators,
     but it uses multiple model weights to generate predictions.
     Thus the `configs.TabPFNModelPathsConfig` can contain multiple paths which are all used.
 
@@ -49,12 +50,12 @@ def get_tabpfn_outer_ensemble(config: configs.TabPFNConfig, **kwargs):
                 "preprocess_transforms": [
                     (pp_transform,) for pp_transform in config.preprocess_transforms
                 ],
-            }
-        )
+            },
+        ),
     )
     # shuffle with fixed seed
     relevant_config_product = sorted(
-        relevant_config_product, key=lambda x: hash(str(x))
+        relevant_config_product, key=lambda x: hash(str(x)),
     )
 
     # if we have more ensemble configurations than models, we can have multiple configurations per model
@@ -62,25 +63,22 @@ def get_tabpfn_outer_ensemble(config: configs.TabPFNConfig, **kwargs):
 
     single_tabpfns = []
     for ensemble_member_index, sub_config in zip(
-        range(config.n_estimators), relevant_config_product
+        range(config.n_estimators), relevant_config_product,
     ):
         member_config = copy.deepcopy(config)
         for k, v in sub_config.items():
             setattr(member_config, k, v)
         member_config.model_type = "single"
         member_config.n_estimators = n_estimators_per_model
-        print(member_config)
         tabpfn = get_single_tabpfn(member_config, **kwargs)
         tabpfn.seed = ensemble_member_index + 120412 + random.randint(0, 100_000)
         single_tabpfns.append(tabpfn)
 
-    ensemble_tabpfn = TabPFNEnsemble(
+    return TabPFNEnsemble(
         estimators=[(f"model_{i}", clf) for i, clf in enumerate(single_tabpfns)],
         voting="soft",
         n_jobs=1,
     )
-    print("oour tabpfn ensemble is: ", ensemble_tabpfn)
-    return ensemble_tabpfn
 
 
 def get_tabpfn_rf(config, random_state=0, **kwargs):
@@ -110,7 +108,7 @@ def get_tabpfn_rf(config, random_state=0, **kwargs):
             rf_average_logits=config.model_type_config.rf_average_logits,
             max_predict_time=config.model_type_config.max_predict_time,
         )
-    elif config.task_type == "regression":
+    if config.task_type == "regression":
         return RandomForestTabPFNRegressor(
             tabpfn=tabpfn,
             min_samples_leaf=config.model_type_config.min_samples_leaf,
@@ -131,8 +129,7 @@ def get_tabpfn_rf(config, random_state=0, **kwargs):
             rf_average_logits=config.model_type_config.rf_average_logits,
             max_predict_time=config.model_type_config.max_predict_time,
         )
-    else:
-        raise ValueError(f"Unknown task type for RF PFN {config.task_type}")
+    raise ValueError(f"Unknown task type for RF PFN {config.task_type}")
 
 
 class TabPFNWeightedAverageEnsemble(WeightedAverageEnsemble):
@@ -211,7 +208,7 @@ class TabPFNBaggingClassifier(BaggingClassifier):
     ):
         self.estimator.seed = None  # Make sure that TabPFN is not seeded
         max_samples = min(
-            X.shape[0], max_samples
+            X.shape[0], max_samples,
         )  # Breaks in sklearn if max_samples is larger than X.shape[0]
         super()._fit(
             X,
@@ -261,7 +258,7 @@ def get_stacking_ensemble(config, **kwargs):
             (
                 str(stacking_config),
                 tabpfn,
-            )
+            ),
         )
 
     if config.model_type_config.append_other_model_types:
@@ -289,7 +286,7 @@ def get_weighted_average_ensemble(config, **kwargs):
             (
                 str(stacking_config),
                 tabpfn,
-            )
+            ),
         )
 
     return TabPFNWeightedAverageEnsemble(

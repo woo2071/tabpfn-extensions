@@ -4,21 +4,23 @@
 from __future__ import annotations
 
 import logging
-import numpy as np
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import deepcopy
-from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
-from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit
 from typing import Literal
 
-from .save_splitting import get_cv_split_for_data
-from ..scoring.scoring_utils import (
+import numpy as np
+from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
+from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit
+
+from tabpfn_extensions.scoring.scoring_utils import (
     CLF_LABEL_METRICS,
     score_classification,
     score_regression,
 )
+
+from .save_splitting import get_cv_split_for_data
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -69,7 +71,8 @@ class AbstractValidationUtils(ABC, BaseEstimator):
         self._start_time: int = 0
         self.classes_: np.ndarray | None = None
         self._repeats_seed = [
-            int(self._rng.randint(0, int(np.iinfo(np.int32).max))) for _ in range(self.n_repeats)
+            int(self._rng.randint(0, int(np.iinfo(np.int32).max)))
+            for _ in range(self.n_repeats)
         ]
         self._estimators = estimators.copy()  # internal copy for early stopping.
         self.validation_method = validation_method
@@ -178,7 +181,16 @@ class AbstractValidationUtils(ABC, BaseEstimator):
         self,
         X,
         y,
-    ) -> tuple[int, int, int, BaseEstimator, list[int], list[int], bool, bool,]:
+    ) -> tuple[
+        int,
+        int,
+        int,
+        BaseEstimator,
+        list[int],
+        list[int],
+        bool,
+        bool,
+    ]:
         n_models = len(self.estimators)
         holdout_validation = self._is_holdout
         _folds = self.n_folds if not holdout_validation else 1
@@ -485,17 +497,7 @@ class AbstractValidationUtils(ABC, BaseEstimator):
                 for oof in oof_proba_list
             ):
                 for i, oof in enumerate(oof_proba_list):
-                    print("==================== ", i)  # STUPID DEBUG PRINT
-                    print(
-                        oof[
-                            ~np.isclose(
-                                oof[~np.isnan(oof).any(axis=1)].sum(axis=1),
-                                ran_repeats,
-                            )
-                        ],
-                    )
-                    print(ran_repeats)
-                print()
+                    pass
                 raise ValueError(
                     "OOF predictions are not consistent over repeats! Something went wrong.",
                 )

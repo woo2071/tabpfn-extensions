@@ -1,8 +1,11 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
+from __future__ import annotations
+
+import warnings
+from typing import Literal
 
 import numpy as np
-import warnings
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -11,14 +14,12 @@ from sklearn.metrics import (
     mean_squared_error,
     roc_auc_score,
 )
-from typing import Literal
 
 CLF_LABEL_METRICS = ["accuracy", "f1"]
 
 
 def safe_roc_auc_score(y_true, y_score, **kwargs):
-    """
-    Compute the Area Under the Receiver Operating Characteristic Curve (ROC AUC) score.
+    """Compute the Area Under the Receiver Operating Characteristic Curve (ROC AUC) score.
 
     This function is a safe wrapper around `sklearn.metrics.roc_auc_score` that handles
     cases where the input data may have missing classes or binary classification problems.
@@ -61,7 +62,7 @@ def safe_roc_auc_score(y_true, y_score, **kwargs):
             return roc_auc_score(y_true, y_score_adjusted, **kwargs)
         except Exception as e:
             warnings.warn(
-                "Unhandleable error in roc_auc_score: " + str(e), stacklevel=2
+                "Unhandleable error in roc_auc_score: " + str(e), stacklevel=2,
             )
             raise e from ve
 
@@ -74,8 +75,7 @@ def score_classification(
     *,
     y_pred_is_labels: bool = False,
 ):
-    """
-    General function to score classification predictions.
+    """General function to score classification predictions.
 
     Parameters:
         optimize_metric : {"roc", "auroc", "accuracy", "f1", "log_loss"}
@@ -97,7 +97,6 @@ def score_classification(
         ValueError:If an unknown metric is specified.
     """
     if optimize_metric is None:
-        print("No metric specified, using roc_auc_score.")
         optimize_metric = "roc"
 
     if (optimize_metric == "roc") and len(np.unique(y_true)) == 2:
@@ -106,26 +105,25 @@ def score_classification(
     if (not y_pred_is_labels) and (optimize_metric not in ["roc", "log_loss"]):
         y_pred = np.argmax(y_pred, axis=1)
 
-    if optimize_metric == "roc" or optimize_metric == "auroc":
+    if optimize_metric in ("roc", "auroc"):
         return safe_roc_auc_score(
             y_true,
             y_pred,
             sample_weight=sample_weight,
             multi_class="ovr",
         )
-    elif optimize_metric == "accuracy":
+    if optimize_metric == "accuracy":
         return accuracy_score(y_true, y_pred, sample_weight=sample_weight)
-    elif optimize_metric == "f1":
+    if optimize_metric == "f1":
         return f1_score(
             y_true,
             y_pred,
             sample_weight=sample_weight,
             average="macro",
         )
-    elif optimize_metric == "log_loss":
+    if optimize_metric == "log_loss":
         return -log_loss(y_true, y_pred, sample_weight=sample_weight)
-    else:
-        raise ValueError(f"Unknown metric {optimize_metric}")
+    raise ValueError(f"Unknown metric {optimize_metric}")
 
 
 def score_regression(
@@ -134,8 +132,7 @@ def score_regression(
     y_pred,
     sample_weight=None,
 ):
-    """
-    General function to score regression predictions.
+    """General function to score regression predictions.
 
     Parameters:
         optimize_metric : {"rmse", "mse", "mae"}
@@ -159,14 +156,15 @@ def score_regression(
     if optimize_metric == "rmse":
         try:
             return -mean_squared_error(
-            y_true,
-            y_pred,
-            sample_weight=sample_weight,
-            squared=False,
+                y_true,
+                y_pred,
+                sample_weight=sample_weight,
+                squared=False,
             )
         except TypeError:
             # Newer python version
             from sklearn.metrics import root_mean_squared_error
+
             return -root_mean_squared_error(y_true, y_pred, sample_weight=sample_weight)
     elif optimize_metric == "mse":
         return -mean_squared_error(y_true, y_pred, sample_weight=sample_weight)
@@ -180,7 +178,7 @@ def get_score_survival_model(metric_used, inv_predictions=True):
     from tabpfn.scripts.tabular_metrics import get_scoring_direction
 
     def score_survival_model(model, X, y):
-        censoring, y = list(zip(*y.tolist()))[0], list(zip(*y.tolist()))[1]
+        censoring, y = next(zip(*y.tolist())), list(zip(*y.tolist()))[1]
         prediction = model.predict(X)
         prediction = -prediction if inv_predictions else prediction
 
@@ -206,8 +204,7 @@ def score_survival(
     event_observed,
     sample_weight=None,
 ):
-    """
-    General function to score regression predictions.
+    """General function to score regression predictions.
 
     Parameters:
         optimize_metric : {"rmse", "mse", "mae"}
@@ -230,12 +227,6 @@ def score_survival(
     """
     from lifelines.utils import concordance_index
 
-    if (
-        optimize_metric == "cindex"
-        or optimize_metric == "c_index"
-        or optimize_metric == "risk_score"
-        or optimize_metric == "risk_score_capped"
-    ):
+    if optimize_metric in ("cindex", "c_index", "risk_score", "risk_score_capped"):
         return concordance_index(y_true, y_pred, event_observed=event_observed)
-    else:
-        raise ValueError(f"Unknown metric {optimize_metric}")
+    raise ValueError(f"Unknown metric {optimize_metric}")

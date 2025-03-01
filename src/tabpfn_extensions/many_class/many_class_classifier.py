@@ -1,53 +1,119 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
 
+"""ManyClassClassifier: TabPFN extension for handling classification with many classes.
+
+This module provides a classifier that overcomes TabPFN's limitation on the number of
+classes (typically 10) by using a meta-classifier approach. It works by breaking down
+multi-class problems into multiple sub-problems, each within TabPFN's class limit.
+
+Key features:
+- Handles any number of classes beyond TabPFN's native limits
+- Uses an efficient codebook approach to minimize the number of base models
+- Compatible with both TabPFN and TabPFN-client backends
+- Maintains high accuracy through redundant coding
+- Follows scikit-learn's Estimator interface
+
+Example usage:
+    ```python
+    from tabpfn import TabPFNClassifier  # or from tabpfn_client
+    from tabpfn_extensions.many_class import ManyClassClassifier
+
+    # Create a base TabPFN classifier
+    base_clf = TabPFNClassifier()
+
+    # Wrap it with ManyClassClassifier to handle more classes
+    many_class_clf = ManyClassClassifier(
+        estimator=base_clf,
+        alphabet_size=10  # Use TabPFN's maximum class limit
+    )
+
+    # Use like any scikit-learn classifier, even with more than 10 classes
+    many_class_clf.fit(X_train, y_train)
+    y_pred = many_class_clf.predict(X_test)
+    ```
+"""
+
+from __future__ import annotations
+
 import math
+
 import numpy as np
-from sklearn.multiclass import OutputCodeClassifier
+from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.utils import check_random_state
 from sklearn.utils.multiclass import check_classification_targets
-from sklearn.utils.validation import _num_samples, check_is_fitted
+from sklearn.utils.validation import (
+    _num_samples,
+    check_array,
+    check_is_fitted,
+)
 
 
-class ManyClassClassifier(OutputCodeClassifier):
-    """Output-Code multiclass strategy with deciary codebook.
+class ManyClassClassifier(BaseEstimator, ClassifierMixin):
+    """Output-Code multiclass strategy to extend TabPFN beyond its class limit.
 
-    This class extends the original OutputCodeClassifier to support n-ary codebooks (with n=alphabet_size),
-    allowing for handling more classes.
+    This class enables TabPFN to handle classification problems with any number of
+    classes by using a meta-classifier approach. It creates an efficient coding
+    system that maps the original classes to multiple sub-problems, each within
+    TabPFN's class limit.
 
-    Parameters:
-        estimator : estimator object
-            An estimator object implementing :term:`fit` and one of
-            :term:`decision_function` or :term:`predict_proba`. The base classifier
-            should be able to handle up to `alphabet_size` classes.
+    Parameters
+    ----------
+    estimator : estimator object
+        A classifier implementing fit() and predict_proba() methods.
+        Typically a TabPFNClassifier instance. The base classifier
+        should be able to handle up to `alphabet_size` classes.
 
-        random_state : int, RandomState instance, default=None
-            The generator used to initialize the codebook.
-            Pass an int for reproducible output across multiple function calls.
-            See :term:`Glossary <random_state>`.
+    alphabet_size : int, default=None
+        Maximum number of classes the base estimator can handle.
+        If None, it will try to get this from estimator.max_num_classes_
+
+    n_estimators : int, default=None
+        Number of base estimators to train. If None, an optimal number
+        is calculated based on the number of classes and alphabet_size.
+
+    n_estimators_redundancy : int, default=4
+        Redundancy factor for the auto-calculated number of estimators.
+        Higher values increase reliability but also computational cost.
+
+    random_state : int, RandomState instance, default=None
+        Controls randomization used to initialize the codebook.
+        Pass an int for reproducible results.
 
     Attributes:
-        estimators_ : list of `int(n_classes * code_size)` estimators
-            Estimators used for predictions.
+    ----------
+    classes_ : ndarray of shape (n_classes,)
+        Array containing unique target labels.
 
-        classes_ : ndarray of shape (n_classes,)
-            Array containing labels.
+    code_book_ : ndarray of shape (n_estimators, n_classes)
+        N-ary array containing the coding scheme that maps original
+        classes to base classifier problems.
 
-        code_book_ : ndarray of shape (n_classes, `len(estimators_)`)
-            Deciary array containing the code of each class.
+    no_mapping_needed_ : bool
+        True if the number of classes is within the alphabet_size limit,
+        allowing direct use of the base estimator without any mapping.
+
+    classes_index_ : dict
+        Maps class labels to their indices in classes_.
+
+    X_train : array-like
+        Training data stored for reuse during prediction.
+
+    Y_train : array-like
+        Encoded training labels for each base estimator.
 
     Examples:
-    ```python title="Example"
+    --------
     >>> from sklearn.datasets import load_iris
-    >>> from tabpfn.scripts.estimator import ManyClassClassifier, TabPFNClassifier
+    >>> from tabpfn import TabPFNClassifier
+    >>> from tabpfn_extensions.many_class import ManyClassClassifier
     >>> from sklearn.model_selection import train_test_split
-    >>> x, y = load_iris(return_X_y=True)
-    >>> x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=42)
-    >>> clf = TabPFNClassifier()
-    >>> clf = ManyClassClassifier(clf, alphabet_size=clf.max_num_classes_)
-    >>> clf.fit(x_train, y_train)
-    >>> clf.predict(x_test)
-    ```
+    >>> X, y = load_iris(return_X_y=True)
+    >>> X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+    >>> base_clf = TabPFNClassifier()
+    >>> many_clf = ManyClassClassifier(base_clf, alphabet_size=base_clf.max_num_classes_)
+    >>> many_clf.fit(X_train, y_train)
+    >>> y_pred = many_clf.predict(X_test)
     """
 
     def __init__(
@@ -108,7 +174,7 @@ class ManyClassClassifier(OutputCodeClassifier):
         codebook = np.zeros((n_estimators, n_classes), dtype=int)
 
         def generate_codeword():
-            choices = list(range(0, n_classes_in_codebook)) + [
+            choices = list(range(n_classes_in_codebook)) + [
                 n_classes_in_codebook for _ in range(n_classes_remaining)
             ]
             return np.random.permutation(
@@ -178,14 +244,14 @@ class ManyClassClassifier(OutputCodeClassifier):
         """
         y = self._validate_data(X="no_validation", y=y)
 
-        random_state = check_random_state(self.random_state)
+        check_random_state(self.random_state)
         check_classification_targets(y)
 
         self.classes_ = np.unique(y)
         n_classes = self.classes_.shape[0]
         if n_classes == 0:
             raise ValueError(
-                "DeciaryOutputCodeClassifier can not be fit when no class is present."
+                "DeciaryOutputCodeClassifier can not be fit when no class is present.",
             )
 
         self.no_mapping_needed_ = False
@@ -200,9 +266,6 @@ class ManyClassClassifier(OutputCodeClassifier):
             alphabet_size=self.get_alphabet_size(),
         )
 
-        print(
-            f"Using codebook with {self.code_book_.shape[0]} estimators and {self.code_book_.shape[1]} classes"
-        )
 
         self.classes_index_ = {c: i for i, c in enumerate(self.classes_)}
 
@@ -236,7 +299,7 @@ class ManyClassClassifier(OutputCodeClassifier):
         Y = np.array(
             [
                 _fit_and_predict_proba(
-                    self.estimator, self.X_train, self.Y_train[:, i], X
+                    self.estimator, self.X_train, self.Y_train[:, i], X,
                 )
                 for i in range(self.code_book_.shape[0])
             ],
@@ -255,13 +318,13 @@ class ManyClassClassifier(OutputCodeClassifier):
                 if self.code_book_[i, j] != rest_class:
                     j_remapped = self.code_book_[i, j]
                     probabilities[:, j] += Y[
-                        i, :, j_remapped
+                        i, :, j_remapped,
                     ]  # / (1 - Y[i, :, rest_class])
                     # print(j, Y[i, :, j_remapped])
 
-        assert not (
-            (self.code_book_ != rest_class).sum(0) == 0
-        ).any(), f"Some classes are not mapped to any codeword. {self.code_book_} {self.classes_} {((self.code_book_ != rest_class).sum(0) == 0)}"
+        assert not ((self.code_book_ != rest_class).sum(0) == 0).any(), (
+            f"Some classes are not mapped to any codeword. {self.code_book_} {self.classes_} {((self.code_book_ != rest_class).sum(0) == 0)}"
+        )
 
         # Normalize the weighted probabilities to get the final class probabilities
         probabilities /= (self.code_book_ != rest_class).sum(0)
@@ -269,15 +332,85 @@ class ManyClassClassifier(OutputCodeClassifier):
 
         return probabilities
 
+    def predict(self, X):
+        """Predict multi-class targets using underlying estimators.
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            Data.
+
+        Returns:
+        -------
+        y : ndarray of shape (n_samples,)
+            Predicted multi-class targets.
+        """
+        check_is_fitted(self)
+        X = check_array(X)
+
+        if self.no_mapping_needed_:
+            return self.estimator.predict(X)
+
+        # Get predicted probabilities from each model
+        probas = self.predict_proba(X)
+
+        # Return class with highest probability
+        return self.classes_[np.argmax(probas, axis=1)]
+
     def set_categorical_features(self, categorical_features):
+        """Set categorical features for the base estimator if it supports it.
+
+        Parameters
+        ----------
+        categorical_features : list
+            List of categorical feature indices
+        """
         self.categorical_features = categorical_features
+        if hasattr(self.estimator, "set_categorical_features"):
+            self.estimator.set_categorical_features(categorical_features)
 
 
 def _fit_and_predict_proba(estimator, X_train, Y_train, X):
-    """Predict probabilities for deciary values using a single estimator."""
-    estimator.fit(X_train, Y_train)
+    """Fit a cloned base estimator and predict probabilities for a single sub-problem.
 
-    if hasattr(estimator, "predict_proba"):
-        return estimator.predict_proba(X)
-    else:
-        raise AttributeError("Base estimator doesn't have `predict_proba` method.")
+    This helper function handles training and prediction for a single base
+    estimator in the ManyClassClassifier ensemble. It clones the original
+    estimator to prevent modification, fits it on the training data with the
+    encoded labels for this specific sub-problem, and returns probability
+    predictions for the test data.
+
+    Parameters
+    ----------
+    estimator : estimator object
+        Base estimator to clone and fit. Usually a TabPFNClassifier instance.
+
+    X_train : array-like of shape (n_samples, n_features)
+        Training data features used to fit the cloned estimator.
+
+    Y_train : array-like of shape (n_samples,)
+        Encoded target values for this particular sub-problem.
+        These are derived from the codebook mapping.
+
+    X : array-like of shape (n_samples_test, n_features)
+        Test data for which to predict probabilities.
+
+    Returns:
+    -------
+    probas : ndarray of shape (n_samples_test, n_classes)
+        Predicted probabilities for each class in this sub-problem.
+
+    Raises:
+    ------
+    AttributeError
+        If the base estimator doesn't implement predict_proba.
+    """
+    # Clone the estimator to avoid modifying the original
+    cloned_estimator = clone(estimator)
+
+    # Fit the cloned estimator on this particular encoding of the target
+    cloned_estimator.fit(X_train, Y_train)
+
+    # Generate probability predictions
+    if hasattr(cloned_estimator, "predict_proba"):
+        return cloned_estimator.predict_proba(X)
+    raise AttributeError("Base estimator must implement the predict_proba method.")

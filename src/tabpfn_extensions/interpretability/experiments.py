@@ -1,11 +1,10 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
+from __future__ import annotations
 
 
 class FeatureSelectionExperiment(Experiment):
-    """
-    This class is used to run experiments on generating synthetic data.
-    """
+    """This class is used to run experiments on generating synthetic data."""
 
     name = "FeatureSelectionExperiment"
 
@@ -13,21 +12,18 @@ class FeatureSelectionExperiment(Experiment):
         pass
 
     def run(self, tabpfn, **kwargs):
-        """
-
-        :param tabpfn:
+        """:param tabpfn:
         :param kwargs:
             indices: list of indices from X features to use
         :return:
         """
         from tabpfn.scripts.estimator.interpretability import feature_selection
 
-        results = []
 
         assert kwargs.get("dataset") is not None, "Dataset must be provided"
         dataset = copy.deepcopy(kwargs.get("dataset"))
 
-        sfs = feature_selection(tabpfn, dataset.x, dataset.y, n_features_to_select=1)
+        feature_selection(tabpfn, dataset.x, dataset.y, n_features_to_select=1)
 
         self.plot()
 
@@ -66,9 +62,7 @@ class FeatureRetainer(BaseEstimator, ClassifierMixin):
 
 
 class FeatureSelectionInPredictExperiment(Experiment):
-    """
-    This class is used to run experiments on generating synthetic data.
-    """
+    """This class is used to run experiments on generating synthetic data."""
 
     # TODO: Also without selection, check if can use info from train
 
@@ -78,33 +72,19 @@ class FeatureSelectionInPredictExperiment(Experiment):
         pass
 
     def run(self, tabpfn, **kwargs):
-        """
-
-        :param tabpfn:
+        """:param tabpfn:
         :param kwargs:
             indices: list of indices from X features to use
         :return:
         """
-        CV_FOLDS = 5
-        from sklearn.model_selection import cross_val_score
-
-        results = []
-
         assert kwargs.get("dataset") is not None, "Dataset must be provided"
-        dataset = copy.deepcopy(kwargs.get("dataset"))
+        copy.deepcopy(kwargs.get("dataset"))
 
-        print(cross_val_score(tabpfn, dataset.x, dataset.y, cv=CV_FOLDS))
 
         retained_indices = [0, 1, 2]
-        feature_retainer = FeatureRetainer(
-            estimator=tabpfn, retained_indices=retained_indices
+        FeatureRetainer(
+            estimator=tabpfn, retained_indices=retained_indices,
         )
 
-        print(cross_val_score(feature_retainer, dataset.x, dataset.y, cv=CV_FOLDS))
-        print(
-            cross_val_score(
-                tabpfn, dataset.x[:, retained_indices], dataset.y, cv=CV_FOLDS
-            )
-        )
 
         self.plot()

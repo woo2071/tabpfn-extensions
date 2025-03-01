@@ -3,14 +3,15 @@
 
 from __future__ import annotations
 
-import numpy as np
 import random
+from typing import Literal
+
+import numpy as np
 import torch
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.utils import check_random_state
 from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.validation import check_is_fitted
-from typing import Literal
 
 from .pfn_phe import (
     AutoPostHocEnsemblePredictor,
@@ -92,7 +93,7 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
         # Torch reproducibility bomb
         torch.manual_seed(rnd.randint(0, MAX_INT))
         random.seed(rnd.randint(0, MAX_INT))
-        np.random.seed(rnd.randint(0, MAX_INT))  # noqa: NPY002
+        np.random.seed(rnd.randint(0, MAX_INT))
 
         task_type = (
             TaskType.MULTICLASS if len(unique_labels(y)) > 2 else TaskType.BINARY
@@ -205,7 +206,7 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
         # Torch reproducibility bomb
         torch.manual_seed(rnd.randint(0, MAX_INT))
         random.seed(rnd.randint(0, MAX_INT))
-        np.random.seed(rnd.randint(0, MAX_INT))  # noqa: NPY002
+        np.random.seed(rnd.randint(0, MAX_INT))
 
         self.predictor_ = AutoPostHocEnsemblePredictor(
             preset=self.preset,
@@ -261,7 +262,6 @@ if __name__ == "__main__":
         (AutoTabPFNClassifier(device="cuda"), clf_non_deterministic_for_reasons),
         (AutoTabPFNRegressor(device="cuda"), reg_non_deterministic_for_reasons),
     ]:
-        print("Run for", est)
         lst = []
         for i, x in enumerate(check_estimator(est, generate_only=True)):
             if (i == nan_test) and ("allow_nan" in x[0]._get_tags()):
@@ -273,10 +273,7 @@ if __name__ == "__main__":
                 try:
                     x[1](x[0])
                 except Exception as e:
-                    print("Error in test:", i)
-                    print(x)
                     if i in non_deterministic:
-                        print("Non deterministic test, retrying")
                         n_tests -= 1
                         continue
                     if raise_on_error:
@@ -284,7 +281,3 @@ if __name__ == "__main__":
                     lst.append((i, x, e))
                 break
 
-    print("\n\n\n\n\n\nFailed tests")
-    print(len(lst))
-    print(lst)
-    print([x[0] for x in lst])

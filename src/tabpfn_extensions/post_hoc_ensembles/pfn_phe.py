@@ -5,23 +5,25 @@ from __future__ import annotations
 
 import itertools
 import logging
-import numpy as np
 import warnings
 from enum import Enum
-from sklearn.base import BaseEstimator
-from sklearn.utils import check_array, check_X_y
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 from typing import Literal
 
+import numpy as np
+from sklearn.base import BaseEstimator
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
+from sklearn.utils import check_array, check_X_y
+
 from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
+from tabpfn_extensions.rf_pfn.SklearnBasedRandomForestTabPFN import (
+    RandomForestTabPFNClassifier,
+    RandomForestTabPFNRegressor,
+)
+
 from .greedy_weighted_ensemble import (
     GreedyWeightedEnsembleClassifier,
     GreedyWeightedEnsembleRegressor,
-)
-from ..rf_pfn.SklearnBasedRandomForestTabPFN import (
-    RandomForestTabPFNClassifier,
-    RandomForestTabPFNRegressor,
 )
 
 logging.basicConfig(
@@ -428,7 +430,7 @@ def _get_base_models_from_random_search(
     # TODO: switch to config space to not depend on hyperopt
     from hyperopt.pyll import stochastic
 
-    from ..hpo.search_space import get_param_grid_hyperopt
+    from tabpfn_extensions.hpo.search_space import get_param_grid_hyperopt
 
     _task_type = (
         "multiclass"
@@ -500,3 +502,33 @@ def _interleave_lists(list1, list2):
         for x in itertools.chain(*itertools.zip_longest(list1, list2))
         if x is not None
     ]
+
+
+class TabPFNPostHocEnsemble:
+    """Simple wrapper around AutoTabPFNClassifier for backward compatibility."""
+
+    def __init__(self, n_models=5, device="cpu", random_state=42):
+        from .sklearn_interface import AutoTabPFNClassifier
+
+        self.classifier = AutoTabPFNClassifier(
+            max_time=30,
+            device=device,
+            random_state=random_state,
+            phe_init_args={"max_models": n_models},
+        )
+        self.n_models = n_models
+        self.device = device
+        self.random_state = random_state
+
+    def fit(self, X, y):
+        self.classifier.fit(X, y)
+        # Set attributes to match test expectations
+        self.base_models_ = self.classifier.predictor_._estimators
+        self.ensemble_ = self.classifier.predictor_._ens_model
+        return self
+
+    def predict(self, X):
+        return self.classifier.predict(X)
+
+    def predict_proba(self, X):
+        return self.classifier.predict_proba(X)

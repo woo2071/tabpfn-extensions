@@ -1,29 +1,93 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
 
+"""Hyperparameter Optimization (HPO) for TabPFN models.
+
+This module provides automatic tuning capabilities for TabPFN models using
+Bayesian optimization via Hyperopt. It finds optimal hyperparameters for both
+the TabPFN model and its inference configuration.
+
+Key features:
+- Optimized search spaces for classification and regression tasks
+- Support for multiple evaluation metrics (accuracy, ROC-AUC, F1, RMSE, MAE)
+- Proper handling of categorical features through automatic encoding
+- Compatible with both TabPFN and TabPFN-client backends
+- Implements scikit-learn's estimator interface for easy integration
+- Built-in validation strategies for reliable performance estimation
+
+Example usage:
+    ```python
+    from tabpfn_extensions.hpo import TunedTabPFNClassifier
+
+    # Create a tuned classifier with 50 optimization trials
+    tuned_clf = TunedTabPFNClassifier(
+        n_trials=50,                    # Number of hyperparameter configurations to try
+        metric='accuracy',              # Metric to optimize
+        categorical_feature_indices=[0, 2],  # Categorical features
+        random_state=42                 # For reproducibility
+    )
+
+    # Fit will automatically find the best hyperparameters
+    tuned_clf.fit(X_train, y_train)
+
+    # Use like any scikit-learn estimator
+    y_pred = tuned_clf.predict(X_test)
+    ```
+"""
+
 from __future__ import annotations
 
 import logging
-import numpy as np
-import torch
 import warnings
 from enum import Enum
-from hyperopt import fmin, tpe, STATUS_OK, Trials
+from typing import Any
+
+import numpy as np
+import torch
+from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin, check_array
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 from sklearn.utils import check_random_state
-from sklearn.utils.validation import check_is_fitted, check_X_y
-from typing import Literal, Optional
+from sklearn.utils.validation import check_X_y
 
 from tabpfn_extensions.hpo.search_space import get_param_grid_hyperopt
-from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
+
+# Try to import TabPFN models from extensions first (which handles backend compatibility)
+try:
+    from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
+except ImportError:
+    # Try direct imports from different backends as fallback
+    try:
+        from tabpfn import TabPFNClassifier, TabPFNRegressor
+    except ImportError:
+        try:
+            from tabpfn_client import TabPFNClassifier, TabPFNRegressor
+        except ImportError:
+            raise ImportError(
+                "Neither TabPFN nor TabPFN-client is installed. Install one of them with: "
+                "pip install tabpfn or pip install tabpfn-client",
+            )
 
 logger = logging.getLogger(__name__)
 
 
 class MetricType(str, Enum):
+    """Supported evaluation metrics for TabPFN hyperparameter tuning.
+
+    This enum defines the metrics that can be used to evaluate and select
+    the best hyperparameter configuration during optimization.
+
+    Values:
+        ACCURACY: Classification accuracy (proportion of correct predictions)
+        ROC_AUC: Area under the ROC curve (for binary or multiclass problems)
+        F1: F1 score (harmonic mean of precision and recall)
+        RMSE: Root mean squared error (regression)
+        MSE: Mean squared error (regression)
+        MAE: Mean absolute error (regression)
+    """
+
     ACCURACY = "accuracy"
     ROC_AUC = "roc_auc"
     F1 = "f1"
@@ -38,23 +102,31 @@ class TunedTabPFNBase(BaseEstimator):
     def __init__(
         self,
         n_trials: int = 50,
+        max_evals: int | None = None,  # Added for backward compatibility
         n_validation_size: float = 0.2,
         metric: MetricType = MetricType.ACCURACY,
         device: str = "cpu",
-        random_state: Optional[int] = None,
-        categorical_feature_indices: Optional[list[int]] = None,
+        random_state: int | None = None,
+        categorical_feature_indices: list[int] | None = None,
         verbose: bool = True,
+        search_space: dict[str, Any] | None = None,
+        objective_fn: callable | None = None,
     ):
-        self.n_trials = n_trials
+        # Handle both n_trials and max_evals parameter names (for backward compatibility)
+        self.n_trials = n_trials if max_evals is None else max_evals
+        self.max_evals = self.n_trials  # Maintain backward compatibility
+
         self.n_validation_size = n_validation_size
         self.metric = MetricType(metric)  # Validate metric type
         self.device = device
         self.random_state = random_state
         self.categorical_feature_indices = categorical_feature_indices or []
         self.verbose = verbose
+        self.search_space = search_space
+        self.objective_fn = objective_fn
 
     def _setup_data_encoders(
-        self, X: np.ndarray, categorical_feature_indices: Optional[list[int]] = None
+        self, X: np.ndarray, categorical_feature_indices: list[int] | None = None,
     ):
         """Set up categorical and label encoders."""
         if categorical_feature_indices is not None:
@@ -62,7 +134,7 @@ class TunedTabPFNBase(BaseEstimator):
 
         if not self.categorical_feature_indices:
             logger.info(
-                "No categorical features specified. Using all features as numeric."
+                "No categorical features specified. Using all features as numeric.",
             )
             self.categorical_feature_indices = []
 
@@ -104,9 +176,24 @@ class TunedTabPFNBase(BaseEstimator):
             stratify=y if task_type == "multiclass" else None,
         )
 
-        search_space = get_param_grid_hyperopt(
-            "multiclass" if task_type in ["binary", "multiclass"] else "regression"
-        )
+        # Use custom search space if provided, otherwise use default
+        if hasattr(self, "search_space") and self.search_space is not None:
+            # For test with simple search space (just a dict with lists of values)
+            custom_space = {}
+            for k, v in self.search_space.items():
+                if isinstance(v, list):
+                    custom_space[k] = hp.choice(k, v)
+                elif isinstance(v, (int, float, bool, str)) or v is None:
+                    # Handle simple values directly
+                    custom_space[k] = v
+                else:
+                    # Try to handle hyperopt objects directly
+                    custom_space[k] = v
+            search_space = custom_space
+        else:
+            search_space = get_param_grid_hyperopt(
+                "multiclass" if task_type in ["binary", "multiclass"] else "regression",
+            )
 
         def objective(params):
             inference_config = {
@@ -142,8 +229,12 @@ class TunedTabPFNBase(BaseEstimator):
 
                 model.fit(X_train, y_train)
 
+                # Use custom objective function if provided
+                if hasattr(self, "objective_fn") and self.objective_fn is not None:
+                    # Custom objective should return a negative score (for minimization)
+                    score = -self.objective_fn(model, X_val, y_val)
                 # Evaluate based on metric
-                if task_type in ["binary", "multiclass"]:
+                elif task_type in ["binary", "multiclass"]:
                     if self.metric == MetricType.ACCURACY:
                         score = model.score(X_val, y_val)
                     elif self.metric in [MetricType.ROC_AUC]:
@@ -158,11 +249,11 @@ class TunedTabPFNBase(BaseEstimator):
                         score = f1_score(y_val, y_pred, average="weighted")
                 else:
                     y_pred = model.predict(X_val)
-                    from sklearn.metrics import mean_squared_error, mean_absolute_error
+                    from sklearn.metrics import mean_absolute_error, mean_squared_error
 
                     if self.metric in [MetricType.RMSE, MetricType.MSE]:
                         score = -mean_squared_error(
-                            y_val, y_pred, squared=self.metric == MetricType.MSE
+                            y_val, y_pred, squared=self.metric == MetricType.MSE,
                         )
                     elif self.metric == MetricType.MAE:
                         score = -mean_absolute_error(y_val, y_pred)
@@ -171,7 +262,7 @@ class TunedTabPFNBase(BaseEstimator):
 
             except Exception as e:
                 if self.verbose:
-                    logger.warning(f"Trial failed with error: {str(e)}")
+                    logger.warning(f"Trial failed with error: {e!s}")
                 return {"loss": float("inf"), "status": STATUS_OK}
 
         trials = Trials()
@@ -211,11 +302,13 @@ class TunedTabPFNBase(BaseEstimator):
 class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
     """TabPFN Classifier with hyperparameter tuning and proper categorical handling."""
 
+    # TunedTabPFNBase already handles all parameters properly with max_evals for backwards compatibility
+
     def fit(
         self,
         X: np.ndarray,
         y: np.ndarray,
-        categorical_feature_indices: Optional[list[int]] = None,
+        categorical_feature_indices: list[int] | None = None,
     ) -> TunedTabPFNClassifier:
         # Validate input
         X, y = check_X_y(
@@ -241,10 +334,30 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
         task_type = "multiclass" if len(self.classes_) > 2 else "binary"
         self._optimize(X, y, task_type)
 
+        # Mark as fitted for sklearn
+        self.is_fitted_ = True
+
         return self
 
+    def __sklearn_is_fitted__(self):
+        """Check if the model has been fitted."""
+        return (
+            hasattr(self, "is_fitted_")
+            and self.is_fitted_
+            and hasattr(self, "best_model_")
+        )
+
     def predict(self, X: np.ndarray) -> np.ndarray:
-        check_is_fitted(self)
+        # Simple fit check instead of check_is_fitted to avoid sklearn Tags issue
+        if (
+            not hasattr(self, "is_fitted_")
+            or not self.is_fitted_
+            or not hasattr(self, "best_model_")
+        ):
+            raise ValueError(
+                "This TunedTabPFNClassifier instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.",
+            )
+
         X = check_array(X, force_all_finite="allow-nan", dtype=object)
         X = check_array(
             self._cat_encoder.transform(X),
@@ -254,7 +367,16 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
         return self._label_encoder.inverse_transform(self.best_model_.predict(X))
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
-        check_is_fitted(self)
+        # Simple fit check instead of check_is_fitted to avoid sklearn Tags issue
+        if (
+            not hasattr(self, "is_fitted_")
+            or not self.is_fitted_
+            or not hasattr(self, "best_model_")
+        ):
+            raise ValueError(
+                "This TunedTabPFNClassifier instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.",
+            )
+
         X = check_array(X, force_all_finite="allow-nan", dtype=object)
         X = check_array(
             self._cat_encoder.transform(X),
@@ -266,15 +388,21 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
     def _more_tags(self):
         return {"allow_nan": True}
 
+    def __sklearn_tags__(self):
+        # Create a new dictionary with our tags
+        return {"allow_nan": True, "estimator_type": "classifier", "requires_fit": True}
+
 
 class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
     """TabPFN Regressor with hyperparameter tuning and proper categorical handling."""
+
+    # TunedTabPFNBase already handles all parameters properly with max_evals for backwards compatibility
 
     def fit(
         self,
         X: np.ndarray,
         y: np.ndarray,
-        categorical_feature_indices: Optional[list[int]] = None,
+        categorical_feature_indices: list[int] | None = None,
     ) -> TunedTabPFNRegressor:
         # Validate input
         X, y = check_X_y(
@@ -294,10 +422,30 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
         # Optimize
         self._optimize(X, y, "regression")
 
+        # Mark as fitted for sklearn
+        self.is_fitted_ = True
+
         return self
 
+    def __sklearn_is_fitted__(self):
+        """Check if the model has been fitted."""
+        return (
+            hasattr(self, "is_fitted_")
+            and self.is_fitted_
+            and hasattr(self, "best_model_")
+        )
+
     def predict(self, X: np.ndarray) -> np.ndarray:
-        check_is_fitted(self)
+        # Simple fit check instead of check_is_fitted to avoid sklearn Tags issue
+        if (
+            not hasattr(self, "is_fitted_")
+            or not self.is_fitted_
+            or not hasattr(self, "best_model_")
+        ):
+            raise ValueError(
+                "This TunedTabPFNRegressor instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.",
+            )
+
         X = check_array(X, force_all_finite="allow-nan", dtype=object)
         X = check_array(
             self._cat_encoder.transform(X),
@@ -308,3 +456,7 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
 
     def _more_tags(self):
         return {"allow_nan": True}
+
+    def __sklearn_tags__(self):
+        # Create a new dictionary with our tags
+        return {"allow_nan": True, "estimator_type": "regressor", "requires_fit": True}

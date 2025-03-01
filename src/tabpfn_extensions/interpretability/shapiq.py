@@ -1,20 +1,25 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
-from typing import Optional, Union
+from __future__ import annotations
 
-import numpy as np
+from typing import TYPE_CHECKING
+
 import pandas as pd
-import tabpfn
+
+if TYPE_CHECKING:
+    import numpy as np
+
+    import tabpfn
 
 
 def get_tabpfn_explainer(
-    model: Union[tabpfn.TabPFNRegressor, tabpfn.TabPFNClassifier],
-    data: Union[pd.DataFrame, np.ndarray],
-    labels: Union[pd.DataFrame, np.ndarray],
+    model: tabpfn.TabPFNRegressor | tabpfn.TabPFNClassifier,
+    data: pd.DataFrame | np.ndarray,
+    labels: pd.DataFrame | np.ndarray,
     index: str = "k-SII",
     max_order: int = 2,
-    class_index: Optional[int] = None,
-    **kwargs
+    class_index: int | None = None,
+    **kwargs,
 ):
     """Get a TabPFNExplainer from shapiq.
 
@@ -58,7 +63,7 @@ def get_tabpfn_explainer(
         data = data.values
 
     # make labels to array if it is a pandas Series
-    if isinstance(labels, pd.Series) or isinstance(labels, pd.DataFrame):
+    if isinstance(labels, (pd.Series, pd.DataFrame)):
         labels = labels.values
 
     return shapiq.TabPFNExplainer(
@@ -73,13 +78,13 @@ def get_tabpfn_explainer(
 
 
 def get_tabpfn_imputation_explainer(
-    model: Union[tabpfn.TabPFNRegressor, tabpfn.TabPFNClassifier],
-    data: Union[pd.DataFrame, np.ndarray],
+    model: tabpfn.TabPFNRegressor | tabpfn.TabPFNClassifier,
+    data: pd.DataFrame | np.ndarray,
     index: str = "k-SII",
     max_order: int = 2,
     imputer: str = "marginal",
-    class_index: Optional[int] = None,
-    **kwargs
+    class_index: int | None = None,
+    **kwargs,
 ):
     """Gets a TabularExplainer from shapiq with using imputation.
 

@@ -2,7 +2,7 @@
 
 ## TabPFN shapiq
 
-``shapiq`` is a library for computing Shapley-based explanations like Shapley values or Shapley 
+``shapiq`` is a library for computing Shapley-based explanations like Shapley values or Shapley
 interactions for machine learning models. ``shapiq`` offers native support for interpreting TabPFN
 by utilizing a remove-and-recontextualize paradigm of model interpretation. The library extends the
 well-known SHAP library by providing a more efficient and scalable implementation of Shapley values
@@ -21,7 +21,7 @@ and Shapley interactions. The ``shapiq`` library can be cited as follows:
 
 ## TabPFN SHAP
 
-``shap`` is a library for computing Shapley values explanations for machine learning models. 
+``shap`` is a library for computing Shapley values explanations for machine learning models.
 ``shap`` constructs these explanations by imputing missing values with randomly drawn samples from
 a background distribution. The ``shap`` library can be cited as follows:
 

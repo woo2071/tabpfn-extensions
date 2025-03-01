@@ -1,13 +1,12 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
+from __future__ import annotations
 
 import numpy as np
-from typing import Dict, List, Literal, Optional, Tuple
 
 
-def infer_categorical_features(X: np.ndarray, categorical_features) -> List[int]:
-    """
-    Infer the categorical features from the input data.
+def infer_categorical_features(X: np.ndarray, categorical_features) -> list[int]:
+    """Infer the categorical features from the input data.
     We take `self.categorical_features` as the initial list of categorical features.
 
 

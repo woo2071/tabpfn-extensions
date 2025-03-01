@@ -1,22 +1,19 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
+from __future__ import annotations
 
 import os
-
-import os
-from typing import Any, Type, Tuple, Protocol, Literal, Optional, Union, Dict
-from dataclasses import dataclass
-from typing_extensions import override
-from sklearn.base import BaseEstimator
-import numpy as np
 import warnings
+from typing import TYPE_CHECKING, Any, Literal, Protocol
+
+if TYPE_CHECKING:
+    import numpy as np
+
 
 class TabPFNEstimator(Protocol):
-    def fit(self, X: Any, y: Any) -> Any:
-        ...
+    def fit(self, X: Any, y: Any) -> Any: ...
 
-    def predict(self, X: Any) -> Any:
-        ...
+    def predict(self, X: Any) -> Any: ...
 
 
 def is_tabpfn(estimator: Any) -> bool:
@@ -28,16 +25,17 @@ def is_tabpfn(estimator: Any) -> bool:
                 "TabPFN" in str(estimator.__class__.__bases__),
                 any("TabPFN" in str(b) for b in estimator.__class__.__bases__),
                 "tabpfn.base_model.TabPFNBaseModel" in str(estimator.__class__.mro()),
-            ]
+            ],
         )
     except (AttributeError, TypeError):
         return False
 
-from typing import Tuple, Type
-import os
+
+
 USE_TABPFN_LOCAL = os.getenv("USE_TABPFN_LOCAL", "true").lower() == "true"
 
-def get_tabpfn_models() -> Tuple[Type, Type, Type]:
+
+def get_tabpfn_models() -> tuple[type, type, type]:
     """Get TabPFN models with fallback between local and client versions."""
     if USE_TABPFN_LOCAL:
         try:
@@ -53,14 +51,13 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
             TabPFNRegressor as ClientTabPFNRegressor,
         )
 
-
         # Wrapper classes to add device parameter
         # we can't use *args because scikit-learn needs to know the parameters of the constructor
         class TabPFNClassifierWrapper(ClientTabPFNClassifier):
             def __init__(
                 self,
-                device: Union[str, None] = None,
-                categorical_features_indices: Optional[list[int]] = None,
+                device: str | None = None,
+                categorical_features_indices: list[int] | None = None,
                 model_path: str = "default",
                 n_estimators: int = 4,
                 softmax_temperature: float = 0.9,
@@ -68,12 +65,15 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                 average_before_softmax: bool = False,
                 ignore_pretraining_limits: bool = False,
                 inference_precision: Literal["autocast", "auto"] = "auto",
-                random_state: Optional[Union[int, np.random.RandomState, np.random.Generator]] = None,
-                inference_config: Optional[Dict] = None,
+                random_state: int
+                | np.random.RandomState
+                | np.random.Generator
+                | None = None,
+                inference_config: dict | None = None,
                 paper_version: bool = False,
             ) -> None:
                 self.device = device
-                #TODO: we should support this argument in the client version
+                # TODO: we should support this argument in the client version
                 self.categorical_features_indices = categorical_features_indices
                 if categorical_features_indices is not None:
                     warnings.warn(
@@ -102,7 +102,7 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                     paper_version=paper_version,
                 )
 
-            def get_params(self, deep: bool = True) -> Dict[str, Any]:
+            def get_params(self, deep: bool = True) -> dict[str, Any]:
                 """Return parameters for this estimator."""
                 params = super().get_params(deep=deep)
                 params.pop("device")
@@ -112,16 +112,19 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
         class TabPFNRegressorWrapper(ClientTabPFNRegressor):
             def __init__(
                 self,
-                device: Union[str, None] = None,
-                categorical_features_indices: Optional[list[int]] = None,
+                device: str | None = None,
+                categorical_features_indices: list[int] | None = None,
                 model_path: str = "default",
                 n_estimators: int = 8,
                 softmax_temperature: float = 0.9,
                 average_before_softmax: bool = False,
                 ignore_pretraining_limits: bool = False,
                 inference_precision: Literal["autocast", "auto"] = "auto",
-                random_state: Optional[Union[int, np.random.RandomState, np.random.Generator]] = None,
-                inference_config: Optional[Dict] = None,
+                random_state: int
+                | np.random.RandomState
+                | np.random.Generator
+                | None = None,
+                inference_config: dict | None = None,
                 paper_version: bool = False,
             ) -> None:
                 self.device = device
@@ -153,10 +156,8 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
                     paper_version=paper_version,
                 )
 
-            def get_params(self, deep: bool = True) -> Dict[str, Any]:
-                """
-                Return parameters for this estimator.
-                """
+            def get_params(self, deep: bool = True) -> dict[str, Any]:
+                """Return parameters for this estimator."""
                 params = super().get_params(deep=deep)
                 params.pop("device")
                 params.pop("categorical_features_indices")
@@ -169,7 +170,7 @@ def get_tabpfn_models() -> Tuple[Type, Type, Type]:
             "Neither local TabPFN nor TabPFN client could be imported. Install with:\n"
             "pip install tabpfn\n"
             "or\n"
-            "pip install tabpfn-client"
+            "pip install tabpfn-client",
         )
 
 

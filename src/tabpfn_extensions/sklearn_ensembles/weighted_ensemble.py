@@ -1,5 +1,6 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
+from __future__ import annotations
 
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
@@ -17,7 +18,7 @@ class WeightedAverageEnsemble(BaseEstimator, ClassifierMixin):
 
     def fit(self, X, y):
         scores = []
-        for name, clf in self.estimators:
+        for _name, clf in self.estimators:
             score = np.mean(cross_val_score(clf, X, y, cv=self.cv))
             scores.append(score)
 
@@ -37,22 +38,15 @@ class WeightedAverageEnsemble(BaseEstimator, ClassifierMixin):
             pruned_classifiers = [
                 clf
                 for _, clf in sorted(
-                    zip(pruned_weights, pruned_classifiers), key=lambda pair: pair[0]
+                    zip(pruned_weights, pruned_classifiers), key=lambda pair: pair[0],
                 )
             ]
             pruned_weights = sorted(pruned_weights)
             pruned_classifiers = pruned_classifiers[-self.n_max :]
             pruned_weights = pruned_weights[-self.n_max :]
-            if False:
-                print(
-                    {
-                        clf[0]: weight
-                        for clf, weight in zip(pruned_classifiers, pruned_weights)
-                    }
-                )
 
         self.ensemble = VotingClassifier(
-            estimators=pruned_classifiers, voting="soft", weights=pruned_weights
+            estimators=pruned_classifiers, voting="soft", weights=pruned_weights,
         )
         self.ensemble.fit(X, y)
         return self

@@ -1,10 +1,8 @@
-import matplotlib.pyplot as plt
-import numpy as np
-from sklearn.datasets import load_breast_cancer, load_iris
+
+from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
-from tabpfn_extensions import interpretability
-from tabpfn_extensions import TabPFNClassifier
-from typing import List, Optional, Tuple
+
+from tabpfn_extensions import TabPFNClassifier, interpretability
 
 # Load example dataset
 data = load_breast_cancer()
@@ -13,9 +11,7 @@ feature_names = data.feature_names
 n_samples = 50
 
 # Split data
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.5
-)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5)
 
 # Initialize and train model
 clf = TabPFNClassifier()

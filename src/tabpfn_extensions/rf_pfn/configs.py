@@ -16,7 +16,7 @@ class TabPFNRFConfig:
     n_estimators: int = 16
     max_features: Literal["sqrt", "auto"] = "sqrt"
     criterion: Literal[
-        "gini", "entropy", "log_loss", "squared_error", "friedman_mse", "poisson"
+        "gini", "entropy", "log_loss", "squared_error", "friedman_mse", "poisson",
     ] = "gini"
     preprocess_X: bool = False
     preprocess_X_once: bool = False

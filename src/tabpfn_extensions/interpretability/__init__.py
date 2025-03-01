@@ -1,5 +1,3 @@
-from . import feature_selection
-from . import shap
-from . import shapiq
+from . import feature_selection, shap, shapiq
 
-__all__ = ["shapiq", "shap", "feature_selection"]
+__all__ = ["feature_selection", "shap", "shapiq"]
