@@ -105,7 +105,7 @@ class TunedTabPFNBase(BaseEstimator):
         max_evals: int | None = None,  # Added for backward compatibility
         n_validation_size: float = 0.2,
         metric: MetricType = MetricType.ACCURACY,
-        device: str = "cpu",
+        device: str = "auto",
         random_state: int | None = None,
         categorical_feature_indices: list[int] | None = None,
         verbose: bool = True,
@@ -207,7 +207,9 @@ class TunedTabPFNBase(BaseEstimator):
                 k: v for k, v in params.items() if not k.startswith("inference_config/")
             }
             model_params["inference_config"] = inference_config
-            model_params["device"] = self.device
+            # Use device utility for automatic selection
+            from tabpfn_extensions.utils import get_device
+            model_params["device"] = get_device(self.device)
             model_params["random_state"] = rng.randint(0, 2**31 - 1)
 
             # Handle special parameters

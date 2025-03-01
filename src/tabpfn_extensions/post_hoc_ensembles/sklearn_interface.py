@@ -62,7 +62,7 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
         max_time: int | None = 30,
         preset: Literal["default", "custom_hps", "avoid_overfitting"] = "default",
         ges_scoring_string: str = "roc",
-        device: Literal["cpu", "cuda"] = "cpu",
+        device: Literal["cpu", "cuda", "auto"] = "auto",
         random_state: int | None | np.random.RandomState = None,
         categorical_feature_indices: list[int] | None = None,
         ignore_pretraining_limits: bool = False,
@@ -98,12 +98,15 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
         task_type = (
             TaskType.MULTICLASS if len(unique_labels(y)) > 2 else TaskType.BINARY
         )
+        # Use the device utility for automatic selection
+        from tabpfn_extensions.utils import get_device
+
         self.predictor_ = AutoPostHocEnsemblePredictor(
             preset=self.preset,
             task_type=task_type,
             max_time=self.max_time,
             ges_scoring_string=self.ges_scoring_string,
-            device=self.device,
+            device=get_device(self.device),
             bm_random_state=rnd.randint(0, MAX_INT),
             ges_random_state=rnd.randint(0, MAX_INT),
             ignore_pretraining_limits=self.ignore_pretraining_limits,
@@ -175,7 +178,7 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
         max_time: int | None = 30,
         preset: Literal["default", "custom_hps", "avoid_overfitting"] = "default",
         ges_scoring_string: str = "mse",
-        device: Literal["cpu", "cuda"] = "cpu",
+        device: Literal["cpu", "cuda", "auto"] = "auto",
         random_state: int | None | np.random.RandomState = None,
         categorical_feature_indices: list[int] | None = None,
         ignore_pretraining_limits: bool = False,
@@ -208,12 +211,15 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
         random.seed(rnd.randint(0, MAX_INT))
         np.random.seed(rnd.randint(0, MAX_INT))
 
+        # Use the device utility for automatic selection
+        from tabpfn_extensions.utils import get_device
+
         self.predictor_ = AutoPostHocEnsemblePredictor(
             preset=self.preset,
             task_type=TaskType.REGRESSION,
             max_time=self.max_time,
             ges_scoring_string=self.ges_scoring_string,
-            device=self.device,
+            device=get_device(self.device),
             bm_random_state=rnd.randint(0, MAX_INT),
             ges_random_state=rnd.randint(0, MAX_INT),
             ignore_pretraining_limits=self.ignore_pretraining_limits,

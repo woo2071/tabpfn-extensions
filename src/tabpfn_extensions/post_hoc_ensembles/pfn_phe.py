@@ -48,6 +48,7 @@ class PresetType(str, Enum):
 class DeviceType(str, Enum):
     CPU = "cpu"
     CUDA = "cuda"
+    AUTO = "auto"
 
 
 class TabPFNBaseModelSource(str, Enum):
@@ -427,6 +428,9 @@ def _get_base_models_from_random_search(
     start_with_default_pfn: bool = True,
     ignore_pretraining_limits: bool = False,
 ) -> list[tuple[str, object]]:
+    # Convert device if needed
+    from tabpfn_extensions.utils import get_device
+    resolved_device = get_device(device)
     # TODO: switch to config space to not depend on hyperopt
     from hyperopt.pyll import stochastic
 
@@ -464,7 +468,7 @@ def _get_base_models_from_random_search(
             if k.startswith("inference_config/"):
                 del param[k]
 
-        param["device"] = device
+        param["device"] = resolved_device
         param["random_state"] = model_seed
         param["categorical_features_indices"] = categorical_indices
         param["ignore_pretraining_limits"] = ignore_pretraining_limits
@@ -507,7 +511,7 @@ def _interleave_lists(list1, list2):
 class TabPFNPostHocEnsemble:
     """Simple wrapper around AutoTabPFNClassifier for backward compatibility."""
 
-    def __init__(self, n_models=5, device="cpu", random_state=42):
+    def __init__(self, n_models=5, device="auto", random_state=42):
         from .sklearn_interface import AutoTabPFNClassifier
 
         self.classifier = AutoTabPFNClassifier(
