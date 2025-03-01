@@ -22,7 +22,6 @@ def enumerate_preprocess_transforms():
         ["safepower"],
         ["quantile_uni_coarse"],
         ["quantile_norm_coarse"],
-        # ["norm_and_kdi"],
         ["quantile_uni"],
         ["none"],
         ["robust"],
@@ -30,17 +29,20 @@ def enumerate_preprocess_transforms():
         ["none", "safepower"],
     ]
 
-    # try:
-    #     from kditransform import KDITransformer
-    #
-    #     names_list += [
-    #         ["kdi_uni"],
-    #         ["kdi_alpha_0.3"],
-    #         ["kdi_alpha_3.0"],
-    #         ["kdi", "quantile_uni"],
-    #     ]
-    # except:
-    #     pass
+    # Add KDI transforms if available
+    try:
+        from kditransform import KDITransformer
+
+        # Only add KDI transforms if the module is properly imported
+        names_list += [
+            ["kdi_uni"],
+            ["kdi_alpha_0.3"],
+            ["kdi_alpha_3.0"],
+            ["kdi", "quantile_uni"],
+        ]
+    except ImportError:
+        # KDI transform not available, skipping related transforms
+        pass
 
     for names in names_list:
         for categorical_name in [
@@ -164,7 +166,8 @@ def get_param_grid_hyperopt(task_type: str) -> dict:
         # Custom HPs
         "model_type": hp.choice(
             "model_type", ["single"],
-        ),  # TODO: reenable "dt_pfn" in hpo search space
+            # Decision tree TabPFN currently disabled in HPO
+        ),
         "n_ensemble_repeats": hp.choice("n_ensemble_repeats", [4]),
         # -- Model HPs
         "average_before_softmax": hp.choice("average_before_softmax", [True, False]),
@@ -223,11 +226,6 @@ def get_param_grid_hyperopt(task_type: str) -> dict:
                 (None,),
                 (None, "safepower"),
                 ("safepower",),
-                # ("kdi_alpha_0.3",),
-                # ("kdi_alpha_1.0",),
-                # ("kdi_alpha_1.5",),
-                # ("kdi_alpha_0.6",),
-                # ("kdi_alpha_3.0",),
                 ("quantile_uni",),
             ],
         )

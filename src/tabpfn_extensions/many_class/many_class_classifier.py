@@ -207,8 +207,7 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
                 min_distance = np.min(distances, axis=0)
 
                 n_min_distance = np.sum(distances == min_distance)
-
-                # print(min_distance, n_min_distance)
+                # print(min_distance, n_min_distance)  # noqa: ERA001
 
                 if min_distance > max_distance or (
                     min_distance == max_distance and n_min_distance < n_min_distance_min
@@ -274,8 +273,7 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
             dtype=int,
         )
         self.X_train = X
-
-        # print('CLF DIST IN', list(zip(np.unique(y), (np.unique(y, return_counts=True)[1] / y.shape[0]).tolist())))
+        # print('CLF DIST IN', list(zip(np.unique(y), (np.unique(y, return_counts=True)[1] / y.shape[0]).tolist())))  # noqa: ERA001
 
         return self
 
@@ -320,7 +318,7 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
                     probabilities[:, j] += Y[
                         i, :, j_remapped,
                     ]  # / (1 - Y[i, :, rest_class])
-                    # print(j, Y[i, :, j_remapped])
+                    # print(j, Y[i, :, j_remapped])  # noqa: ERA001
 
         assert not ((self.code_book_ != rest_class).sum(0) == 0).any(), (
             f"Some classes are not mapped to any codeword. {self.code_book_} {self.classes_} {((self.code_book_ != rest_class).sum(0) == 0)}"

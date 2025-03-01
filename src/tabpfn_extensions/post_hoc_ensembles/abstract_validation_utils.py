@@ -124,7 +124,7 @@ class AbstractValidationUtils(ABC, BaseEstimator):
     ) -> None:
         fold_X_train, fold_X_test = X[train_index], X[test_index]
         fold_y_train, fold_y_test = y[train_index], y[test_index]
-        # base_model = copy.deepcopy(base_model) # FIXME: think about adding this for safety but will likely slow down (due to having to load model again)
+        # Note: Using the base_model directly without deepcopy for performance reasons
 
         # Default base models case
         base_model.fit(fold_X_train, fold_y_train)

@@ -191,9 +191,6 @@ ignore = [
     "PLR0915", # Too many statements
     "N803", # Argument name `X` should be lowercase
     "N802", # Function name should be lowercase
-    "ERA001", # Found commented-out code - useful for TODOs and experimentation
-    "D102",  # Missing docstring in public method - we focus on class level docs
-    "BLE001", # Do not catch blind exception - sometimes useful in extension code
     # These tend to be lighweight and confuse pyright
 ]
 

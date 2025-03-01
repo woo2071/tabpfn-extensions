@@ -120,7 +120,7 @@ def check_compatibility():
     # Return non-zero exit code if issues were found
     if issues["device_hardcoding"] or issues["missing_import_compatibility"]:
         print(
-            "\n⚠️  Backend compatibility issues found. Please fix them before committing."
+            "\n⚠️  Backend compatibility issues found. Please fix them before committing.",
         )
         return 1
     else:

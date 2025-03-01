@@ -267,7 +267,13 @@ class TunedTabPFNBase(BaseEstimator):
 
                 return {"loss": -score, "status": STATUS_OK, "model": model}
 
-            except (ValueError, TypeError, RuntimeError, ImportError, torch.cuda.CudaError) as e:
+            except (
+                ValueError,
+                TypeError,
+                RuntimeError,
+                ImportError,
+                torch.cuda.CudaError,
+            ) as e:
                 if self.verbose:
                     logger.warning(f"Trial failed with error: {e!s}")
                 return {"loss": float("inf"), "status": STATUS_OK}

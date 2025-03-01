@@ -185,11 +185,6 @@ class TabPFNStackingClassifier(StackingClassifier):
 
     # TODO: Adapt scoring function, needs to overwrite the scoring function of the
     #  _BaseStacking or in BaseTabPFNClassifier
-    # def score(self, X, y=None):
-    #    if self.optimize_metric == "roc":
-    #        from sklearn.metrics import roc_auc_score
-
-    #        return roc_auc_score(X, y)
 
 
 class TabPFNBaggingClassifier(BaggingClassifier):

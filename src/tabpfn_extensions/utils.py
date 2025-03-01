@@ -103,7 +103,7 @@ def get_tabpfn_models() -> tuple[type, type, type]:
                 paper_version: bool = False,
             ) -> None:
                 self.device = device
-                # TODO: we should support this argument in the client version
+                # Categorical features need to be passed but are not used by client
                 self.categorical_features_indices = categorical_features_indices
                 if categorical_features_indices is not None:
                     warnings.warn(

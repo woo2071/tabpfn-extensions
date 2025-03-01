@@ -362,7 +362,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         column_idx: int,
     ) -> torch.tensor:
         # Initialize model if needed
-        if hasattr(self, 'init_model_and_get_model_config'):
+        if hasattr(self, "init_model_and_get_model_config"):
             self.init_model_and_get_model_config()
 
         if len(conditional_idx) > 0:
@@ -563,7 +563,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                 Lower scores indicate more likely outliers.
         """
         # Initialize model if needed
-        if hasattr(self, 'init_model_and_get_model_config'):
+        if hasattr(self, "init_model_and_get_model_config"):
             self.init_model_and_get_model_config()
 
         n_features = X.shape[1]

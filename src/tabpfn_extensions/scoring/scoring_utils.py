@@ -60,7 +60,7 @@ def safe_roc_auc_score(y_true, y_score, **kwargs):
                 keepdims=True,
             )
             return roc_auc_score(y_true, y_score_adjusted, **kwargs)
-        except Exception as e:
+        except (ValueError, IndexError, TypeError) as e:
             warnings.warn(
                 "Unhandleable error in roc_auc_score: " + str(e), stacklevel=2,
             )
