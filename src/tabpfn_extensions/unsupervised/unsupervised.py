@@ -197,6 +197,9 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             RuntimeError: If model initialization fails
         """
         for estimator in self.estimators:
+            if estimator is None:
+                continue
+                
             try:
                 # First try the direct method (original TabPFN implementation)
                 if hasattr(estimator, "init_model_and_get_model_config"):
@@ -215,6 +218,80 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                     # The model will be initialized on first prediction call
             except Exception as e:
                 raise RuntimeError(f"Failed to initialize model: {e}") from e
+                
+    # Add the method to the TabPFNClassifier and TabPFNRegressor if they don't have it
+    def _ensure_init_model_method(self):
+        """Ensure all estimators have the init_model_and_get_model_config method."""
+        for idx, estimator in enumerate(self.estimators):
+            if estimator is None:
+                continue
+                
+            # Skip if the estimator already has the method
+            if hasattr(estimator, "init_model_and_get_model_config"):
+                continue
+                
+            # Add a compatibility wrapper method to the estimator
+            def init_wrapper(est=estimator):
+                """Compatibility wrapper for init_model_and_get_model_config."""
+                # For TabPFN models, ensure they're initialized by calling predict once
+                if hasattr(est, "model") and est.model is None:
+                    _ = est.predict(torch.zeros((1, 2)))
+                # For client implementations, there's nothing to do
+                return None
+                
+            # Add the method to the estimator
+            setattr(estimator, "init_model_and_get_model_config", init_wrapper)
+            
+            # Update the estimator in the list
+            self.estimators[idx] = estimator
+                
+    def fit(self, X: np.ndarray, y: np.ndarray | None = None) -> None:
+        """Fit the model to the input data.
+
+        Args:
+            X : array-like of shape (n_samples, n_features)
+                Input data to fit the model.
+
+            y : array-like of shape (n_samples,), optional
+                Target values.
+
+        Returns:
+            self : TabPFNUnsupervisedModel
+                Fitted model.
+        """
+        self.X_ = copy.deepcopy(X)
+
+        # Ensure y is not None and doesn't contain NaN values
+        if y is not None:
+            # Create a dummy y if none is provided
+            y_clean = copy.deepcopy(y)
+            # Replace any NaN values with zeros
+            if torch.is_tensor(y_clean):
+                if torch.isnan(y_clean).any():
+                    y_clean = torch.nan_to_num(y_clean, nan=0.0)
+            elif hasattr(y_clean, "numpy"):
+                arr = y_clean.numpy()
+                if np.isnan(arr).any():
+                    arr = np.nan_to_num(arr, nan=0.0)
+                    y_clean = torch.tensor(arr)
+        else:
+            # Create a dummy target with zeros if none is provided
+            y_clean = torch.zeros(X.shape[0])
+
+        self.y = y_clean
+
+        # Get a numpy array from X for feature inference
+        X_np = X
+        if torch.is_tensor(X_np):
+            X_np = X_np.cpu().numpy()
+
+        self.categorical_features = utils_todo.infer_categorical_features(
+            X_np,
+            self.categorical_features,
+        )
+        
+        # Ensure all estimators have the init_model_and_get_model_config method
+        self._ensure_init_model_method()
 
     def impute_(
         self,
@@ -383,8 +460,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         column_idx: int,
     ) -> torch.tensor:
         # Initialize model if needed
-        if hasattr(self, "init_model_and_get_model_config"):
-            self.init_model_and_get_model_config()
+        self.init_model_and_get_model_config()
 
         if len(conditional_idx) > 0:
             # If not the first feature, use all previous features
@@ -610,8 +686,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                 Lower scores indicate more likely outliers.
         """
         # Initialize model if needed
-        if hasattr(self, "init_model_and_get_model_config"):
-            self.init_model_and_get_model_config()
+        self.init_model_and_get_model_config()
 
         n_features = X.shape[1]
         all_features = list(range(n_features))
