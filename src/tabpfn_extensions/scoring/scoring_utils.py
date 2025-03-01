@@ -60,12 +60,24 @@ def safe_roc_auc_score(y_true, y_score, **kwargs):
                 keepdims=True,
             )
             return roc_auc_score(y_true, y_score_adjusted, **kwargs)
-        except (ValueError, IndexError, TypeError) as e:
+        except ValueError as ve2:
             warnings.warn(
-                "Unhandleable error in roc_auc_score: " + str(e),
+                f"Unable to compute ROC AUC score with adjusted classes: {ve2}",
                 stacklevel=2,
             )
-            raise e from ve
+            raise ve2 from ve
+        except IndexError as ie:
+            warnings.warn(
+                f"Index error when adjusting classes for ROC AUC: {ie}",
+                stacklevel=2,
+            )
+            raise ie from ve
+        except TypeError as te:
+            warnings.warn(
+                f"Type error when computing ROC AUC: {te}",
+                stacklevel=2,
+            )
+            raise te from ve
 
 
 def score_classification(

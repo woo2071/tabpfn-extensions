@@ -3,7 +3,7 @@ from .sklearn_based_decision_tree_tabpfn import (
     DecisionTreeTabPFNClassifier,
     DecisionTreeTabPFNRegressor,
 )
-from .SklearnBasedRandomForestTabPFN import (
+from .sklearn_based_random_forest_tabpfn import (
     RandomForestTabPFNClassifier,
     RandomForestTabPFNRegressor,
 )

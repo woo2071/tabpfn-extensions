@@ -42,7 +42,7 @@ from __future__ import annotations
 
 import copy
 import random
-from typing import TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple, Type, Union, cast
 
 import numpy as np
 import torch
@@ -50,8 +50,6 @@ from sklearn.base import BaseEstimator
 from tqdm import tqdm
 
 # Import TabPFN models from extensions (which handles backend compatibility)
-import contextlib
-
 from tabpfn_extensions import utils_todo
 from tabpfn_extensions.utils import TabPFNClassifier, TabPFNRegressor  # type: ignore
 
@@ -134,8 +132,15 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             if hasattr(estimator, "set_categorical_features"):
                 try:
                     estimator.set_categorical_features(categorical_features)
-                except Exception:
-                    pass  # Silently ignore if the estimator doesn't support categorical features
+                except AttributeError:
+                    # Estimator has the attribute but it's not callable
+                    pass
+                except TypeError as e:
+                    # Wrong argument type 
+                    pass
+                except ValueError as e:
+                    # Invalid values in categorical_features
+                    pass
 
     def fit(self, X: np.ndarray, y: np.ndarray | None = None) -> None:
         """Fit the model to the input data.
@@ -182,18 +187,33 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             self.categorical_features,
         )
 
-    def init_model_and_get_model_config(self):
+    def init_model_and_get_model_config(self) -> None:
+        """Initialize TabPFN models for use in unsupervised learning.
+        
+        Raises:
+            AttributeError: If estimators don't support the init_model_and_get_model_config method
+            RuntimeError: If model initialization fails
+        """
         for estimator in self.estimators:
-            estimator.init_model_and_get_model_config()
+            if not hasattr(estimator, "init_model_and_get_model_config"):
+                raise AttributeError(
+                    f"Estimator of type {type(estimator).__name__} does not support "
+                    "init_model_and_get_model_config method. Make sure you're using "
+                    "the correct TabPFN implementation."
+                )
+            try:
+                estimator.init_model_and_get_model_config()
+            except Exception as e:
+                raise RuntimeError(f"Failed to initialize model: {e}") from e
 
     def impute_(
         self,
-        X: torch.tensor,
+        X: torch.Tensor,
         t: float = 0.000000001,
         n_permutations: int = 10,
         condition_on_all_features: bool = True,
         fast_mode: bool = False,
-    ) -> torch.tensor:
+    ) -> torch.Tensor:
         """Impute missing values (np.nan) in X by sampling all cells independently from the trained models.
 
         :param X: Input data of the shape (num_examples, num_features) with missing values encoded as np.nan
@@ -269,11 +289,11 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
     def impute_single_permutation_(
         self,
-        X: torch.tensor,
-        feature_permutation: list[int] | tuple[int],
+        X: torch.Tensor,
+        feature_permutation: Union[List[int], Tuple[int, ...]],
         t: float = 0.000000001,
         condition_on_all_features: bool = True,
-    ) -> torch.tensor:
+    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """Impute missing values (np.nan) in X by sampling all cells independently from the trained models.
 
         :param X: Input data of the shape (num_examples, num_features) with missing values encoded as np.nan
@@ -507,7 +527,19 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
         return log_p, torch.exp(log_p)
 
-    def outliers_pdf(self, X: torch.tensor, n_permutations: int = 10) -> torch.tensor:
+    def outliers_pdf(self, X: torch.Tensor, n_permutations: int = 10) -> torch.Tensor:
+        """Calculate outlier scores based on probability density functions for continuous features.
+        
+        This method filters out categorical features and only considers numerical features
+        for outlier detection using probability density functions.
+        
+        Args:
+            X: Input data tensor
+            n_permutations: Number of permutations to use for the outlier calculation
+            
+        Returns:
+            Tensor of outlier scores (lower values indicate more likely outliers)
+        """
         X_store = copy.deepcopy(self.X_)
         mask = torch.ones_like(X_store).bool()
         mask[self.categorical_features] = False
@@ -520,7 +552,19 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         self.X_ = X_store
         return pdf
 
-    def outliers_pmf(self, X: torch.tensor, n_permutations: int = 10) -> torch.tensor:
+    def outliers_pmf(self, X: torch.Tensor, n_permutations: int = 10) -> torch.Tensor:
+        """Calculate outlier scores based on probability mass functions for categorical features.
+        
+        This method filters out numerical features and only considers categorical features
+        for outlier detection using probability mass functions.
+        
+        Args:
+            X: Input data tensor
+            n_permutations: Number of permutations to use for the outlier calculation
+            
+        Returns:
+            Tensor of outlier scores (lower values indicate more likely outliers)
+        """
         X_store = copy.deepcopy(self.X_)
         mask = torch.zeros_like(X_store).bool()
         mask[self.categorical_features] = True
@@ -533,7 +577,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         self.X_ = X_store
         return pmf
 
-    def outliers(self, X: torch.tensor, n_permutations: int = 10) -> torch.tensor:
+    def outliers(self, X: torch.Tensor, n_permutations: int = 10) -> torch.Tensor:
         """Calculate outlier scores for each sample in the input data.
 
         This is the preferred implementation for outlier detection, which calculates
@@ -542,14 +586,16 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         indicate samples that are more likely to be outliers.
 
         Args:
-            X: torch.tensor
-                Samples to calculate outlier scores for, shape (n_samples, n_features)
-            n_permutations: int, default=10
-                Number of feature permutations to use for calculating outlier scores.
+            X: Samples to calculate outlier scores for, shape (n_samples, n_features)
+            n_permutations: Number of permutations to use for more robust probability estimates. 
                 Higher values may produce more stable results but increase computation time.
 
         Returns:
-            torch.tensor
+            Tensor of outlier scores (lower values indicate more likely outliers)
+            
+        Raises:
+            RuntimeError: If the model initialization fails
+            ValueError: If the input data has incompatible dimensions
                 Outlier scores for each sample, shape (n_samples,)
                 Lower scores indicate more likely outliers.
         """

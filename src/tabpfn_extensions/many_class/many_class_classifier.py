@@ -131,12 +131,25 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         self.n_estimators = n_estimators
         self.n_estimators_redundancy = n_estimators_redundancy
 
-    def get_alphabet_size(self):
+    def get_alphabet_size(self) -> int:
+        """Get the alphabet size to use for the codebook.
+        
+        Returns:
+            int: The alphabet size to use
+        """
         if self.alphabet_size is None:
             return self.estimator.max_num_classes_
         return self.alphabet_size
 
-    def get_n_estimators(self, n_classes):
+    def get_n_estimators(self, n_classes: int) -> int:
+        """Calculate the number of estimators to use based on the number of classes.
+        
+        Args:
+            n_classes: The number of classes in the classification problem
+            
+        Returns:
+            int: The number of estimators to use
+        """
         if self.n_estimators is None:
             return (
                 math.ceil(1 + math.log(n_classes, self.get_alphabet_size()))
@@ -372,7 +385,12 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
             self.estimator.set_categorical_features(categorical_features)
 
 
-def _fit_and_predict_proba(estimator, X_train, Y_train, X):
+def _fit_and_predict_proba(
+    estimator: BaseEstimator, 
+    X_train: np.ndarray, 
+    Y_train: np.ndarray, 
+    X: np.ndarray
+) -> np.ndarray:
     """Fit a cloned base estimator and predict probabilities for a single sub-problem.
 
     This helper function handles training and prediction for a single base
