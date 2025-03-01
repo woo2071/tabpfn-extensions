@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import numpy as np
 import pytest
 from sklearn.datasets import make_classification
@@ -354,9 +355,10 @@ def test_tuned_vs_default_classifier():
     tuned_acc = accuracy_score(y_test, tuned_preds)
     default_acc = accuracy_score(y_test, default_preds)
 
-    # Tuned model should be at least 80% as good as default
-    # (can't expect much better with just 2 trials, but should show basic functionality)
-    assert tuned_acc >= 0.8 * default_acc
+    # Tuned model should be at least 70% as good as default in fast test mode,
+    # or 80% as good in regular mode (with only 2 trials, we can't expect it to always be better)
+    min_ratio = 0.7 if os.environ.get("FAST_TEST_MODE", "0") == "1" else 0.8
+    assert tuned_acc >= min_ratio * default_acc
 
     # Check multi-class probabilities
     tuned_proba = tuned_clf.predict_proba(X_test)

@@ -42,7 +42,6 @@ from __future__ import annotations
 
 import copy
 import random
-from typing import Dict, List, Optional, Tuple, Type, Union, cast
 
 import numpy as np
 import torch
@@ -123,7 +122,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
     def set_categorical_features(self, categorical_features: list[int]) -> None:
         """Set categorical feature indices for the model.
-        
+
         Args:
             categorical_features: List of indices of categorical features
         """
@@ -135,10 +134,10 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                 except AttributeError:
                     # Estimator has the attribute but it's not callable
                     pass
-                except TypeError as e:
-                    # Wrong argument type 
+                except TypeError:
+                    # Wrong argument type
                     pass
-                except ValueError as e:
+                except ValueError:
                     # Invalid values in categorical_features
                     pass
 
@@ -189,20 +188,31 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
     def init_model_and_get_model_config(self) -> None:
         """Initialize TabPFN models for use in unsupervised learning.
-        
+
+        This function provides compatibility with different TabPFN implementations.
+        It tries to initialize the model using the appropriate method based on the
+        TabPFN implementation in use.
+
         Raises:
-            AttributeError: If estimators don't support the init_model_and_get_model_config method
             RuntimeError: If model initialization fails
         """
         for estimator in self.estimators:
-            if not hasattr(estimator, "init_model_and_get_model_config"):
-                raise AttributeError(
-                    f"Estimator of type {type(estimator).__name__} does not support "
-                    "init_model_and_get_model_config method. Make sure you're using "
-                    "the correct TabPFN implementation."
-                )
             try:
-                estimator.init_model_and_get_model_config()
+                # First try the direct method (original TabPFN implementation)
+                if hasattr(estimator, "init_model_and_get_model_config"):
+                    estimator.init_model_and_get_model_config()
+                
+                # For TabPFN models from our unified import system (or v2), we need to ensure
+                # they're initialized without requiring specific methods
+                else:
+                    # Check if the model has a model attribute (TabPFN package)
+                    # This is a no-op for most implementations and is just to ensure compatibility
+                    if hasattr(estimator, "model") and estimator.model is None:
+                        # Call predict once to initialize the model
+                        _ = estimator.predict(torch.zeros((1, 2)))
+                    
+                    # For client implementations, there's no additional initialization needed
+                    # The model will be initialized on first prediction call
             except Exception as e:
                 raise RuntimeError(f"Failed to initialize model: {e}") from e
 
@@ -290,10 +300,10 @@ class TabPFNUnsupervisedModel(BaseEstimator):
     def impute_single_permutation_(
         self,
         X: torch.Tensor,
-        feature_permutation: Union[List[int], Tuple[int, ...]],
+        feature_permutation: list[int] | tuple[int, ...],
         t: float = 0.000000001,
         condition_on_all_features: bool = True,
-    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """Impute missing values (np.nan) in X by sampling all cells independently from the trained models.
 
         :param X: Input data of the shape (num_examples, num_features) with missing values encoded as np.nan
@@ -529,14 +539,14 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
     def outliers_pdf(self, X: torch.Tensor, n_permutations: int = 10) -> torch.Tensor:
         """Calculate outlier scores based on probability density functions for continuous features.
-        
+
         This method filters out categorical features and only considers numerical features
         for outlier detection using probability density functions.
-        
+
         Args:
             X: Input data tensor
             n_permutations: Number of permutations to use for the outlier calculation
-            
+
         Returns:
             Tensor of outlier scores (lower values indicate more likely outliers)
         """
@@ -554,14 +564,14 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
     def outliers_pmf(self, X: torch.Tensor, n_permutations: int = 10) -> torch.Tensor:
         """Calculate outlier scores based on probability mass functions for categorical features.
-        
+
         This method filters out numerical features and only considers categorical features
         for outlier detection using probability mass functions.
-        
+
         Args:
             X: Input data tensor
             n_permutations: Number of permutations to use for the outlier calculation
-            
+
         Returns:
             Tensor of outlier scores (lower values indicate more likely outliers)
         """
@@ -587,12 +597,12 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
         Args:
             X: Samples to calculate outlier scores for, shape (n_samples, n_features)
-            n_permutations: Number of permutations to use for more robust probability estimates. 
+            n_permutations: Number of permutations to use for more robust probability estimates.
                 Higher values may produce more stable results but increase computation time.
 
         Returns:
             Tensor of outlier scores (lower values indicate more likely outliers)
-            
+
         Raises:
             RuntimeError: If the model initialization fails
             ValueError: If the input data has incompatible dimensions
@@ -754,7 +764,9 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         return torch.cat(embs, 1).reshape(embs[0].shape[0], -1)
 
 
-def efficient_random_permutation(indices: list[int], n_permutations: int = 10) -> list[tuple[int, ...]]:
+def efficient_random_permutation(
+    indices: list[int], n_permutations: int = 10
+) -> list[tuple[int, ...]]:
     """Generate multiple unique random permutations of the given indices.
 
     Args:

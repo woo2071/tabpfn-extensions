@@ -246,7 +246,7 @@ class TunedTabPFNBase(BaseEstimator):
                         score = f1_score(y_val, y_pred, average="weighted")
                 else:
                     y_pred = model.predict(X_val)
-                    from sklearn.metrics import mean_absolute_error, mean_squared_error
+                    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
                     if self.metric in [MetricType.RMSE, MetricType.MSE]:
                         score = -mean_squared_error(
@@ -256,6 +256,9 @@ class TunedTabPFNBase(BaseEstimator):
                         )
                     elif self.metric == MetricType.MAE:
                         score = -mean_absolute_error(y_val, y_pred)
+                    else:
+                        # Default to R2 for any other metric or if not specified
+                        score = r2_score(y_val, y_pred)
 
                 return {"loss": -score, "status": STATUS_OK, "model": model}
 
