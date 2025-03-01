@@ -18,22 +18,33 @@ pip install -e ".[dev,all]"
 ```
 
 ### Backend Options
-TabPFN Extensions supports multiple backends:
+TabPFN Extensions supports multiple backends (in priority order):
 
-1. **TabPFN Package** - Full PyTorch implementation for local inference:
+1. **TabPFN v2** - Next generation model with improved performance:
+   ```bash
+   pip install tabpfnv2
+   ```
+
+2. **TabPFN Package** - Full PyTorch implementation for local inference:
    ```bash
    pip install tabpfn
    ```
 
-2. **TabPFN Client** - Lightweight API client for cloud-based inference:
+3. **TabPFN Client** - Lightweight API client for cloud-based inference:
    ```bash
    pip install tabpfn-client
    ```
 
-3. **TabPFN v2** - Next generation model with improved performance:
-   ```bash
-   pip install tabpfnv2
-   ```
+#### Controlling Backend Selection
+You can control which backend is used through environment variables:
+
+```bash
+# Force using only local TabPFN implementations (not client)
+export USE_TABPFN_LOCAL=true  # Default: true
+
+# Enable debug output when importing TabPFN
+export TABPFN_DEBUG=true      # Default: false
+```
 
 ## Build & Test Commands
 ### Essential For Development
@@ -76,18 +87,19 @@ Each extension should be in its own subpackage with:
 ## Extension Compatibility
 When developing extensions, ensure compatibility with all TabPFN implementations:
 
-1. **Import TabPFN in a flexible way**:
+1. **Import TabPFN from the central utility**:
    ```python
-   try:
-       # Try TabPFN v2 first
-       from tabpfnv2 import TabPFNClassifier, TabPFNRegressor
-   except ImportError:
-       try:
-           # Try standard TabPFN package next
-           from tabpfn import TabPFNClassifier, TabPFNRegressor
-       except ImportError:
-           # Fall back to TabPFN client
-           from tabpfn_client import TabPFNClassifier, TabPFNRegressor
+   # Import TabPFN models from the central utility that handles backend selection
+   from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
+   
+   # The utility automatically tries to import TabPFN in this order:
+   # 1. TabPFN v2 (if available)
+   # 2. Standard TabPFN package (if USE_TABPFN_LOCAL=true)
+   # 3. TabPFN client
+   
+   # For debugging, you can enable verbose output:
+   # import os
+   # os.environ["TABPFN_DEBUG"] = "true"
    ```
 
 2. **Use common parameters and avoid backend-specific features**:

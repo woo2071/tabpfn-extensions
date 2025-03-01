@@ -5,25 +5,7 @@ import torch
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 
-from tabpfn_extensions import unsupervised
-
-# Try to import TabPFN from different sources
-try:
-    # Try the standard TabPFN package first
-    from tabpfn import TabPFNClassifier, TabPFNRegressor
-
-    print("Using TabPFN package")
-except ImportError:
-    try:
-        # Try the TabPFN client as fallback
-        from tabpfn_client import TabPFNClassifier, TabPFNRegressor
-
-        print("Using TabPFN client")
-    except ImportError:
-        # Last resort - try old tabpfn_extensions imports
-        from tabpfn_extensions import TabPFNClassifier
-
-        print("Using TabPFN from extensions")
+from tabpfn_extensions import TabPFNClassifier, unsupervised
 
 # Load the breast cancer dataset
 df = load_breast_cancer(return_X_y=False)

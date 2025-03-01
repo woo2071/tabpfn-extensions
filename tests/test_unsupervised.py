@@ -1154,23 +1154,11 @@ def test_model_initialization_with_explicit_models(synthetic_data):
     X = synthetic_data
 
     try:
-        # Try to import TabPFN from different sources, like in the example
-        try:
-            from tabpfn import TabPFNClassifier, TabPFNRegressor
+        # Import TabPFN models from central utility
+        from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
 
-            clf = TabPFNClassifier()  # Let device default to auto
-            reg = TabPFNRegressor()  # Let device default to auto
-        except ImportError:
-            try:
-                from tabpfn_client import TabPFNClassifier, TabPFNRegressor
-
-                clf = TabPFNClassifier()
-                reg = TabPFNRegressor()
-            except ImportError:
-                from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
-
-                clf = TabPFNClassifier()  # Let device default to auto
-                reg = TabPFNRegressor()  # Let device default to auto
+        clf = TabPFNClassifier()  # Let device default to auto
+        reg = TabPFNRegressor()  # Let device default to auto
 
         # Initialize with explicit models
         model = TabPFNUnsupervisedModel(tabpfn_clf=clf, tabpfn_reg=reg)

@@ -66,27 +66,51 @@ USE_TABPFN_LOCAL = os.getenv("USE_TABPFN_LOCAL", "true").lower() == "true"
 
 
 def get_tabpfn_models() -> tuple[type, type]:
-    """Get TabPFN models with fallback between local and client versions.
+    """Get TabPFN models with fallback between different versions.
     
+    Attempts to import TabPFN models in the following order:
+    1. TabPFN v2 (if available)
+    2. Standard TabPFN package (if USE_TABPFN_LOCAL is True)
+    3. TabPFN client
+
     Returns:
         tuple[type, type]: A tuple containing (TabPFNClassifier, TabPFNRegressor) classes
-    
+
     Raises:
-        ImportError: If neither TabPFN nor TabPFN client could be imported
+        ImportError: If none of the TabPFN implementations could be imported
     """
+    # First try TabPFN v2
+    try:
+        from tabpfnv2 import TabPFNClassifier, TabPFNRegressor
+        
+        if os.getenv("TABPFN_DEBUG", "false").lower() == "true":
+            print("Using TabPFN v2 package")
+        
+        return TabPFNClassifier, TabPFNRegressor
+    except ImportError:
+        pass
+    
+    # Then try standard TabPFN package (if local usage is enabled)
     if USE_TABPFN_LOCAL:
         try:
             from tabpfn import TabPFNClassifier, TabPFNRegressor
-
+            
+            if os.getenv("TABPFN_DEBUG", "false").lower() == "true":
+                print("Using TabPFN package")
+            
             return TabPFNClassifier, TabPFNRegressor
         except ImportError:
             pass
 
+    # Finally try TabPFN client
     try:
         from tabpfn_client import (
             TabPFNClassifier as ClientTabPFNClassifier,
             TabPFNRegressor as ClientTabPFNRegressor,
         )
+        
+        if os.getenv("TABPFN_DEBUG", "false").lower() == "true":
+            print("Using TabPFN client")
 
         # Wrapper classes to add device parameter
         # we can't use *args because scikit-learn needs to know the parameters of the constructor
@@ -204,10 +228,10 @@ def get_tabpfn_models() -> tuple[type, type]:
 
     except ImportError:
         raise ImportError(
-            "Neither local TabPFN nor TabPFN client could be imported. Install with:\n"
-            "pip install tabpfn\n"
-            "or\n"
-            "pip install tabpfn-client",
+            "No TabPFN implementation could be imported. Install with one of the following:\n"
+            "pip install tabpfnv2  # For TabPFN v2 (recommended)\n"
+            "pip install tabpfn    # For standard TabPFN package\n"
+            "pip install tabpfn-client  # For TabPFN client (API-based inference)"
         )
 
 
