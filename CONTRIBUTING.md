@@ -15,11 +15,11 @@ cd tabpfn-extensions
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install for development with all dependencies
-pip install -e ".[dev,all]"
+# Lightweight install for extension development
+pip install -e ".[dev]"  # Only installs base requirements
 
-# Install pre-commit hooks
-pre-commit install
+# OR full install with all dependencies (may take longer)
+pip install -e ".[dev,all]"
 ```
 
 2. **Create your extension package**:
@@ -36,11 +36,17 @@ mkdir -p src/tabpfn_extensions/your_package examples/your_package tests/
 4. **Test your code**:
 
 ```bash
-# Run all tests
-pytest
+# Quick test run for your package only
+FAST_TEST_MODE=1 pytest tests/test_your_package.py -v
 
-# Run tests for your package
-pytest tests/test_your_package.py
+# Even faster test with debug mode (smaller datasets)
+TABPFN_DEBUG=1 FAST_TEST_MODE=1 pytest tests/test_your_package.py -v
+
+# Full test of your package (before submitting PR)
+pytest tests/test_your_package.py -v
+
+# Run all tests (optional, CI will do this anyway)
+pytest
 ```
 
 ## 🔄 TabPFN Compatibility
@@ -98,27 +104,41 @@ tabpfn-extensions/
 
 Each extension should include:
 
-- Clear docstrings using Google style format
-- Type hints for all function parameters and return values
+#### Essential:
+- Basic docstrings explaining what functions/classes do
 - At least one example script in the examples directory
+
+#### Recommended:
+- Google style format docstrings for key functions
+- Type hints for main functions and parameters
 - Comments explaining non-obvious code sections
 
 ### Testing
 
 - Write tests using pytest
+- For quick test development, use `FAST_TEST_MODE=1 pytest tests/test_your_package.py`
+- Only run long tests (like full dataset tests) when `FAST_TEST_MODE` is not set
 - Use appropriate markers: `client_compatible`, `requires_tabpfn`, `requires_any_tabpfn`
-- Test both TabPFN and TabPFN-client compatibility where appropriate
 - Use the fixtures provided in conftest.py for TabPFN instances
+- Focus on testing your core functionality first, not edge cases
 
 ## ✅ Contribution Checklist
 
+### Minimum Requirements
 - [ ] Added extension under src/tabpfn_extensions/
-- [ ] Included example(s) in examples/
-- [ ] Added appropriate dependencies to pyproject.toml
-- [ ] Written tests in tests/
-- [ ] Documented all public functions and classes
+- [ ] Included at least one example in examples/
+- [ ] Added required dependencies to pyproject.toml
+- [ ] Written basic tests that pass with FAST_TEST_MODE=1
+
+### Before Submitting PR
+- [ ] Documented public functions and classes
 - [ ] Ensured compatibility with both TabPFN backends (when possible)
-- [ ] Run all linting and type checking tools
+- [ ] All tests pass: `pytest tests/test_your_package.py`
+
+### Advanced/Optional
+- [ ] Added type hints for main functions
+- [ ] Run linting with ruff: `ruff check src/tabpfn_extensions/your_package/`
+- [ ] Run type checking: `mypy src/tabpfn_extensions/your_package/`
 
 ## 📜 Legal & Security
 

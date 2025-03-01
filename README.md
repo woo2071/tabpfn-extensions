@@ -32,7 +32,10 @@ pip install "tabpfn-extensions[interpretability,hpo]"
 # Install all extensions
 pip install "tabpfn-extensions[all]"
 
-# Development installation
+# Development installation (minimal)
+pip install -e ".[dev]"
+
+# Development installation (all extensions - slower)
 pip install -e ".[dev,all]"
 ```
 
@@ -68,6 +71,24 @@ many_class_clf = ManyClassClassifier(estimator=base_clf, alphabet_size=10)
 many_class_clf.fit(X_train, y_train)
 y_pred = many_class_clf.predict(X_test)
 ```
+
+## 🧑‍💻 For Contributors
+
+Interested in adding your own extension? We welcome contributions!
+
+```bash
+# Clone and set up for development
+git clone https://github.com/PriorLabs/tabpfn-extensions.git
+cd tabpfn-extensions
+
+# Lightweight dev setup (fast)
+pip install -e ".[dev]"
+
+# Test your extension with fast mode
+FAST_TEST_MODE=1 pytest tests/test_your_extension.py -v
+```
+
+See our [Contribution Guide](CONTRIBUTING.md) for more details.
 
 ## 🛠️ Available Extensions
 

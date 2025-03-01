@@ -119,40 +119,40 @@ When developing extensions, ensure compatibility with all TabPFN implementations
    - Example usage:
      ```python
      from tabpfn_extensions.utils import get_device
-     
+
      # In your extension's initialization:
      def __init__(self, device="auto", ...):
          self.device = device
-         
+
      # When creating TabPFN models:
      model = TabPFNClassifier(device=get_device(self.device), ...)
      ```
-   
+
 2. **Input Validation**:
    - Support multiple input formats (NumPy arrays, pandas DataFrames, PyTorch tensors)
    - Validate inputs early and provide clear error messages
    - Implement consistent type conversion utilities
-   
+
 3. **Error Handling**:
    - Use specific exception types for different error conditions
    - Include descriptive error messages that suggest solutions
    - Add context to exceptions raised from lower-level functions
-   
+
 4. **Documentation**:
    - Document parameters, return values, exceptions, and examples
    - Note any backend-specific behavior or limitations
    - Keep READMEs updated with latest usage information
-   
+
 5. **Testing**:
    - Write tests for each backend separately where necessary
    - Use small, synthetic datasets for test speed
    - Test edge cases and error conditions explicitly
-   
+
 6. **Pull Requests**:
    - **DO NOT** add "Done with Claude" or AI attribution to PRs
    - Include basic PR description explaining changes
    - Reference related issues in PR descriptions
-   - Respond to code review comments 
+   - Respond to code review comments
    - Test your specific module before submitting: `pytest tests/test_your_module.py`
    - For quicker testing use: `FAST_TEST_MODE=1 pytest tests/test_your_module.py`
 

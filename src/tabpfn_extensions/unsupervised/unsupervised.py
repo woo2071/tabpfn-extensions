@@ -161,7 +161,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                 Fitted model.
         """
         self.X_ = copy.deepcopy(X)
-        
+
         # Ensure y is not None and doesn't contain NaN values
         if y is not None:
             # Create a dummy y if none is provided
@@ -170,7 +170,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             if torch.is_tensor(y_clean):
                 if torch.isnan(y_clean).any():
                     y_clean = torch.nan_to_num(y_clean, nan=0.0)
-            elif hasattr(y_clean, 'numpy'):
+            elif hasattr(y_clean, "numpy"):
                 arr = y_clean.numpy()
                 if np.isnan(arr).any():
                     arr = np.nan_to_num(arr, nan=0.0)
@@ -178,16 +178,17 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         else:
             # Create a dummy target with zeros if none is provided
             y_clean = torch.zeros(X.shape[0])
-            
+
         self.y = y_clean
-        
+
         # Get a numpy array from X for feature inference
         X_np = X
         if torch.is_tensor(X_np):
             X_np = X_np.cpu().numpy()
-            
+
         self.categorical_features = utils_todo.infer_categorical_features(
-            X_np, self.categorical_features,
+            X_np,
+            self.categorical_features,
         )
 
     def init_model_and_get_model_config(self):
@@ -233,11 +234,17 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             densities = []
             # Use fewer permutations in fast mode
             actual_n_permutations = 1 if fast_mode else n_permutations
-            
-            for perm in efficient_random_permutation(conditional_idx, actual_n_permutations):
+
+            for perm in efficient_random_permutation(
+                conditional_idx,
+                actual_n_permutations,
+            ):
                 perm = (*perm, column_idx)
                 _, pred = self.impute_single_permutation_(
-                    X_where_y_is_nan, perm, t, condition_on_all_features,
+                    X_where_y_is_nan,
+                    perm,
+                    t,
+                    condition_on_all_features,
                 )
                 densities.append(pred)
 
@@ -246,11 +253,21 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                     "criterion"
                 ].average_bar_distributions_into_this(
                     [d["criterion"] for d in densities],
-                    [d["logits"].clone().detach() if torch.is_tensor(d["logits"]) else torch.tensor(d["logits"]) for d in densities],
+                    [
+                        d["logits"].clone().detach()
+                        if torch.is_tensor(d["logits"])
+                        else torch.tensor(d["logits"])
+                        for d in densities
+                    ],
                 )
                 pred_sampled = densities[0]["criterion"].sample(pred_merged, t=t)
             else:
-                pred = torch.stack(list(densities)).mean(dim=0)
+                # Convert numpy arrays to tensors if necessary before stacking
+                tensor_densities = [
+                    torch.tensor(d) if isinstance(d, np.ndarray) else d
+                    for d in densities
+                ]
+                pred = torch.stack(tensor_densities).mean(dim=0)
                 pred_sampled = (
                     torch.distributions.Categorical(probs=pred).sample().float()
                 )
@@ -292,11 +309,18 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             X_where_y_is_nan = X_where_y_is_nan.reshape(-1, impute_X.shape[1])
 
             model, X_predict, _ = self.density_(
-                X_where_y_is_nan, X_fit, conditional_idx, column_idx,
+                X_where_y_is_nan,
+                X_fit,
+                conditional_idx,
+                column_idx,
             )
 
             pred, pred_sampled = self.sample_from_model_prediction_(
-                column_idx, X_fit, model, X_predict, t,
+                column_idx,
+                X_fit,
+                model,
+                X_predict,
+                t,
             )
 
             impute_X[torch.isnan(y_predict), column_idx] = pred_sampled
@@ -308,16 +332,18 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             pred = model.predict(X_predict.numpy(), output_type="full")
             # Proper tensor construction to avoid warnings
             logits = pred["logits"]
-            logits_tensor = logits.clone().detach() if torch.is_tensor(logits) else torch.as_tensor(logits)
+            logits_tensor = (
+                logits.clone().detach()
+                if torch.is_tensor(logits)
+                else torch.as_tensor(logits)
+            )
             pred_sampled = pred["criterion"].sample(logits_tensor, t=t)
         else:
             pred = model.predict_proba(X_predict.numpy())
             # Proper tensor construction to avoid warnings
             probs_tensor = torch.as_tensor(pred)
             pred_sampled = (
-                torch.distributions.Categorical(probs=probs_tensor)
-                .sample()
-                .float()
+                torch.distributions.Categorical(probs=probs_tensor).sample().float()
             )
 
         return pred, pred_sampled
@@ -335,7 +361,9 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         conditional_idx: list[int],
         column_idx: int,
     ) -> torch.tensor:
-        # self.init_model_and_get_model_config()
+        # Initialize model if needed
+        if hasattr(self, 'init_model_and_get_model_config'):
+            self.init_model_and_get_model_config()
 
         if len(conditional_idx) > 0:
             # If not the first feature, use all previous features
@@ -361,44 +389,66 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         )
 
         # Handle potential nan values in y_fit
-        y_fit_np = y_fit.numpy() if hasattr(y_fit, 'numpy') else y_fit
+        y_fit_np = y_fit.numpy() if hasattr(y_fit, "numpy") else y_fit
         if np.isnan(y_fit_np).any():
             y_fit_np = np.nan_to_num(y_fit_np, nan=0.0)
-            
-        X_fit_np = X_fit.numpy() if hasattr(X_fit, 'numpy') else X_fit
-        
+
+        X_fit_np = X_fit.numpy() if hasattr(X_fit, "numpy") else X_fit
+
         model.fit(X_fit_np, y_fit_np)
 
         return model, X_predict, y_predict
 
     def impute(
-        self, X: torch.tensor, t: float = 0.000000001, n_permutations: int = 10,
+        self,
+        X: torch.tensor,
+        t: float = 0.000000001,
+        n_permutations: int = 10,
     ) -> torch.tensor:
-        """Impute missing values in the input data.
+        """Impute missing values in the input data using the fitted TabPFN models.
+
+        This method fills missing values (np.nan) in the input data by predicting
+        each missing value based on the observed values in the same sample. The
+        imputation uses multiple random feature permutations to improve robustness.
 
         Args:
-            X : torch.Tensor of shape (n_samples, n_features)
-                Input data with missing values encoded as np.nan.
+            X: torch.tensor
+                Input data of shape (n_samples, n_features) with missing values
+                encoded as np.nan.
 
-            t : float, default=0.000000001
-                Temperature for sampling from the imputation distribution. Lower values result in
-                more deterministic imputations.
+            t: float, default=0.000000001
+                Temperature for sampling from the imputation distribution.
+                Lower values result in more deterministic imputations, while
+                higher values introduce more randomness.
+
+            n_permutations: int, default=10
+                Number of random feature permutations to use for imputation.
+                Higher values may improve robustness but increase computation time.
 
         Returns:
-            torch.Tensor of shape (n_samples, n_features)
-                Imputed data with missing values replaced.
+            torch.tensor
+                Imputed data with missing values replaced, of shape (n_samples, n_features).
+
+        Note:
+            The model must be fitted with training data before calling this method.
         """
         # Check if running in test mode
         import os
+
         fast_mode = os.environ.get("FAST_TEST_MODE", "0") == "1"
-        
+
         return self.impute_(
-            X, t, condition_on_all_features=True, n_permutations=n_permutations,
+            X,
+            t,
+            condition_on_all_features=True,
+            n_permutations=n_permutations,
             fast_mode=fast_mode,
         )
 
     def outliers_single_permutation_(
-        self, X: torch.tensor, feature_permutation: list[int] | tuple[int],
+        self,
+        X: torch.tensor,
+        feature_permutation: list[int] | tuple[int],
     ) -> torch.tensor:
         log_p = torch.zeros_like(
             X[:, 0],
@@ -406,44 +456,58 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
         for i, column_idx in enumerate(feature_permutation):
             model, X_predict, y_predict = self.density_(
-                X, self.X_, feature_permutation[:i], column_idx,
+                X,
+                self.X_,
+                feature_permutation[:i],
+                column_idx,
             )
             if self.use_classifier_(column_idx, y_predict):
                 # Get predictions and convert to torch tensor
                 pred_np = model.predict_proba(X_predict.numpy())
-                
+
                 # Convert y_predict to indices for indexing the probabilities
-                y_indices = y_predict.long() if torch.is_tensor(y_predict) else torch.tensor(y_predict, dtype=torch.long)
-                
+                y_indices = (
+                    y_predict.long()
+                    if torch.is_tensor(y_predict)
+                    else torch.tensor(y_predict, dtype=torch.long)
+                )
+
                 # Check indices are in bounds
                 valid_indices = (y_indices >= 0) & (y_indices < pred_np.shape[1])
                 # Get default probability tensor filled with a reasonable value
                 pred = torch.ones_like(log_p) * 0.1  # Default small probability
-                
+
                 # Only index with valid indices
                 if valid_indices.any():
                     # Get probabilities for each sample based on its class in y_predict
                     for idx, (prob_row, y_idx) in enumerate(zip(pred_np, y_indices)):
-                        if 0 <= y_idx < pred_np.shape[1]:  # Check bounds again per sample
+                        if (
+                            0 <= y_idx < pred_np.shape[1]
+                        ):  # Check bounds again per sample
                             # Proper tensor construction to avoid warning
                             pred[idx] = torch.as_tensor(prob_row[y_idx])
             else:
                 pred = model.predict(X_predict.numpy(), output_type="full")
                 # Proper tensor construction to avoid warning
-                y_tensor = y_predict.clone().detach() if torch.is_tensor(y_predict) else torch.tensor(y_predict)
-                
+                y_tensor = (
+                    y_predict.clone().detach()
+                    if torch.is_tensor(y_predict)
+                    else torch.tensor(y_predict)
+                )
+
                 # Get logits tensor properly
                 logits = pred["logits"]
-                if torch.is_tensor(logits):
-                    logits_tensor = logits.clone().detach()
-                else:
-                    logits_tensor = torch.tensor(logits)
-                
+                logits_tensor = (
+                    logits.clone().detach()
+                    if torch.is_tensor(logits)
+                    else torch.tensor(logits)
+                )
+
                 pred = pred["criterion"].pdf(logits_tensor, y_tensor)
 
             # Handle zero or negative probabilities (avoid log(0))
             pred = torch.clamp(pred, min=1e-10)
-            
+
             # Convert probabilities to log probabilities
             log_pred = torch.log(pred)
 
@@ -479,84 +543,123 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         return pmf
 
     def outliers(self, X: torch.tensor, n_permutations: int = 10) -> torch.tensor:
-        """Preferred implementation for outliers, where we calculate the sample probability for each sample in X by
-        multiplying the probabilities of each feature according to chain rule of probability. The first feature is
-        estimated by using a zero feature as input.
+        """Calculate outlier scores for each sample in the input data.
+
+        This is the preferred implementation for outlier detection, which calculates
+        sample probability for each sample in X by multiplying the probabilities of
+        each feature according to chain rule of probability. Lower probabilities
+        indicate samples that are more likely to be outliers.
 
         Args:
-            X: Samples to calculate the sample probability for, shape (n_samples, n_features)
+            X: torch.tensor
+                Samples to calculate outlier scores for, shape (n_samples, n_features)
+            n_permutations: int, default=10
+                Number of feature permutations to use for calculating outlier scores.
+                Higher values may produce more stable results but increase computation time.
 
         Returns:
-            Sample unnormalized probability for each sample in X, shape (n_samples,)
+            torch.tensor
+                Outlier scores for each sample, shape (n_samples,)
+                Lower scores indicate more likely outliers.
         """
-        # self.init_model_and_get_model_config()
+        # Initialize model if needed
+        if hasattr(self, 'init_model_and_get_model_config'):
+            self.init_model_and_get_model_config()
 
         n_features = X.shape[1]
         all_features = list(range(n_features))
 
         # Check if running in test mode
         import os
+
         fast_mode = os.environ.get("FAST_TEST_MODE", "0") == "1"
-        
+
         # Use fewer permutations in fast mode
         actual_n_permutations = 1 if fast_mode else n_permutations
 
         densities = []
         for perm in efficient_random_permutation(all_features, actual_n_permutations):
             perm_density_log, perm_density = self.outliers_single_permutation_(
-                X, feature_permutation=perm,
+                X,
+                feature_permutation=perm,
             )
             densities.append(perm_density)
 
         # Average the densities across all permutations
-        # Ensure all tensors are properly stacked using proper tensor construction
-        densities_tensor = torch.stack([
-            d if torch.is_tensor(d) else torch.as_tensor(d) 
+        # Handle potential infinite values by replacing them with large finite values
+        densities_clean = [
+            torch.nan_to_num(d, nan=0.0, posinf=1e30, neginf=1e-30)
+            if torch.is_tensor(d)
+            else torch.nan_to_num(
+                torch.tensor(d, dtype=torch.float32),
+                nan=0.0,
+                posinf=1e30,
+                neginf=1e-30,
+            )
             for d in densities
-        ])
+        ]
+
+        # Stack the clean tensors and compute mean
+        densities_tensor = torch.stack(densities_clean)
         return densities_tensor.mean(dim=0)
 
-    def generate_synthetic_data(self, n_samples=100, t=1.0, n_permutations=3):
-        """Generate synthetic data using the trained models. Uses imputation method to generate synthetic data, passed with
-        a matrix of nans. Samples are generated feature by feature in one pass, so samples are not dependent on each
-        other per feature.
+    def generate_synthetic_data(
+        self,
+        n_samples: int = 100,
+        t: float = 1.0,
+        n_permutations: int = 3,
+    ) -> torch.tensor:
+        """Generate synthetic tabular data samples using the fitted TabPFN models.
+
+        This method uses imputation to create synthetic data, starting with a matrix of NaN
+        values and filling in each feature sequentially. Samples are generated feature by
+        feature in a single pass, with each feature conditioned on previously generated features.
 
         Args:
-            n_samples : int, default=100
-                Number of synthetic samples to generate.
+            n_samples: int, default=100
+                Number of synthetic samples to generate
 
-            t : float, default=1.0
-                Temperature for sampling from the imputation distribution. Lower values result in
-                more deterministic samples.
+            t: float, default=1.0
+                Temperature parameter for sampling. Controls randomness:
+                - Higher values (e.g., 1.0) produce more diverse samples
+                - Lower values (e.g., 0.1) produce more deterministic samples
+
+            n_permutations: int, default=3
+                Number of feature permutations to use for generation
+                More permutations may provide more robust results but increase computation time
 
         Returns:
-            torch.Tensor of shape (n_samples, n_features)
-                Generated synthetic data.
+            torch.tensor
+                Generated synthetic data of shape (n_samples, n_features)
 
         Raises:
             AssertionError
-                If the model is not fitted.
+                If the model is not fitted (self.X_ does not exist)
         """
-        # TODO: Test what happens if we generate one feature at a time, with train data only for that featur
-        #  and previous ones, like outliers
+        # TODO: Test generating one feature at a time, with train data only for that feature
+        #       and previously generated features, similar to the outliers method
         assert hasattr(self, "X_"), (
             "You need to fit the model before generating synthetic data"
         )
 
         # Check if running in test mode
         import os
+
         fast_mode = os.environ.get("FAST_TEST_MODE", "0") == "1"
-        
+
         # Use smaller number of samples in fast mode
         if fast_mode and n_samples > 10:
             n_samples = 5
-        
+
         # Use fewer permutations in fast mode
         actual_n_permutations = 1 if fast_mode else n_permutations
 
         X = torch.zeros(n_samples, self.X_.shape[1]) * np.nan
         return self.impute_(
-            X, t=t, condition_on_all_features=False, n_permutations=actual_n_permutations,
+            X,
+            t=t,
+            condition_on_all_features=False,
+            n_permutations=actual_n_permutations,
             fast_mode=fast_mode,
         )
 
@@ -615,27 +718,41 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
 
 def efficient_random_permutation(indices, n_permutations=10):
+    """Generate multiple unique random permutations of the given indices.
+
+    Args:
+        indices: List of indices to permute
+        n_permutations: Number of unique permutations to generate
+
+    Returns:
+        List of unique permutations
+    """
     perms = []
     n_iter = 0
-    while len(perms) < n_permutations and n_iter < n_permutations * 10:
+    max_iterations = n_permutations * 10  # Set a limit to avoid infinite loops
+
+    while len(perms) < n_permutations and n_iter < max_iterations:
         perm = efficient_random_permutation_(indices)
         if perm not in perms:
-            perms += [perm]
+            perms.append(perm)
         n_iter += 1
 
     return perms
 
 
 def efficient_random_permutation_(indices):
-    """Generate a single random permutation from a very large space.
+    """Generate a single random permutation from the given indices.
 
-    :param n: The size of the permutation (number of elements)
-    :return: A list representing a random permutation of numbers from 0 to n-1
+    Args:
+        indices: List of indices to permute
+
+    Returns:
+        A tuple representing a random permutation of the input indices
     """
-    # Create a list of numbers from 0 to n-1
-    permutation = indices
+    # Create a copy of the list to avoid modifying the original
+    permutation = list(indices)
 
-    # Shuffle the list in-place
+    # Shuffle the list in-place using Fisher-Yates algorithm
     for i in range(len(indices) - 1, 0, -1):
         # Pick a random index from 0 to i
         j = random.randint(0, i)

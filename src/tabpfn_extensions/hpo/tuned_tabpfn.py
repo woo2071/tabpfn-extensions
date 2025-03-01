@@ -126,7 +126,9 @@ class TunedTabPFNBase(BaseEstimator):
         self.objective_fn = objective_fn
 
     def _setup_data_encoders(
-        self, X: np.ndarray, categorical_feature_indices: list[int] | None = None,
+        self,
+        X: np.ndarray,
+        categorical_feature_indices: list[int] | None = None,
     ):
         """Set up categorical and label encoders."""
         if categorical_feature_indices is not None:
@@ -209,6 +211,7 @@ class TunedTabPFNBase(BaseEstimator):
             model_params["inference_config"] = inference_config
             # Use device utility for automatic selection
             from tabpfn_extensions.utils import get_device
+
             model_params["device"] = get_device(self.device)
             model_params["random_state"] = rng.randint(0, 2**31 - 1)
 
@@ -255,14 +258,16 @@ class TunedTabPFNBase(BaseEstimator):
 
                     if self.metric in [MetricType.RMSE, MetricType.MSE]:
                         score = -mean_squared_error(
-                            y_val, y_pred, squared=self.metric == MetricType.MSE,
+                            y_val,
+                            y_pred,
+                            squared=self.metric == MetricType.MSE,
                         )
                     elif self.metric == MetricType.MAE:
                         score = -mean_absolute_error(y_val, y_pred)
 
                 return {"loss": -score, "status": STATUS_OK, "model": model}
 
-            except Exception as e:
+            except (ValueError, TypeError, RuntimeError, ImportError, torch.cuda.CudaError) as e:
                 if self.verbose:
                     logger.warning(f"Trial failed with error: {e!s}")
                 return {"loss": float("inf"), "status": STATUS_OK}

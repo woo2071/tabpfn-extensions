@@ -430,6 +430,7 @@ def _get_base_models_from_random_search(
 ) -> list[tuple[str, object]]:
     # Convert device if needed
     from tabpfn_extensions.utils import get_device
+
     resolved_device = get_device(device)
     # TODO: switch to config space to not depend on hyperopt
     from hyperopt.pyll import stochastic
