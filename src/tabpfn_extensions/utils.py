@@ -65,7 +65,7 @@ def get_device(device: str | None = "auto") -> str:
 USE_TABPFN_LOCAL = os.getenv("USE_TABPFN_LOCAL", "true").lower() == "true"
 
 
-def get_tabpfn_models() -> tuple[type, type, type]:
+def get_tabpfn_models() -> tuple[type, type]:
     """Get TabPFN models with fallback between local and client versions."""
     if USE_TABPFN_LOCAL:
         try:
@@ -204,4 +204,4 @@ def get_tabpfn_models() -> tuple[type, type, type]:
         )
 
 
-TabPFNClassifier, TabPFNRegressor = get_tabpfn_models()
+TabPFNClassifier, TabPFNRegressor = get_tabpfn_models()  # type: ignore

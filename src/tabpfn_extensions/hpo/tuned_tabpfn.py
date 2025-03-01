@@ -40,7 +40,7 @@ from __future__ import annotations
 import logging
 import warnings
 from enum import Enum
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 import torch
@@ -54,21 +54,13 @@ from sklearn.utils.validation import check_X_y
 
 from tabpfn_extensions.hpo.search_space import get_param_grid_hyperopt
 
-# Try to import TabPFN models from extensions first (which handles backend compatibility)
+# Import TabPFN models from extensions (which handles backend compatibility)
 try:
-    from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
+    from tabpfn_extensions.utils import TabPFNClassifier, TabPFNRegressor
 except ImportError:
-    # Try direct imports from different backends as fallback
-    try:
-        from tabpfn import TabPFNClassifier, TabPFNRegressor
-    except ImportError:
-        try:
-            from tabpfn_client import TabPFNClassifier, TabPFNRegressor
-        except ImportError:
-            raise ImportError(
-                "Neither TabPFN nor TabPFN-client is installed. Install one of them with: "
-                "pip install tabpfn or pip install tabpfn-client",
-            )
+    raise ImportError(
+        "TabPFN extensions utils module not found. Please make sure tabpfn_extensions is installed correctly."
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +102,7 @@ class TunedTabPFNBase(BaseEstimator):
         categorical_feature_indices: list[int] | None = None,
         verbose: bool = True,
         search_space: dict[str, Any] | None = None,
-        objective_fn: callable | None = None,
+        objective_fn: Callable[[Any, np.ndarray, np.ndarray], float] | None = None,
     ):
         # Handle both n_trials and max_evals parameter names (for backward compatibility)
         self.n_trials = n_trials if max_evals is None else max_evals

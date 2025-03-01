@@ -140,7 +140,8 @@ class TabPFNSearchSpace:
         """
         # Basic space is the same as classifier space
         space = TabPFNSearchSpace.get_classifier_space(
-            n_ensemble_range=n_ensemble_range, temp_range=temp_range,
+            n_ensemble_range=n_ensemble_range,
+            temp_range=temp_range,
         )
 
         # Add regression-specific parameters
@@ -165,7 +166,8 @@ def get_param_grid_hyperopt(task_type: str) -> dict:
     search_space = {
         # Custom HPs
         "model_type": hp.choice(
-            "model_type", ["single"],
+            "model_type",
+            ["single"],
             # Decision tree TabPFN currently disabled in HPO
         ),
         "n_ensemble_repeats": hp.choice("n_ensemble_repeats", [4]),
@@ -191,13 +193,16 @@ def get_param_grid_hyperopt(task_type: str) -> dict:
             enumerate_preprocess_transforms(),
         ),
         "inference_config/POLYNOMIAL_FEATURES": hp.choice(
-            "POLYNOMIAL_FEATURES", ["no", 50],
+            "POLYNOMIAL_FEATURES",
+            ["no", 50],
         ),
         "inference_config/OUTLIER_REMOVAL_STD": hp.choice(
-            "OUTLIER_REMOVAL_STD", [None, 7.0, 9.0, 12.0],
+            "OUTLIER_REMOVAL_STD",
+            [None, 7.0, 9.0, 12.0],
         ),
         "inference_config/SUBSAMPLE_SAMPLES": hp.choice(
-            "SUBSAMPLE_SAMPLES", [0.99, None],
+            "SUBSAMPLE_SAMPLES",
+            [0.99, None],
         ),
     }
 

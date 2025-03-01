@@ -62,7 +62,8 @@ def safe_roc_auc_score(y_true, y_score, **kwargs):
             return roc_auc_score(y_true, y_score_adjusted, **kwargs)
         except (ValueError, IndexError, TypeError) as e:
             warnings.warn(
-                "Unhandleable error in roc_auc_score: " + str(e), stacklevel=2,
+                "Unhandleable error in roc_auc_score: " + str(e),
+                stacklevel=2,
             )
             raise e from ve
 

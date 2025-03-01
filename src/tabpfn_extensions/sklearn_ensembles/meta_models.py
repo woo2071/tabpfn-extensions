@@ -55,7 +55,8 @@ def get_tabpfn_outer_ensemble(config: configs.TabPFNConfig, **kwargs):
     )
     # shuffle with fixed seed
     relevant_config_product = sorted(
-        relevant_config_product, key=lambda x: hash(str(x)),
+        relevant_config_product,
+        key=lambda x: hash(str(x)),
     )
 
     # if we have more ensemble configurations than models, we can have multiple configurations per model
@@ -63,7 +64,8 @@ def get_tabpfn_outer_ensemble(config: configs.TabPFNConfig, **kwargs):
 
     single_tabpfns = []
     for ensemble_member_index, sub_config in zip(
-        range(config.n_estimators), relevant_config_product,
+        range(config.n_estimators),
+        relevant_config_product,
     ):
         member_config = copy.deepcopy(config)
         for k, v in sub_config.items():
@@ -203,7 +205,8 @@ class TabPFNBaggingClassifier(BaggingClassifier):
     ):
         self.estimator.seed = None  # Make sure that TabPFN is not seeded
         max_samples = min(
-            X.shape[0], max_samples,
+            X.shape[0],
+            max_samples,
         )  # Breaks in sklearn if max_samples is larger than X.shape[0]
         super()._fit(
             X,

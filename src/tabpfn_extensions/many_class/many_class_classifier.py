@@ -265,7 +265,6 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
             alphabet_size=self.get_alphabet_size(),
         )
 
-
         self.classes_index_ = {c: i for i, c in enumerate(self.classes_)}
 
         self.Y_train = np.array(
@@ -297,7 +296,10 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         Y = np.array(
             [
                 _fit_and_predict_proba(
-                    self.estimator, self.X_train, self.Y_train[:, i], X,
+                    self.estimator,
+                    self.X_train,
+                    self.Y_train[:, i],
+                    X,
                 )
                 for i in range(self.code_book_.shape[0])
             ],
@@ -316,7 +318,9 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
                 if self.code_book_[i, j] != rest_class:
                     j_remapped = self.code_book_[i, j]
                     probabilities[:, j] += Y[
-                        i, :, j_remapped,
+                        i,
+                        :,
+                        j_remapped,
                     ]  # / (1 - Y[i, :, rest_class])
                     # print(j, Y[i, :, j_remapped])  # noqa: ERA001
 

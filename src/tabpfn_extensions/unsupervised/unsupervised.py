@@ -49,28 +49,11 @@ import torch
 from sklearn.base import BaseEstimator
 from tqdm import tqdm
 
-# Try to import TabPFN models from extensions first (which handles backend compatibility)
-try:
-    from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
-except ImportError:
-    # Try direct imports from different backends as fallback
-    try:
-        from tabpfn import TabPFNClassifier, TabPFNRegressor
-    except ImportError:
-        try:
-            pass
-        except ImportError:
-            raise ImportError(
-                "Neither TabPFN nor TabPFN-client is installed. Install one of them with: "
-                "pip install tabpfn or pip install tabpfn-client",
-            )
-
+# Import TabPFN models from extensions (which handles backend compatibility)
 import contextlib
 
 from tabpfn_extensions import utils_todo
-
-if TYPE_CHECKING:
-    from tabpfn_client import TabPFNClassifier, TabPFNRegressor
+from tabpfn_extensions.utils import TabPFNClassifier, TabPFNRegressor  # type: ignore
 
 
 class TabPFNUnsupervisedModel(BaseEstimator):
@@ -138,13 +121,21 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         self.tabpfn_reg = tabpfn_reg
         self.estimators = [self.tabpfn_clf, self.tabpfn_reg]
 
-        self.categorical_features = []
+        self.categorical_features: list[int] = []
 
-    def set_categorical_features(self, categorical_features):
+    def set_categorical_features(self, categorical_features: list[int]) -> None:
+        """Set categorical feature indices for the model.
+        
+        Args:
+            categorical_features: List of indices of categorical features
+        """
         self.categorical_features = categorical_features
         for estimator in self.estimators:
-            with contextlib.suppress(Exception):
-                estimator.set_categorical_features(categorical_features)
+            if hasattr(estimator, "set_categorical_features"):
+                try:
+                    estimator.set_categorical_features(categorical_features)
+                except Exception:
+                    pass  # Silently ignore if the estimator doesn't support categorical features
 
     def fit(self, X: np.ndarray, y: np.ndarray | None = None) -> None:
         """Fit the model to the input data.
@@ -717,7 +708,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         return torch.cat(embs, 1).reshape(embs[0].shape[0], -1)
 
 
-def efficient_random_permutation(indices, n_permutations=10):
+def efficient_random_permutation(indices: list[int], n_permutations: int = 10) -> list[tuple[int, ...]]:
     """Generate multiple unique random permutations of the given indices.
 
     Args:
@@ -727,7 +718,7 @@ def efficient_random_permutation(indices, n_permutations=10):
     Returns:
         List of unique permutations
     """
-    perms = []
+    perms: list[tuple[int, ...]] = []
     n_iter = 0
     max_iterations = n_permutations * 10  # Set a limit to avoid infinite loops
 
@@ -740,7 +731,7 @@ def efficient_random_permutation(indices, n_permutations=10):
     return perms
 
 
-def efficient_random_permutation_(indices):
+def efficient_random_permutation_(indices: list[int]) -> tuple[int, ...]:
     """Generate a single random permutation from the given indices.
 
     Args:
