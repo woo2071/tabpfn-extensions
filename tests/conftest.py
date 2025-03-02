@@ -44,23 +44,27 @@ TABPFN_SOURCE = None  # Which implementation is preferred ("tabpfn", or "tabpfn_
 
 # Check if TabPFN is available
 try:
-    import tabpfn
-    from tabpfn import TabPFNClassifier, TabPFNRegressor
-
-    HAS_TABPFN = True
-    HAS_ANY_TABPFN = True
-    if TABPFN_SOURCE is None:
-        TABPFN_SOURCE = "tabpfn"
+    # Using importlib.util.find_spec as recommended by ruff
+    import importlib.util
+    tabpfn_spec = importlib.util.find_spec("tabpfn")
+    if tabpfn_spec is not None:
+        from tabpfn import TabPFNClassifier, TabPFNRegressor
+        HAS_TABPFN = True
+        HAS_ANY_TABPFN = True
+        if TABPFN_SOURCE is None:
+            TABPFN_SOURCE = "tabpfn"
 except ImportError:
     pass
 
 # Check if TabPFN client is available
 try:
-    import tabpfn_client
-    from tabpfn_client import (
-        TabPFNClassifier as ClientTabPFNClassifier,
-        TabPFNRegressor as ClientTabPFNRegressor,
-    )
+    # Using importlib.util.find_spec as recommended by ruff
+    tabpfn_client_spec = importlib.util.find_spec("tabpfn_client")
+    if tabpfn_client_spec is not None:
+        from tabpfn_client import (
+            TabPFNClassifier as ClientTabPFNClassifier,
+            TabPFNRegressor as ClientTabPFNRegressor,
+        )
 
     HAS_TABPFN_CLIENT = True
     HAS_ANY_TABPFN = True
@@ -230,73 +234,76 @@ def pytest_runtest_setup(item):
 # Custom class to hold data and metadata
 class TestData:
     """Wrapper class to hold data and metadata for testing.
-    
+
     This class wraps a numpy array and adds metadata like categorical_features.
     It mimics the behavior of numpy arrays for basic operations.
     """
-    
+
     def __init__(self, data, categorical_features=None):
         """Initialize with data and metadata.
-        
+
         Args:
             data: numpy array of data
             categorical_features: list of indices of categorical features
         """
         self.data = np.array(data)
         self.categorical_features = categorical_features or []
-        
+
     def __getitem__(self, key):
         """Support array-like indexing."""
         result = self.data[key]
         if isinstance(key, tuple) and len(key) == 2 and not isinstance(key[0], slice):
             # Single element access - return raw value
             return result
-        
+
         # For slices, wrap the result in TestData
         if isinstance(result, np.ndarray):
             return TestData(result, self.categorical_features)
         return result
-    
+
     def __setitem__(self, key, value):
         """Support array-like assignment."""
         self.data[key] = value
-        
+
     @property
     def shape(self):
         """Return shape of underlying data."""
         return self.data.shape
-    
+
     @property
     def dtype(self):
         """Return dtype of underlying data."""
         return self.data.dtype
-    
+
     def astype(self, dtype):
         """Cast data to the specified type."""
         return TestData(self.data.astype(dtype), self.categorical_features)
-    
+
     def copy(self):
         """Return a copy of this TestData object."""
-        return TestData(self.data.copy(), self.categorical_features.copy() if self.categorical_features else [])
-        
+        return TestData(
+            self.data.copy(),
+            self.categorical_features.copy() if self.categorical_features else [],
+        )
+
     def __array__(self, dtype=None, order=None):
         """Support numpy array conversion with dtype and order parameters.
-        
+
         Args:
             dtype: Optional data type to cast to
             order: Optional memory layout (C or F)
-            
+
         Returns:
             numpy.ndarray: The underlying data array
         """
         if dtype is not None:
             return np.array(self.data, dtype=dtype, order=order)
         return self.data
-        
+
     def __len__(self):
         """Return length of first dimension."""
         return self.shape[0]
-        
+
     def __repr__(self):
         """String representation."""
         return f"TestData(shape={self.shape}, categorical_features={self.categorical_features})"
@@ -306,13 +313,13 @@ class TestData:
 @pytest.fixture
 def synthetic_data_classification():
     """Create synthetic classification data with controlled properties.
-    
+
     The dataset includes:
     - Numerical features
     - Categorical features (as integers)
     - Missing values (NaN)
     - String categorical features
-    
+
     This provides a comprehensive test for handling all common data types.
 
     Returns:
@@ -329,23 +336,23 @@ def synthetic_data_classification():
     # - Feature 3: Categorical (as strings 'A', 'B', 'C')
     # - Feature 4: Numerical with missing values
     X = np.zeros((n_samples, 5), dtype=object)
-    
+
     # Numerical features
     X[:, 0] = rng.rand(n_samples)
     X[:, 1] = rng.rand(n_samples)
-    
+
     # Categorical feature (as integers)
     X[:, 2] = rng.randint(0, 3, size=n_samples)
-    
+
     # Categorical feature (as strings)
-    categories = np.array(['A', 'B', 'C'])
+    categories = np.array(["A", "B", "C"])
     X[:, 3] = categories[rng.randint(0, 3, size=n_samples)]
-    
+
     # Numerical feature with missing values (about 10%)
     X[:, 4] = rng.rand(n_samples)
     missing_mask = rng.random(n_samples) < 0.1
     X[missing_mask, 4] = np.nan
-    
+
     # Create a simple binary classification problem based on the numerical features
     y = (X[:, 0].astype(float) + X[:, 1].astype(float) > 1).astype(int)
 
@@ -353,7 +360,7 @@ def synthetic_data_classification():
     train_size = int(0.7 * n_samples)
     X_train_data, X_test_data = X[:train_size], X[train_size:]
     y_train, y_test = y[:train_size], y[train_size:]
-    
+
     # Wrap data in TestData with metadata
     X_train = TestData(X_train_data, categorical_features=[2, 3])
     X_test = TestData(X_test_data, categorical_features=[2, 3])
@@ -364,13 +371,13 @@ def synthetic_data_classification():
 @pytest.fixture
 def synthetic_data_regression():
     """Create synthetic regression data with controlled properties.
-    
+
     The dataset includes:
     - Numerical features
     - Categorical features (as integers)
     - Missing values (NaN)
     - String categorical features
-    
+
     This provides a comprehensive test for handling all common data types.
 
     Returns:
@@ -386,27 +393,29 @@ def synthetic_data_regression():
     # - Feature 3: Categorical (as integers 0-3)
     # - Feature 4: Numerical with missing values
     X = np.zeros((n_samples, 5), dtype=object)
-    
+
     # Numerical features
     X[:, 0] = rng.rand(n_samples)
     X[:, 1] = rng.rand(n_samples)
     X[:, 2] = rng.rand(n_samples)
-    
+
     # Categorical feature (as strings)
-    categories = np.array(['low', 'medium', 'high', 'extreme'])
+    categories = np.array(["low", "medium", "high", "extreme"])
     X[:, 3] = categories[rng.randint(0, 4, size=n_samples)]
-    
+
     # Numerical feature with missing values (about 10%)
-    X[:, 4] = rng.rand(n_samples) 
+    X[:, 4] = rng.rand(n_samples)
     missing_mask = rng.random(n_samples) < 0.1
     X[missing_mask, 4] = np.nan
 
     # Create a simple regression problem based on the numerical features
-    y = (2 * X[:, 0].astype(float) + 
-         3 * X[:, 1].astype(float) - 
-         1.5 * X[:, 2].astype(float) +
-         rng.normal(0, 0.1, size=n_samples))
-    
+    y = (
+        2 * X[:, 0].astype(float)
+        + 3 * X[:, 1].astype(float)
+        - 1.5 * X[:, 2].astype(float)
+        + rng.normal(0, 0.1, size=n_samples)
+    )
+
     # Add some missing values to target (about 5%)
     if False:  # Disabled for now as most models can't handle missing targets
         missing_y_mask = rng.random(n_samples) < 0.05
@@ -416,7 +425,7 @@ def synthetic_data_regression():
     train_size = int(0.7 * n_samples)
     X_train_data, X_test_data = X[:train_size], X[train_size:]
     y_train, y_test = y[:train_size], y[train_size:]
-    
+
     # Wrap data in TestData with metadata
     X_train = TestData(X_train_data, categorical_features=[3])
     X_test = TestData(X_test_data, categorical_features=[3])

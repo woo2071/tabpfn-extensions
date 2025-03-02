@@ -157,14 +157,18 @@ class TunedTabPFNBase(BaseEstimator):
         np.random.seed(rng.randint(0, 2**31 - 1))
 
         # Store original categorical feature indices before transformation
-        original_categorical_indices = self.categorical_feature_indices.copy() if self.categorical_feature_indices else []
-        
+        original_categorical_indices = (
+            self.categorical_feature_indices.copy()
+            if self.categorical_feature_indices
+            else []
+        )
+
         # Check for TestData object and extract raw data
-        if hasattr(X, 'data'):
+        if hasattr(X, "data"):
             X_data = X.data
         else:
             X_data = X
-            
+
         # Fit transformers
         X_transformed = self._cat_encoder.fit_transform(X_data)
         if hasattr(self, "_label_encoder"):
@@ -215,16 +219,18 @@ class TunedTabPFNBase(BaseEstimator):
 
             model_params["device"] = get_device(self.device)
             model_params["random_state"] = rng.randint(0, 2**31 - 1)
-            
+
             # Since we've already transformed the categorical features, don't specify them again
             # to avoid double-transformation, remove categorical_feature_indices from params
             if "categorical_feature_indices" in model_params:
                 model_params.pop("categorical_feature_indices")
             if "categorical_features_indices" in model_params:
                 model_params.pop("categorical_features_indices")
-                
+
             if self.verbose and original_categorical_indices:
-                logger.info(f"Original categorical features {original_categorical_indices} already encoded")
+                logger.info(
+                    f"Original categorical features {original_categorical_indices} already encoded"
+                )
 
             # Handle special parameters
             n_ensemble_repeats = model_params.pop("n_ensemble_repeats", None)
@@ -233,7 +239,7 @@ class TunedTabPFNBase(BaseEstimator):
 
             # Handle model type selection
             model_type = model_params.pop("model_type", "single")
-            
+
             # Import model implementations based on type
             if model_type == "dt_pfn":
                 # Import DecisionTreeTabPFN models
@@ -251,15 +257,19 @@ class TunedTabPFNBase(BaseEstimator):
                 if model_type == "dt_pfn":
                     # Extract decision tree specific parameters
                     max_depth = model_params.pop("max_depth", 3)
-                    
+
                     if task_type in ["binary", "multiclass"]:
                         # Use TabPFNClassifier as the base model for DT
                         base_model = TabPFNClassifier(**model_params)
-                        model = DecisionTreeTabPFNClassifier(tabpfn=base_model, max_depth=max_depth)
+                        model = DecisionTreeTabPFNClassifier(
+                            tabpfn=base_model, max_depth=max_depth
+                        )
                     else:
                         # Use TabPFNRegressor as the base model for DT
                         base_model = TabPFNRegressor(**model_params)
-                        model = DecisionTreeTabPFNRegressor(tabpfn=base_model, max_depth=max_depth)
+                        model = DecisionTreeTabPFNRegressor(
+                            tabpfn=base_model, max_depth=max_depth
+                        )
                 else:
                     # Standard single model
                     if task_type in ["binary", "multiclass"]:
@@ -310,7 +320,9 @@ class TunedTabPFNBase(BaseEstimator):
                         # Default to R2 for any other metric or if not specified
                         score = r2_score(y_val, y_pred)
 
-                return {"loss": -score, "status": STATUS_OK, "model": model}
+                # Ensure score is not None before negating
+                loss_value = -score if score is not None else float("inf")
+                return {"loss": loss_value, "status": STATUS_OK, "model": model}
 
             except (
                 ValueError,
@@ -389,11 +401,13 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
         categorical_feature_indices: list[int] | None = None,
     ) -> TunedTabPFNClassifier:
         # Check if X is a TestData object with categorical_features
-        if hasattr(X, 'categorical_features') and not categorical_feature_indices:
-            categorical_feature_indices = getattr(X, 'categorical_features', [])
+        if hasattr(X, "categorical_features") and not categorical_feature_indices:
+            categorical_feature_indices = getattr(X, "categorical_features", [])
             if categorical_feature_indices and self.verbose:
-                logger.info(f"Using categorical features from TestData: {categorical_feature_indices}")
-        
+                logger.info(
+                    f"Using categorical features from TestData: {categorical_feature_indices}"
+                )
+
         # Validate input
         X, y = check_X_y(
             X,
@@ -443,11 +457,11 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
             )
 
         # Check if X is a TestData object and extract raw data if needed
-        if hasattr(X, 'data'):
+        if hasattr(X, "data"):
             X_data = X.data
         else:
             X_data = X
-        
+
         X_data = check_array(X_data, force_all_finite="allow-nan", dtype=object)
         X_data = check_array(
             self._cat_encoder.transform(X_data),
@@ -468,11 +482,11 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
             )
 
         # Check if X is a TestData object and extract raw data if needed
-        if hasattr(X, 'data'):
+        if hasattr(X, "data"):
             X_data = X.data
         else:
             X_data = X
-            
+
         X_data = check_array(X_data, force_all_finite="allow-nan", dtype=object)
         X_data = check_array(
             self._cat_encoder.transform(X_data),
@@ -501,11 +515,13 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
         categorical_feature_indices: list[int] | None = None,
     ) -> TunedTabPFNRegressor:
         # Check if X is a TestData object with categorical_features
-        if hasattr(X, 'categorical_features') and not categorical_feature_indices:
-            categorical_feature_indices = getattr(X, 'categorical_features', [])
+        if hasattr(X, "categorical_features") and not categorical_feature_indices:
+            categorical_feature_indices = getattr(X, "categorical_features", [])
             if categorical_feature_indices and self.verbose:
-                logger.info(f"Using categorical features from TestData: {categorical_feature_indices}")
-        
+                logger.info(
+                    f"Using categorical features from TestData: {categorical_feature_indices}"
+                )
+
         # Validate input
         X, y = check_X_y(
             X,
@@ -549,11 +565,11 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
             )
 
         # Check if X is a TestData object and extract raw data if needed
-        if hasattr(X, 'data'):
+        if hasattr(X, "data"):
             X_data = X.data
         else:
             X_data = X
-            
+
         X_data = check_array(X_data, force_all_finite="allow-nan", dtype=object)
         X_data = check_array(
             self._cat_encoder.transform(X_data),
