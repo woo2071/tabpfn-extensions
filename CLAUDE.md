@@ -91,12 +91,12 @@ When developing extensions, ensure compatibility with all TabPFN implementations
    ```python
    # Import TabPFN models from the central utility that handles backend selection
    from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
-   
+
    # The utility automatically tries to import TabPFN in this order:
    # 1. TabPFN v2 (if available)
    # 2. Standard TabPFN package (if USE_TABPFN_LOCAL=true)
    # 3. TabPFN client
-   
+
    # For debugging, you can enable verbose output:
    # import os
    # os.environ["TABPFN_DEBUG"] = "true"

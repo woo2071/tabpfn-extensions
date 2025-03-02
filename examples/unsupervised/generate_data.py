@@ -14,7 +14,10 @@ attribute_names = df["feature_names"]
 
 # Split the data
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.5, random_state=42,
+    X,
+    y,
+    test_size=0.5,
+    random_state=42,
 )
 
 # Initialize TabPFN models with compatible parameters
@@ -24,7 +27,8 @@ reg = TabPFNClassifier()  # Use classifier for both (common pattern)
 
 # Initialize unsupervised model
 model_unsupervised = unsupervised.TabPFNUnsupervisedModel(
-    tabpfn_clf=clf, tabpfn_reg=reg,
+    tabpfn_clf=clf,
+    tabpfn_reg=reg,
 )
 
 # Select features for analysis (e.g., first two features)

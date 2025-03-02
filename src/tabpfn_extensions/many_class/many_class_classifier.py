@@ -133,7 +133,7 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
 
     def get_alphabet_size(self) -> int:
         """Get the alphabet size to use for the codebook.
-        
+
         Returns:
             int: The alphabet size to use
         """
@@ -143,10 +143,10 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
 
     def get_n_estimators(self, n_classes: int) -> int:
         """Calculate the number of estimators to use based on the number of classes.
-        
+
         Args:
             n_classes: The number of classes in the classification problem
-            
+
         Returns:
             int: The number of estimators to use
         """
@@ -386,10 +386,10 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
 
 
 def _fit_and_predict_proba(
-    estimator: BaseEstimator, 
-    X_train: np.ndarray, 
-    Y_train: np.ndarray, 
-    X: np.ndarray
+    estimator: BaseEstimator,
+    X_train: np.ndarray,
+    Y_train: np.ndarray,
+    X: np.ndarray,
 ) -> np.ndarray:
     """Fit a cloned base estimator and predict probabilities for a single sub-problem.
 

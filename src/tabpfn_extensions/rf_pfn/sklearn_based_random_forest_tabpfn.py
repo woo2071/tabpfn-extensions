@@ -618,7 +618,7 @@ def _accumulate_prediction(
     predict,
     X: np.ndarray,
     out: list[np.ndarray],
-    accumulate_logits: bool = False
+    accumulate_logits: bool = False,
 ) -> None:
     """This is a utility function for joblib's Parallel.
 

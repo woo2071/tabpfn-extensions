@@ -199,12 +199,12 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         for estimator in self.estimators:
             if estimator is None:
                 continue
-                
+
             try:
                 # First try the direct method (original TabPFN implementation)
                 if hasattr(estimator, "init_model_and_get_model_config"):
                     estimator.init_model_and_get_model_config()
-                
+
                 # For TabPFN models from our unified import system (or v2), we need to ensure
                 # they're initialized without requiring specific methods
                 else:
@@ -213,23 +213,23 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                     if hasattr(estimator, "model") and estimator.model is None:
                         # Call predict once to initialize the model
                         _ = estimator.predict(torch.zeros((1, 2)))
-                    
+
                     # For client implementations, there's no additional initialization needed
                     # The model will be initialized on first prediction call
             except Exception as e:
                 raise RuntimeError(f"Failed to initialize model: {e}") from e
-                
+
     # Add the method to the TabPFNClassifier and TabPFNRegressor if they don't have it
     def _ensure_init_model_method(self):
         """Ensure all estimators have the init_model_and_get_model_config method."""
         for idx, estimator in enumerate(self.estimators):
             if estimator is None:
                 continue
-                
+
             # Skip if the estimator already has the method
             if hasattr(estimator, "init_model_and_get_model_config"):
                 continue
-                
+
             # Add a compatibility wrapper method to the estimator
             def init_wrapper(est=estimator):
                 """Compatibility wrapper for init_model_and_get_model_config."""
@@ -238,13 +238,13 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                     _ = est.predict(torch.zeros((1, 2)))
                 # For client implementations, there's nothing to do
                 return None
-                
+
             # Add the method to the estimator
             setattr(estimator, "init_model_and_get_model_config", init_wrapper)
-            
+
             # Update the estimator in the list
             self.estimators[idx] = estimator
-                
+
     def fit(self, X: np.ndarray, y: np.ndarray | None = None) -> None:
         """Fit the model to the input data.
 
@@ -289,7 +289,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             X_np,
             self.categorical_features,
         )
-        
+
         # Ensure all estimators have the init_model_and_get_model_config method
         self._ensure_init_model_method()
 
@@ -840,7 +840,8 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
 
 def efficient_random_permutation(
-    indices: list[int], n_permutations: int = 10
+    indices: list[int],
+    n_permutations: int = 10,
 ) -> list[tuple[int, ...]]:
     """Generate multiple unique random permutations of the given indices.
 

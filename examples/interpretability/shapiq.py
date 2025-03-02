@@ -2,8 +2,9 @@
 
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
-from tabpfn_extensions import interpretability
+
 from tabpfn import TabPFNClassifier
+from tabpfn_extensions import interpretability
 
 # Load example dataset
 data = load_breast_cancer()
@@ -16,7 +17,10 @@ n_model_evals = 100
 
 # Split data
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, train_size=200, random_state=42
+    X,
+    y,
+    train_size=200,
+    random_state=42,
 )
 x_explain = X_test[0]
 
@@ -29,8 +33,8 @@ explainer = interpretability.shapiq.get_tabpfn_explainer(
     model=clf,
     data=X_train,
     labels=y_train,
-    index="SV",      # SV: Shapley Value (like in shap)
-    verbose=True,    # show a progress bar during explanation
+    index="SV",  # SV: Shapley Value (like in shap)
+    verbose=True,  # show a progress bar during explanation
 )
 
 # Get shap values
@@ -45,9 +49,9 @@ explainer = interpretability.shapiq.get_tabpfn_explainer(
     model=clf,
     data=X_train,
     labels=y_train,
-    index="FSII",    # SV: Shapley Value, FSII: Faithful Shapley Interaction Index
-    max_order=2,     # maximum order of the Shapley interactions (2 for pairwise interactions)
-    verbose=True,    # show a progress bar during explanation
+    index="FSII",  # SV: Shapley Value, FSII: Faithful Shapley Interaction Index
+    max_order=2,  # maximum order of the Shapley interactions (2 for pairwise interactions)
+    verbose=True,  # show a progress bar during explanation
 )
 
 # Get shapley interaction values

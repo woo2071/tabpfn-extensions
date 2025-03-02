@@ -6,6 +6,7 @@ Use sklearn_based_random_forest_tabpfn.py directly for new code.
 
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
+from __future__ import annotations
 
 import warnings
 

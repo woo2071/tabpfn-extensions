@@ -16,7 +16,8 @@ attribute_names = df["feature_names"]
 clf = TabPFNClassifier()
 reg = TabPFNRegressor()
 model_unsupervised = unsupervised.TabPFNUnsupervisedModel(
-    tabpfn_clf=clf, tabpfn_reg=reg,
+    tabpfn_clf=clf,
+    tabpfn_reg=reg,
 )
 
 # Run outlier detection

@@ -59,7 +59,7 @@ try:
     from tabpfn_extensions.utils import TabPFNClassifier, TabPFNRegressor
 except ImportError:
     raise ImportError(
-        "TabPFN extensions utils module not found. Please make sure tabpfn_extensions is installed correctly."
+        "TabPFN extensions utils module not found. Please make sure tabpfn_extensions is installed correctly.",
     )
 
 logger = logging.getLogger(__name__)
@@ -246,11 +246,15 @@ class TunedTabPFNBase(BaseEstimator):
                         score = f1_score(y_val, y_pred, average="weighted")
                 else:
                     y_pred = model.predict(X_val)
-                    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+                    from sklearn.metrics import (
+                        mean_absolute_error,
+                        mean_squared_error,
+                        r2_score,
+                    )
 
                     # Initialize score variable
                     score = None
-                    
+
                     if self.metric in [MetricType.RMSE, MetricType.MSE]:
                         score = -mean_squared_error(
                             y_val,
@@ -259,7 +263,7 @@ class TunedTabPFNBase(BaseEstimator):
                         )
                     elif self.metric == MetricType.MAE:
                         score = -mean_absolute_error(y_val, y_pred)
-                    
+
                     # Default to R2 if score is still None or if metric is not specified
                     if score is None:
                         # Default to R2 for any other metric or if not specified

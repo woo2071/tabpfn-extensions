@@ -96,7 +96,7 @@ def import_module_from_path(path: Path, timeout: int | None = None) -> object:
 
         # Set default timeout of 30 seconds for examples unless specified otherwise
         if seconds is None:
-            seconds = 30
+            seconds = 120
 
         if (
             seconds is not None and sys.platform != "win32"

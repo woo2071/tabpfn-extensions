@@ -232,7 +232,7 @@ class AbstractValidationUtils(ABC, BaseEstimator):
 
     def time_limit_reached(self) -> bool:
         """Check if the time limit for execution has been reached.
-        
+
         Returns:
             bool: True if the time limit has been reached, False otherwise or if no time limit was set
         """
@@ -242,13 +242,13 @@ class AbstractValidationUtils(ABC, BaseEstimator):
 
     def not_enough_time(self, current_repeat: int) -> bool:
         """Simple heuristic to stop cross-validation early if not enough time is left for another repeat.
-        
+
         Args:
             current_repeat: The current repeat index
-            
+
         Returns:
             bool: True if there likely isn't enough time for another repeat, False otherwise
-            
+
         Note:
             This is a heuristic based on average time per repeat so far and may not be exact.
         """
@@ -262,7 +262,7 @@ class AbstractValidationUtils(ABC, BaseEstimator):
 
     def set_time_limit(self) -> None:
         """Initialize the timer for time-limited execution.
-        
+
         Sets the start time for time limit tracking and logs the time limit info.
         This method should be called at the beginning of validation.
         """
