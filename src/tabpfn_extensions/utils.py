@@ -69,9 +69,8 @@ def get_tabpfn_models() -> tuple[type, type]:
     """Get TabPFN models with fallback between different versions.
 
     Attempts to import TabPFN models in the following order:
-    1. TabPFN v2 (if available)
-    2. Standard TabPFN package (if USE_TABPFN_LOCAL is True)
-    3. TabPFN client
+    1. Standard TabPFN package (if USE_TABPFN_LOCAL is True)
+    2. TabPFN client
 
     Returns:
         tuple[type, type]: A tuple containing (TabPFNClassifier, TabPFNRegressor) classes
@@ -79,18 +78,8 @@ def get_tabpfn_models() -> tuple[type, type]:
     Raises:
         ImportError: If none of the TabPFN implementations could be imported
     """
-    # First try TabPFN v2
-    try:
-        from tabpfnv2 import TabPFNClassifier, TabPFNRegressor
 
-        if os.getenv("TABPFN_DEBUG", "false").lower() == "true":
-            print("Using TabPFN v2 package")
-
-        return TabPFNClassifier, TabPFNRegressor
-    except ImportError:
-        pass
-
-    # Then try standard TabPFN package (if local usage is enabled)
+    # First try standard TabPFN package (if local usage is enabled)
     if USE_TABPFN_LOCAL:
         try:
             from tabpfn import TabPFNClassifier, TabPFNRegressor
@@ -229,7 +218,6 @@ def get_tabpfn_models() -> tuple[type, type]:
     except ImportError:
         raise ImportError(
             "No TabPFN implementation could be imported. Install with one of the following:\n"
-            "pip install tabpfnv2  # For TabPFN v2 (recommended)\n"
             "pip install tabpfn    # For standard TabPFN package\n"
             "pip install tabpfn-client  # For TabPFN client (API-based inference)",
         )
