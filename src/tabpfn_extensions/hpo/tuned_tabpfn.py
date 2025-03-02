@@ -164,10 +164,7 @@ class TunedTabPFNBase(BaseEstimator):
         )
 
         # Check for TestData object and extract raw data
-        if hasattr(X, "data"):
-            X_data = X.data
-        else:
-            X_data = X
+        X_data = X.data if hasattr(X, "data") else X
 
         # Fit transformers
         X_transformed = self._cat_encoder.fit_transform(X_data)
@@ -229,7 +226,7 @@ class TunedTabPFNBase(BaseEstimator):
 
             if self.verbose and original_categorical_indices:
                 logger.info(
-                    f"Original categorical features {original_categorical_indices} already encoded"
+                    f"Original categorical features {original_categorical_indices} already encoded",
                 )
 
             # Handle special parameters
@@ -262,20 +259,19 @@ class TunedTabPFNBase(BaseEstimator):
                         # Use TabPFNClassifier as the base model for DT
                         base_model = TabPFNClassifier(**model_params)
                         model = DecisionTreeTabPFNClassifier(
-                            tabpfn=base_model, max_depth=max_depth
+                            tabpfn=base_model, max_depth=max_depth,
                         )
                     else:
                         # Use TabPFNRegressor as the base model for DT
                         base_model = TabPFNRegressor(**model_params)
                         model = DecisionTreeTabPFNRegressor(
-                            tabpfn=base_model, max_depth=max_depth
+                            tabpfn=base_model, max_depth=max_depth,
                         )
+                # Standard single model
+                elif task_type in ["binary", "multiclass"]:
+                    model = TabPFNClassifier(**model_params)
                 else:
-                    # Standard single model
-                    if task_type in ["binary", "multiclass"]:
-                        model = TabPFNClassifier(**model_params)
-                    else:
-                        model = TabPFNRegressor(**model_params)
+                    model = TabPFNRegressor(**model_params)
 
                 model.fit(X_train, y_train)
 
@@ -405,7 +401,7 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
             categorical_feature_indices = getattr(X, "categorical_features", [])
             if categorical_feature_indices and self.verbose:
                 logger.info(
-                    f"Using categorical features from TestData: {categorical_feature_indices}"
+                    f"Using categorical features from TestData: {categorical_feature_indices}",
                 )
 
         # Validate input
@@ -457,10 +453,7 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
             )
 
         # Check if X is a TestData object and extract raw data if needed
-        if hasattr(X, "data"):
-            X_data = X.data
-        else:
-            X_data = X
+        X_data = X.data if hasattr(X, "data") else X
 
         X_data = check_array(X_data, force_all_finite="allow-nan", dtype=object)
         X_data = check_array(
@@ -482,10 +475,7 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
             )
 
         # Check if X is a TestData object and extract raw data if needed
-        if hasattr(X, "data"):
-            X_data = X.data
-        else:
-            X_data = X
+        X_data = X.data if hasattr(X, "data") else X
 
         X_data = check_array(X_data, force_all_finite="allow-nan", dtype=object)
         X_data = check_array(
@@ -519,7 +509,7 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
             categorical_feature_indices = getattr(X, "categorical_features", [])
             if categorical_feature_indices and self.verbose:
                 logger.info(
-                    f"Using categorical features from TestData: {categorical_feature_indices}"
+                    f"Using categorical features from TestData: {categorical_feature_indices}",
                 )
 
         # Validate input
@@ -565,10 +555,7 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
             )
 
         # Check if X is a TestData object and extract raw data if needed
-        if hasattr(X, "data"):
-            X_data = X.data
-        else:
-            X_data = X
+        X_data = X.data if hasattr(X, "data") else X
 
         X_data = check_array(X_data, force_all_finite="allow-nan", dtype=object)
         X_data = check_array(

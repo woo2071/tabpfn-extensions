@@ -137,7 +137,7 @@ def tabpfn_classifier(request):
     # Return appropriate classifier
     if TABPFN_SOURCE == "tabpfn":
         return TabPFNClassifier()  # Let the model use the default device setting
-    elif TABPFN_SOURCE == "tabpfn_client":
+    if TABPFN_SOURCE == "tabpfn_client":
         return ClientTabPFNClassifier()
 
     pytest.fail(
@@ -171,7 +171,7 @@ def tabpfn_regressor(request):
     # Return appropriate regressor
     if TABPFN_SOURCE == "tabpfn":
         return TabPFNRegressor()  # Let the model use the default device setting
-    elif TABPFN_SOURCE == "tabpfn_client":
+    if TABPFN_SOURCE == "tabpfn_client":
         return ClientTabPFNRegressor()
 
     pytest.fail(
