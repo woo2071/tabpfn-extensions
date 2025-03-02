@@ -56,7 +56,14 @@ def get_tabpfn_explainer(
         .. [3] Rundel, D., Kobialka, J., von Crailsheim, C., Feurer, M., Nagler, T., Rügamer, D. (2024). Interpretable Machine Learning for TabPFN. In: Longo, L., Lapuschkin, S., Seifert, C. (eds) Explainable Artificial Intelligence. xAI 2024. Communications in Computer and Information Science, vol 2154. Springer, Cham. https://doi.org/10.1007/978-3-031-63797-1_23
 
     """
-    import shapiq
+    # Defer the import to avoid circular imports
+    try:
+        import shapiq.explainers
+    except ImportError:
+        raise ImportError(
+            "Package 'shapiq' is required for model explanation. "
+            "Please install it with: pip install shapiq"
+        )
 
     # make data to array if it is a pandas DataFrame
     if isinstance(data, pd.DataFrame):
@@ -66,7 +73,7 @@ def get_tabpfn_explainer(
     if isinstance(labels, (pd.Series, pd.DataFrame)):
         labels = labels.values
 
-    return shapiq.TabPFNExplainer(
+    return shapiq.explainers.TabPFNExplainer(
         model=model,
         data=data,
         labels=labels,
@@ -121,13 +128,20 @@ def get_tabpfn_imputation_explainer(
         .. [3] Lundberg, S. M., & Lee, S. I. (2017). A Unified Approach to Interpreting Model Predictions. Advances in Neural Information Processing Systems 30 (pp. 4765--4774).
 
     """
-    import shapiq
+    # Defer the import to avoid circular imports
+    try:
+        import shapiq.explainers
+    except ImportError:
+        raise ImportError(
+            "Package 'shapiq' is required for model explanation. "
+            "Please install it with: pip install shapiq"
+        )
 
     # make data to array if it is a pandas DataFrame
     if isinstance(data, pd.DataFrame):
         data = data.values
 
-    return shapiq.TabularExplainer(
+    return shapiq.explainers.TabularExplainer(
         model=model,
         data=data,
         index=index,

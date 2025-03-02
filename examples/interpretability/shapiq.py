@@ -5,9 +5,6 @@ from sklearn.model_selection import train_test_split
 
 from tabpfn_extensions import TabPFNClassifier
 
-# Import shapiq directly to avoid circular imports
-import shapiq
-
 # Import tabpfn adapters from interpretability module
 from tabpfn_extensions.interpretability import shapiq as tabpfn_shapiq
 
