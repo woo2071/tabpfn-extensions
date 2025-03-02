@@ -279,8 +279,18 @@ class TestData:
         """Return a copy of this TestData object."""
         return TestData(self.data.copy(), self.categorical_features.copy() if self.categorical_features else [])
         
-    def __array__(self):
-        """Support numpy array conversion."""
+    def __array__(self, dtype=None, order=None):
+        """Support numpy array conversion with dtype and order parameters.
+        
+        Args:
+            dtype: Optional data type to cast to
+            order: Optional memory layout (C or F)
+            
+        Returns:
+            numpy.ndarray: The underlying data array
+        """
+        if dtype is not None:
+            return np.array(self.data, dtype=dtype, order=order)
         return self.data
         
     def __len__(self):
