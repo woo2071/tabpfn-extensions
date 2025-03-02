@@ -475,10 +475,10 @@ def _get_base_models_from_random_search(
         param["ignore_pretraining_limits"] = ignore_pretraining_limits
         n_ensemble_repeats = param.pop("n_ensemble_repeats", None)
         model_is_rf_pfn = param.pop("model_type", "no") == "dt_pfn"
-        
+
         # Remove max_depth if it exists (only used for decision tree models)
         max_depth = param.pop("max_depth", None)
-        
+
         if model_is_rf_pfn:
             param["n_estimators"] = 1
             rf_model_base = (
@@ -489,7 +489,9 @@ def _get_base_models_from_random_search(
             bm = rf_model_base(
                 tabpfn=model_base(**param),
                 categorical_features=categorical_indices,
-                max_depth=max_depth if max_depth is not None else 3,  # Use removed max_depth here
+                max_depth=max_depth
+                if max_depth is not None
+                else 3,  # Use removed max_depth here
             )
         else:
             if n_ensemble_repeats is not None:

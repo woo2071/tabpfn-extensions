@@ -1,5 +1,9 @@
-#  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
+"""TabPFN explainer adapters that use the ShapIQ library for model interpretability.
+
+This module provides functions to create shapiq explainers for TabPFN models that support
+both basic Shapley values and interaction indices for more detailed model explanations.
+"""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -62,7 +66,7 @@ def get_tabpfn_explainer(
     except ImportError:
         raise ImportError(
             "Package 'shapiq' is required for model explanation. "
-            "Please install it with: pip install shapiq"
+            "Please install it with: pip install shapiq",
         )
 
     # make data to array if it is a pandas DataFrame
@@ -134,7 +138,7 @@ def get_tabpfn_imputation_explainer(
     except ImportError:
         raise ImportError(
             "Package 'shapiq' is required for model explanation. "
-            "Please install it with: pip install shapiq"
+            "Please install it with: pip install shapiq",
         )
 
     # make data to array if it is a pandas DataFrame
