@@ -283,6 +283,10 @@ class TestData:
         """Support numpy array conversion."""
         return self.data
         
+    def __len__(self):
+        """Return length of first dimension."""
+        return self.shape[0]
+        
     def __repr__(self):
         """String representation."""
         return f"TestData(shape={self.shape}, categorical_features={self.categorical_features})"
