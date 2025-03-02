@@ -44,6 +44,10 @@ predictions = np.argmax(prediction_probabilities, axis=-1)
 print("ROC AUC:", roc_auc_score(y_test, prediction_probabilities[:, 1]))
 print("Accuracy", accuracy_score(y_test, predictions))
 
+# Check for test environment by looking for the FAST_TEST_MODE environment variable
+import os
+is_test = os.environ.get("FAST_TEST_MODE", "0") == "1"
+
 # Multiclass - Use smaller dataset in test mode
 if is_test:
     # Use minimal synthetic dataset for faster testing

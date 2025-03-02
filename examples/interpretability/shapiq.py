@@ -3,8 +3,13 @@
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 
-from tabpfn import TabPFNClassifier
-from tabpfn_extensions import interpretability
+from tabpfn_extensions import TabPFNClassifier
+
+# Import shapiq directly to avoid circular imports
+import shapiq
+
+# Import tabpfn adapters from interpretability module
+from tabpfn_extensions.interpretability import shapiq as tabpfn_shapiq
 
 # Load example dataset
 data = load_breast_cancer()
@@ -29,7 +34,7 @@ clf = TabPFNClassifier()
 clf.fit(X_train, y_train)
 
 # Get a TabPFNExplainer
-explainer = interpretability.shapiq.get_tabpfn_explainer(
+explainer = tabpfn_shapiq.get_tabpfn_explainer(
     model=clf,
     data=X_train,
     labels=y_train,
@@ -45,7 +50,7 @@ shapley_values = explainer.explain(x=x_explain, budget=n_model_evals)
 shapley_values.plot_force(feature_names=feature_names)
 
 # Get an Shapley Interaction Explainer (here we use the Faithful Shapley Interaction Index)
-explainer = interpretability.shapiq.get_tabpfn_explainer(
+explainer = tabpfn_shapiq.get_tabpfn_explainer(
     model=clf,
     data=X_train,
     labels=y_train,
