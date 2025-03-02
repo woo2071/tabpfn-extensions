@@ -212,17 +212,41 @@ class TunedTabPFNBase(BaseEstimator):
             if n_ensemble_repeats is not None:
                 model_params["n_estimators"] = n_ensemble_repeats
 
-            # Handle model type - skip RF-PFN for now
+            # Handle model type selection
             model_type = model_params.pop("model_type", "single")
+            
+            # Import model implementations based on type
             if model_type == "dt_pfn":
-                return {"loss": float("inf"), "status": STATUS_OK}
+                # Import DecisionTreeTabPFN models
+                try:
+                    from tabpfn_extensions.rf_pfn import (
+                        DecisionTreeTabPFNClassifier,
+                        DecisionTreeTabPFNRegressor,
+                    )
+                except ImportError:
+                    # If import fails, skip this trial
+                    return {"loss": float("inf"), "status": STATUS_OK}
 
             try:
-                # Create and fit model
-                if task_type in ["binary", "multiclass"]:
-                    model = TabPFNClassifier(**model_params)
+                # Create and fit model based on model type
+                if model_type == "dt_pfn":
+                    # Extract decision tree specific parameters
+                    max_depth = model_params.pop("max_depth", 3)
+                    
+                    if task_type in ["binary", "multiclass"]:
+                        # Use TabPFNClassifier as the base model for DT
+                        base_model = TabPFNClassifier(**model_params)
+                        model = DecisionTreeTabPFNClassifier(tabpfn=base_model, max_depth=max_depth)
+                    else:
+                        # Use TabPFNRegressor as the base model for DT
+                        base_model = TabPFNRegressor(**model_params)
+                        model = DecisionTreeTabPFNRegressor(tabpfn=base_model, max_depth=max_depth)
                 else:
-                    model = TabPFNRegressor(**model_params)
+                    # Standard single model
+                    if task_type in ["binary", "multiclass"]:
+                        model = TabPFNClassifier(**model_params)
+                    else:
+                        model = TabPFNRegressor(**model_params)
 
                 model.fit(X_train, y_train)
 
