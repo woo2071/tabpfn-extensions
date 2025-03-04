@@ -240,6 +240,9 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
         return predictions
 
     def _final_proba(self, all_proba, evaluated_estimators):
+        if evaluated_estimators == 0:
+            raise ValueError("No estimators were evaluated. Check estimator initialization.")
+        
         for proba in all_proba:
             proba /= evaluated_estimators
 
