@@ -12,26 +12,26 @@ computation for TabPFN can be cited as follows:
 
 ```bibtext
 @inproceedings{muschalik2024shapiq,
-  title = {shapiq: Shapley Interactions for Machine Learning},
+  title     = {shapiq: Shapley Interactions for Machine Learning},
   author    = {Maximilian Muschalik and Hubert Baniecki and Fabian Fumagalli and
                Patrick Kolpaczki and Barbara Hammer and Eyke H\"{u}llermeier},
   booktitle = {Advances in Neural Information Processing Systems},
-  pages = {130324--130357},
-  url = {https://openreview.net/forum?id=knxGmi6SJi},
-  volume = {37},
-  year = {2024}
+  pages     = {130324--130357},
+  url       = {https://openreview.net/forum?id=knxGmi6SJi},
+  volume    = {37},
+  year      = {2024}
 }
 ```
 and
 ```bibtext
 @InProceedings{rundel2024interpretableTabPFN,
-  author = {David Rundel and Julius Kobialka and Constantin von Crailsheim and
-            Matthias Feurer and Thomas Nagler and David R{\"u}gamer},
-  title = {Interpretable Machine Learning for TabPFN},
+  author    = {David Rundel and Julius Kobialka and Constantin von Crailsheim and
+               Matthias Feurer and Thomas Nagler and David R{\"u}gamer},
+  title     = {Interpretable Machine Learning for TabPFN},
   booktitle = {Explainable Artificial Intelligence},
-  year = {2024},
-  pages = {465--476},
-  url = {https://link.springer.com/chapter/10.1007/978-3-031-63797-1_23}
+  year      = {2024},
+  pages     = {465--476},
+  url       = {https://link.springer.com/chapter/10.1007/978-3-031-63797-1_23}
 }
 
 ```
