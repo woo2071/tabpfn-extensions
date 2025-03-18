@@ -192,11 +192,11 @@ class GreedyWeightedEnsemble(AbstractValidationUtils):
         # Prune base models before GES
         data_for_pruning = []
         data_for_selection = {}
+        assert len(self._estimators) == len(oof_proba) == len(self._model_family_per_estimator), "All iterators must have the same length!"
         for (bm_name, bm_model), bm_oof_proba, bm_family in zip(
             self._estimators,
             oof_proba,
             self._model_family_per_estimator,
-            strict=True,
         ):
             bm_loss = self.loss_function(y, bm_oof_proba)
             data_for_selection[bm_name] = (bm_model, bm_oof_proba)
@@ -236,7 +236,8 @@ class GreedyWeightedEnsemble(AbstractValidationUtils):
 
         final_weights = []
         base_models = []
-        for bm, weight in zip(self._estimators, weights, strict=True):
+        assert len(self._estimators) == len(weights), "All iterators must have the same length!"
+        for bm, weight in zip(self._estimators, weights):
             if weight != 0:
                 final_weights.append(weight)
                 base_models.append(bm)

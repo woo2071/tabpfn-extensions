@@ -2,10 +2,14 @@
 #  Licensed under the Apache License, Version 2.0
 from __future__ import annotations
 
-import numpy as np
-from sklearn.base import BaseEstimator
+from typing import TYPE_CHECKING
+
 from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.model_selection import cross_val_score
+
+if TYPE_CHECKING:
+    import numpy as np
+    from sklearn.base import BaseEstimator
 
 
 def feature_selection(
@@ -13,9 +17,26 @@ def feature_selection(
     X: np.ndarray,
     y: np.ndarray,
     n_features_to_select: int = 3,
-    feature_names: list[str] = None,
+    feature_names: list[str] | None = None,
     **kwargs,
-):
+) -> SequentialFeatureSelector:
+    """Perform feature selection to find the most important features.
+
+    Uses forward sequential feature selection to identify the most important
+    features for the given estimator and data.
+
+    Args:
+        estimator: The model to use for feature selection
+        X: Input features, shape (n_samples, n_features)
+        y: Target values, shape (n_samples,)
+        n_features_to_select: Number of features to select
+        feature_names: Names of the features (optional)
+        **kwargs: Additional parameters to pass to SequentialFeatureSelector
+
+    Returns:
+        SequentialFeatureSelector: Fitted feature selector that can be used
+            to transform data to use only the selected features
+    """
     if hasattr(estimator, "fit_at_predict_time") and estimator.fit_at_predict_time:
         pass
 
@@ -45,13 +66,26 @@ def feature_selection(
 
 
 def _feature_selection(
-    estimator,
-    X,
-    y,
-    n_features_to_select=3,
-    feature_names=None,
+    estimator: BaseEstimator,
+    X: np.ndarray,
+    y: np.ndarray,
+    n_features_to_select: int = 3,
+    feature_names: list[str] | None = None,
     **kwargs,
-):
+) -> SequentialFeatureSelector:
+    """Internal implementation of feature selection.
+
+    Args:
+        estimator: The model to use for feature selection
+        X: Input features
+        y: Target values
+        n_features_to_select: Number of features to select
+        feature_names: Names of the features
+        **kwargs: Additional parameters for SequentialFeatureSelector
+
+    Returns:
+        SequentialFeatureSelector: Fitted feature selector
+    """
     # TODO: Try https://rasbt.github.io/mlxtend/api_subpackages/mlxtend.feature_selection/#sequentialfeatureselector
     # TODO: Could use more feature in training, but only keep fewer in test
     # TODO: the fit function is somehow still called; We need to to change the feature selection

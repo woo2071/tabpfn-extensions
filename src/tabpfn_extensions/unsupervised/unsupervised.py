@@ -116,9 +116,9 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             AssertionError
                 If both tabpfn_clf and tabpfn_reg are None.
         """
-        assert tabpfn_clf is not None or tabpfn_reg is not None, (
-            "You cannot set both `tabpfn_clf` and `tabpfn_reg` to None. You can set one to None, if your table exclusively consists of categoricals/numericals."
-        )
+        assert (
+            tabpfn_clf is not None or tabpfn_reg is not None
+        ), "You cannot set both `tabpfn_clf` and `tabpfn_reg` to None. You can set one to None, if your table exclusively consists of categoricals/numericals."
 
         self.tabpfn_clf = tabpfn_clf
         self.tabpfn_reg = tabpfn_reg
@@ -170,12 +170,11 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
                 # For TabPFN models from our unified import system (or v2), we need to ensure
                 # they're initialized without requiring specific methods
-                else:
-                    # Check if the model has a model attribute (TabPFN package)
-                    # This is a no-op for most implementations and is just to ensure compatibility
-                    if hasattr(estimator, "model") and estimator.model is None:
-                        # Call predict once to initialize the model
-                        _ = estimator.predict(torch.zeros((1, 2)))
+                # Check if the model has a model attribute (TabPFN package)
+                # This is a no-op for most implementations and is just to ensure compatibility
+                elif hasattr(estimator, "model") and estimator.model is None:
+                    # Call predict once to initialize the model
+                    _ = estimator.predict(torch.zeros((1, 2)))
 
                     # For client implementations, there's no additional initialization needed
                     # The model will be initialized on first prediction call
@@ -200,10 +199,9 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                 if hasattr(est, "model") and est.model is None:
                     _ = est.predict(torch.zeros((1, 2)))
                 # For client implementations, there's nothing to do
-                return None
 
             # Add the method to the estimator
-            setattr(estimator, "init_model_and_get_model_config", init_wrapper)
+            estimator.init_model_and_get_model_config = init_wrapper
 
             # Update the estimator in the list
             self.estimators[idx] = estimator
@@ -405,7 +403,28 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
         return impute_X, pred
 
-    def sample_from_model_prediction_(self, column_idx, X_fit, model, X_predict, t):
+    def sample_from_model_prediction_(
+        self,
+        column_idx: int,
+        X_fit: torch.Tensor,
+        model: Any,
+        X_predict: torch.Tensor,
+        t: float,
+    ) -> tuple[dict[str, Any] | np.ndarray, torch.Tensor]:
+        """Sample values from a model's prediction distribution.
+
+        Args:
+            column_idx: Index of the column being predicted
+            X_fit: Training data used to determine feature type
+            model: The trained model (classifier or regressor)
+            X_predict: Input data for prediction
+            t: Temperature parameter for sampling (lower values = more deterministic)
+
+        Returns:
+            tuple containing:
+                - The raw prediction output (dictionary for regressors, array for classifiers)
+                - The sampled values as a tensor
+        """
         if not self.use_classifier_(column_idx, X_fit[:, column_idx]):
             pred = model.predict(X_predict.numpy(), output_type="full")
             # Proper tensor construction to avoid warnings
@@ -426,7 +445,16 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
         return pred, pred_sampled
 
-    def use_classifier_(self, column_idx, y):
+    def use_classifier_(self, column_idx: int, y: torch.Tensor | np.ndarray) -> bool:
+        """Determine whether to use a classifier or regressor for a feature.
+
+        Args:
+            column_idx: Index of the column to check
+            y: Values of the feature
+
+        Returns:
+            bool: True if a classifier should be used, False for a regressor
+        """
         # Check if we should use classifier based on feature type and number of unique values
         max_classes = getattr(self.tabpfn_clf, "max_num_classes_", 10)
         return (
@@ -435,11 +463,28 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
     def density_(
         self,
-        X_predict: torch.tensor,
-        X_fit: torch.tensor,
+        X_predict: torch.Tensor,
+        X_fit: torch.Tensor,
         conditional_idx: list[int],
         column_idx: int,
-    ) -> torch.tensor:
+    ) -> tuple[Any, torch.Tensor, torch.Tensor]:
+        """Generate density predictions for a specific feature based on other features.
+
+        This internal method is used by the imputation and outlier detection algorithms
+        to model the conditional probability distribution of one feature given others.
+
+        Args:
+            X_predict: Input data for which to make predictions
+            X_fit: Training data to fit the model
+            conditional_idx: Indices of features to condition on
+            column_idx: Index of the feature to predict
+
+        Returns:
+            tuple containing:
+                - The fitted model (classifier or regressor)
+                - The filtered features used for prediction
+                - The target feature values to predict
+        """
         # Initialize model if needed
         self.init_model_and_get_model_config()
 

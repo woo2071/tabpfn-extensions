@@ -6,8 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "tabpfn-extensions"
 version = "0.0.5"
 dependencies = [
-    "seaborn==0.12.2",
+    "seaborn>=0.12.2",
     "numpy<2.0",
+    "torch",
     "pandas>=1.4.0,<3",
     "scikit-learn>=1.2.0,<1.7",
     "scipy>=1.7.3,<2",
@@ -61,6 +62,7 @@ interpretability = [
 ]
 post_hoc_ensembles = [
     "kditransform>=0.2.0",
+    "llvmlite",
     "hyperopt>=0.2.7"
 ]
 hpo = [

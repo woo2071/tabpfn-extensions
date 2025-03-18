@@ -20,14 +20,14 @@ X_train, X_test, y_train, y_test = train_test_split(
     random_state=42,
 )
 
-# Initialize TabPFN models with compatible parameters
-# Using parameters that work with both TabPFN and TabPFN-client
-clf = TabPFNClassifier()  # Use default parameters for compatibility
+# Initialize TabPFN models
+# Use parameters that work with both TabPFN and TabPFN-client
+clf = TabPFNClassifier(n_estimators=3)
 
 # Import TabPFNRegressor for numerical features
 from tabpfn_extensions import TabPFNRegressor
 
-reg = TabPFNRegressor()  # Use regressor for numerical features
+reg = TabPFNRegressor(n_estimators=3)
 
 # Initialize unsupervised model
 model_unsupervised = unsupervised.TabPFNUnsupervisedModel(

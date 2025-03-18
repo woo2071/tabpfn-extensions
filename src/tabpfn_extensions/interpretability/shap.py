@@ -50,19 +50,15 @@ def calculate_shap_subset(args: tuple) -> np.ndarray:
     This helper function is used by parallel_permutation_shap to enable
     efficient parallel computation of SHAP values for each feature.
 
-    Parameters
-    ----------
-    args : tuple
-        A tuple containing:
-        - X_subset: Feature matrix for which to calculate SHAP values
-        - background: Background data for the explainer
-        - model: The model for which to calculate SHAP values
-        - feature_idx: The index of the feature to calculate SHAP values for
+    Args:
+        args: A tuple containing:
+            - X_subset: Feature matrix for which to calculate SHAP values
+            - background: Background data for the explainer
+            - model: The model for which to calculate SHAP values
+            - feature_idx: The index of the feature to calculate SHAP values for
 
     Returns:
-    -------
-    np.ndarray
-        SHAP values for the specified feature
+        np.ndarray: SHAP values for the specified feature
     """
     import shap
 
@@ -84,25 +80,15 @@ def parallel_permutation_shap(
     This is much faster than calculating all SHAP values at once, especially
     for large datasets or complex models.
 
-    Parameters
-    ----------
-    model : Any
-        The model for which to calculate SHAP values. Must have a prediction method.
-
-    X : Union[np.ndarray, pd.DataFrame]
-        Feature matrix for which to calculate SHAP values.
-
-    background : Union[np.ndarray, pd.DataFrame], optional
-        Background data for the explainer. If None, X is used as background data.
-
-    n_jobs : int, default=-1
-        Number of processes to use for parallel computation.
-        If -1, all available CPU cores are used.
+    Args:
+        model: The model for which to calculate SHAP values. Must have a prediction method.
+        X: Feature matrix for which to calculate SHAP values.
+        background: Background data for the explainer. If None, X is used as background data.
+        n_jobs: Number of processes to use for parallel computation.
+            If -1, all available CPU cores are used.
 
     Returns:
-    -------
-    np.ndarray
-        Matrix of SHAP values with shape (n_samples, n_features).
+        np.ndarray: Matrix of SHAP values with shape (n_samples, n_features).
     """
     # If no background data provided, use X
     if background is None:
@@ -124,12 +110,15 @@ def parallel_permutation_shap(
 
 
 def plot_shap(shap_values: np.ndarray) -> None:
-    """Plots the shap values for the given test data. It will plot aggregated shap values for each feature, as well
-    as per sample shap values. Additionally, if multiple samples are provided, it will plot the 3 most important
-    interactions with the most important feature.
+    """Plot SHAP values for the given test data.
 
-    Parameters:
-        shap_values (np.ndarray): The SHAP values to plot, typically from get_shap_values().
+    This function creates several visualizations of SHAP values:
+    1. Aggregated feature importances across all examples
+    2. Per-sample feature importances
+    3. Important feature interactions (if multiple samples provided)
+
+    Args:
+        shap_values: The SHAP values to plot, typically from get_shap_values().
 
     Returns:
         None: This function only produces visualizations.
@@ -161,10 +150,10 @@ def plot_shap_feature(
 ) -> None:
     """Plot feature interactions for a specific feature based on SHAP values.
 
-    Parameters:
-        shap_values_ (Any): SHAP values object containing the data to plot.
-        feature_name (Union[int, str]): The feature index or name to plot interactions for.
-        n_plots (int, optional): Number of interaction plots to create. Defaults to 1.
+    Args:
+        shap_values_: SHAP values object containing the data to plot.
+        feature_name: The feature index or name to plot interactions for.
+        n_plots: Number of interaction plots to create. Defaults to 1.
 
     Returns:
         None: This function only produces visualizations.
@@ -196,13 +185,17 @@ def get_shap_values(
     attribute_names: list[str] | None = None,
     **kwargs: Any,
 ) -> np.ndarray:
-    """Computes SHAP (SHapley Additive exPlanations) values for the model's predictions on the given input features.
+    """Compute SHAP values for a model's predictions on input features.
 
-    Parameters:
-        estimator (Any): The model to explain, typically a TabPFNClassifier or scikit-learn compatible model.
-        test_x (Union[pd.DataFrame, np.ndarray, torch.Tensor]): The input features to compute SHAP values for.
-        attribute_names (Optional[List[str]], optional): Column names for the features when test_x is a numpy array.
-        **kwargs (Any): Additional keyword arguments to pass to the SHAP explainer.
+    This function calculates SHAP (SHapley Additive exPlanations) values that
+    attribute the contribution of each input feature to the model's output.
+    It automatically selects the appropriate SHAP explainer based on the model.
+
+    Args:
+        estimator: The model to explain, typically a TabPFNClassifier or scikit-learn compatible model.
+        test_x: The input features to compute SHAP values for.
+        attribute_names: Column names for the features when test_x is a numpy array.
+        **kwargs: Additional keyword arguments to pass to the SHAP explainer.
 
     Returns:
         np.ndarray: The computed SHAP values with shape (n_samples, n_features).
@@ -266,12 +259,12 @@ def get_tabpfn_explainer(
 ) -> Any:
     """Create a SHAP explainer specifically optimized for TabPFN models.
 
-    Parameters:
-        estimator (Any): The TabPFN model to explain.
-        test_x (pd.DataFrame): The input features to compute SHAP values for.
-        predict_function_for_shap (Union[str, Callable], optional): Function name or callable to use for prediction.
+    Args:
+        estimator: The TabPFN model to explain.
+        test_x: The input features to compute SHAP values for.
+        predict_function_for_shap: Function name or callable to use for prediction.
             Defaults to "predict".
-        **kwargs (Any): Additional keyword arguments to pass to the SHAP explainer.
+        **kwargs: Additional keyword arguments to pass to the SHAP explainer.
 
     Returns:
         Any: A configured SHAP explainer for the TabPFN model.
@@ -295,12 +288,12 @@ def get_default_explainer(
 ) -> Any:
     """Create a standard SHAP explainer for non-TabPFN models.
 
-    Parameters:
-        estimator (Any): The model to explain.
-        test_x (pd.DataFrame): The input features to compute SHAP values for.
-        predict_function_for_shap (Union[str, Callable], optional): Function name or callable to use for prediction.
+    Args:
+        estimator: The model to explain.
+        test_x: The input features to compute SHAP values for.
+        predict_function_for_shap: Function name or callable to use for prediction.
             Defaults to "predict".
-        **kwargs (Any): Additional keyword arguments to pass to the SHAP explainer.
+        **kwargs: Additional keyword arguments to pass to the SHAP explainer.
 
     Returns:
         Any: A configured SHAP explainer for the model.

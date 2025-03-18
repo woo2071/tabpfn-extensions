@@ -57,63 +57,40 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
     system that maps the original classes to multiple sub-problems, each within
     TabPFN's class limit.
 
-    Parameters
-    ----------
-    estimator : estimator object
-        A classifier implementing fit() and predict_proba() methods.
-        Typically a TabPFNClassifier instance. The base classifier
-        should be able to handle up to `alphabet_size` classes.
-
-    alphabet_size : int, default=None
-        Maximum number of classes the base estimator can handle.
-        If None, it will try to get this from estimator.max_num_classes_
-
-    n_estimators : int, default=None
-        Number of base estimators to train. If None, an optimal number
-        is calculated based on the number of classes and alphabet_size.
-
-    n_estimators_redundancy : int, default=4
-        Redundancy factor for the auto-calculated number of estimators.
-        Higher values increase reliability but also computational cost.
-
-    random_state : int, RandomState instance, default=None
-        Controls randomization used to initialize the codebook.
-        Pass an int for reproducible results.
+    Args:
+        estimator: A classifier implementing fit() and predict_proba() methods.
+            Typically a TabPFNClassifier instance. The base classifier
+            should be able to handle up to `alphabet_size` classes.
+        alphabet_size: Maximum number of classes the base estimator can handle.
+            If None, it will try to get this from estimator.max_num_classes_
+        n_estimators: Number of base estimators to train. If None, an optimal number
+            is calculated based on the number of classes and alphabet_size.
+        n_estimators_redundancy: Redundancy factor for the auto-calculated number of estimators.
+            Higher values increase reliability but also computational cost.
+        random_state: Controls randomization used to initialize the codebook.
+            Pass an int for reproducible results.
 
     Attributes:
-    ----------
-    classes_ : ndarray of shape (n_classes,)
-        Array containing unique target labels.
-
-    code_book_ : ndarray of shape (n_estimators, n_classes)
-        N-ary array containing the coding scheme that maps original
-        classes to base classifier problems.
-
-    no_mapping_needed_ : bool
-        True if the number of classes is within the alphabet_size limit,
-        allowing direct use of the base estimator without any mapping.
-
-    classes_index_ : dict
-        Maps class labels to their indices in classes_.
-
-    X_train : array-like
-        Training data stored for reuse during prediction.
-
-    Y_train : array-like
-        Encoded training labels for each base estimator.
+        classes_: Array containing unique target labels.
+        code_book_: N-ary array containing the coding scheme that maps original
+            classes to base classifier problems.
+        no_mapping_needed_: True if the number of classes is within the alphabet_size limit,
+            allowing direct use of the base estimator without any mapping.
+        classes_index_: Maps class labels to their indices in classes_.
+        X_train: Training data stored for reuse during prediction.
+        Y_train: Encoded training labels for each base estimator.
 
     Examples:
-    --------
-    >>> from sklearn.datasets import load_iris
-    >>> from tabpfn import TabPFNClassifier
-    >>> from tabpfn_extensions.many_class import ManyClassClassifier
-    >>> from sklearn.model_selection import train_test_split
-    >>> X, y = load_iris(return_X_y=True)
-    >>> X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
-    >>> base_clf = TabPFNClassifier()
-    >>> many_clf = ManyClassClassifier(base_clf, alphabet_size=base_clf.max_num_classes_)
-    >>> many_clf.fit(X_train, y_train)
-    >>> y_pred = many_clf.predict(X_test)
+        >>> from sklearn.datasets import load_iris
+        >>> from tabpfn import TabPFNClassifier
+        >>> from tabpfn_extensions.many_class import ManyClassClassifier
+        >>> from sklearn.model_selection import train_test_split
+        >>> X, y = load_iris(return_X_y=True)
+        >>> X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+        >>> base_clf = TabPFNClassifier()
+        >>> many_clf = ManyClassClassifier(base_clf, alphabet_size=base_clf.max_num_classes_)
+        >>> many_clf.fit(X_train, y_train)
+        >>> y_pred = many_clf.predict(X_test)
     """
 
     def __init__(
@@ -158,7 +135,9 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
             )
         return self.n_estimators
 
-    def _generate_codebook(self, n_classes, n_estimators, alphabet_size):
+    def _generate_codebook(
+        self, n_classes: int, n_estimators: int, alphabet_size: int
+    ) -> np.ndarray:
         """Generate an efficient codebook using the provided alphabet size.
 
         This function generates a codebook where for each codeword at most `alphabet_size - 1` classes
@@ -166,19 +145,15 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         is generated to provide for each class a unique codeword with maximum reduncancy between codewords.
         Greedy optimization is used to find the optimal codewords.
 
-        Parameters:
-            n_classes : int
-                Number of classes.
-            n_estimators : int
-                Number of estimators.
-            alphabet_size : int, default=10
-                Size of the alphabet for the codebook. The first `alphabet_size - 1` classes
+        Args:
+            n_classes: Number of classes.
+            n_estimators: Number of estimators.
+            alphabet_size: Size of the alphabet for the codebook. The first `alphabet_size - 1` classes
                 will be mapped to unique classes, and the remaining classes will be mapped
                 to the "rest" class.
 
         Returns:
-            codebook : ndarray of shape (n_estimators, n_classes)
-                Efficient n-ary codebook.
+            np.ndarray: Efficient n-ary codebook of shape (n_estimators, n_classes).
         """
         n_classes_in_codebook = min(n_classes, alphabet_size - 1)
         n_classes_remaining = n_classes - n_classes_in_codebook
@@ -236,23 +211,17 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
 
         return codebook
 
-    def fit(self, X, y, **fit_params):
+    def fit(self, X: np.ndarray, y: np.ndarray, **fit_params) -> ManyClassClassifier:
         """Fit underlying estimators.
 
-        Parameters:
-            X : {array-like, sparse matrix} of shape (n_samples, n_features)
-                Data.
-
-            y : array-like of shape (n_samples,)
-                Multi-class targets.
-
-            **fit_params : dict
-                Parameters passed to the ``estimator.fit`` method of each
+        Args:
+            X: Data matrix of shape (n_samples, n_features).
+            y: Multi-class target labels of shape (n_samples,).
+            **fit_params: Parameters passed to the ``estimator.fit`` method of each
                 sub-estimator.
 
         Returns:
-            self : object
-                Returns a fitted instance of self.
+            self: Returns a fitted instance of self.
         """
         y = self._validate_data(X="no_validation", y=y)
 
@@ -289,17 +258,16 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
 
         return self
 
-    def predict_proba(self, X):
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """Predict probabilities using the underlying estimators.
 
-        Parameters:
-            X : {array-like, sparse matrix} of shape (n_samples, n_features)
-                Data.
+        Args:
+            X: Data matrix of shape (n_samples, n_features).
 
         Returns:
-            p : ndarray of shape (n_samples, n_classes)
-                Returns the probability of the samples for each class in the model,
-                where classes are ordered as they are in `self.classes_`.
+            np.ndarray: The probability of the samples for each class in the model,
+                of shape (n_samples, n_classes), where classes are ordered as
+                they are in `self.classes_`.
         """
         check_is_fitted(self)
 
@@ -337,9 +305,9 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
                     ]  # / (1 - Y[i, :, rest_class])
                     # print(j, Y[i, :, j_remapped])  # noqa: ERA001
 
-        assert not ((self.code_book_ != rest_class).sum(0) == 0).any(), (
-            f"Some classes are not mapped to any codeword. {self.code_book_} {self.classes_} {((self.code_book_ != rest_class).sum(0) == 0)}"
-        )
+        assert not (
+            (self.code_book_ != rest_class).sum(0) == 0
+        ).any(), f"Some classes are not mapped to any codeword. {self.code_book_} {self.classes_} {((self.code_book_ != rest_class).sum(0) == 0)}"
 
         # Normalize the weighted probabilities to get the final class probabilities
         probabilities /= (self.code_book_ != rest_class).sum(0)
@@ -347,18 +315,14 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
 
         return probabilities
 
-    def predict(self, X):
+    def predict(self, X: np.ndarray) -> np.ndarray:
         """Predict multi-class targets using underlying estimators.
 
-        Parameters
-        ----------
-        X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            Data.
+        Args:
+            X: Data matrix of shape (n_samples, n_features).
 
         Returns:
-        -------
-        y : ndarray of shape (n_samples,)
-            Predicted multi-class targets.
+            np.ndarray: Predicted multi-class targets of shape (n_samples,).
         """
         check_is_fitted(self)
         X = check_array(X)
@@ -372,13 +336,11 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         # Return class with highest probability
         return self.classes_[np.argmax(probas, axis=1)]
 
-    def set_categorical_features(self, categorical_features):
+    def set_categorical_features(self, categorical_features: list[int]) -> None:
         """Set categorical features for the base estimator if it supports it.
 
-        Parameters
-        ----------
-        categorical_features : list
-            List of categorical feature indices
+        Args:
+            categorical_features: List of categorical feature indices.
         """
         self.categorical_features = categorical_features
         if hasattr(self.estimator, "set_categorical_features"):
@@ -399,30 +361,21 @@ def _fit_and_predict_proba(
     encoded labels for this specific sub-problem, and returns probability
     predictions for the test data.
 
-    Parameters
-    ----------
-    estimator : estimator object
-        Base estimator to clone and fit. Usually a TabPFNClassifier instance.
-
-    X_train : array-like of shape (n_samples, n_features)
-        Training data features used to fit the cloned estimator.
-
-    Y_train : array-like of shape (n_samples,)
-        Encoded target values for this particular sub-problem.
-        These are derived from the codebook mapping.
-
-    X : array-like of shape (n_samples_test, n_features)
-        Test data for which to predict probabilities.
+    Args:
+        estimator: Base estimator to clone and fit. Usually a TabPFNClassifier instance.
+        X_train: Training data features used to fit the cloned estimator,
+            of shape (n_samples, n_features).
+        Y_train: Encoded target values for this particular sub-problem,
+            of shape (n_samples,). These are derived from the codebook mapping.
+        X: Test data for which to predict probabilities,
+            of shape (n_samples_test, n_features).
 
     Returns:
-    -------
-    probas : ndarray of shape (n_samples_test, n_classes)
-        Predicted probabilities for each class in this sub-problem.
+        np.ndarray: Predicted probabilities for each class in this sub-problem,
+            of shape (n_samples_test, n_classes).
 
     Raises:
-    ------
-    AttributeError
-        If the base estimator doesn't implement predict_proba.
+        AttributeError: If the base estimator doesn't implement predict_proba.
     """
     # Clone the estimator to avoid modifying the original
     cloned_estimator = clone(estimator)
