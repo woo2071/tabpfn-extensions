@@ -11,6 +11,7 @@ WARNING: This example may run slowly on CPU-only systems.
 For better performance, we recommend running with GPU acceleration.
 The ManyClassClassifier creates multiple TabPFN models for handling many classes.
 """
+
 import numpy as np
 from sklearn.datasets import make_classification
 from sklearn.metrics import accuracy_score, roc_auc_score

@@ -4,6 +4,7 @@
 This module provides functions to create shapiq explainers for TabPFN models that support
 both basic Shapley values and interaction indices for more detailed model explanations.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

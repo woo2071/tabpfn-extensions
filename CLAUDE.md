@@ -101,7 +101,7 @@ python -m pytest -m client_compatible
 1. **Inherit from Base Classes**:
    ```python
    from test_base_tabpfn import BaseClassifierTests
-   
+
    class TestMyExtension(BaseClassifierTests):
        @pytest.fixture
        def estimator(self, tabpfn_classifier):

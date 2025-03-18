@@ -7,7 +7,7 @@ body:
   attributes:
     value: >
       #### Before submitting a bug, please make sure the issue hasn't been already
-      addressed by searching through [the past issues](https://github.com/PriorLabs/TabPFN/issues)
+      addressed by searching through [the past issues](https://github.com/PriorLabs/TabPFN-extensions/issues)
       and updating your tabpfn version by running `pip install tabpfn --upgrade`.
 - type: textarea
   attributes:
@@ -29,11 +29,11 @@ body:
 
       # Generate synthetic classification data
       X, y = make_classification(n_samples=100, n_features=10, random_state=42)
-      
+
       # Initialize and train TabPFN
       classifier = TabPFNClassifier(N_estimators=4)
       classifier.fit(X, y)
-      
+
       # Make predictions
       y_pred = classifier.predict(X)
       ```
@@ -67,7 +67,7 @@ body:
       ```python-traceback
       ---------------------------------------------------------------------------
       Traceback (most recent call last):
-        File "/Users/leo/VSCProjects/new/TabPFN/test_git.py", line 9, in <module>
+        File "/Users/leo/VSCProjects/new/TabPFN-extensions/test_git.py", line 9, in <module>
           classifier = TabPFNClassifier(N_estimators=4)
       TypeError: TabPFNClassifier.__init__() got an unexpected keyword argument 'N_estimators'
       ```

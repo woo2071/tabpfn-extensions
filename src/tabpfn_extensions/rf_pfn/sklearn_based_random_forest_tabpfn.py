@@ -87,7 +87,11 @@ class RandomForestTabPFNBase:
             return self
 
         # Initialize the tree estimators - convert to Python int to ensure client compatibility
-        n_estimators = int(self.n_estimators) if hasattr(self.n_estimators, 'item') else self.n_estimators
+        n_estimators = (
+            int(self.n_estimators)
+            if hasattr(self.n_estimators, "item")
+            else self.n_estimators
+        )
         if n_estimators <= 0:
             raise ValueError(
                 f"n_estimators must be greater than zero, got {n_estimators}",
@@ -104,16 +108,20 @@ class RandomForestTabPFNBase:
             # Bootstrap sample if requested (like in RandomForest)
             if self.bootstrap:
                 n_samples = X.shape[0]
-                
+
                 # Convert max_samples to Python int if needed for client compatibility
                 max_samples = self.max_samples
-                if max_samples is not None and hasattr(max_samples, 'item'):
+                if max_samples is not None and hasattr(max_samples, "item"):
                     max_samples = int(max_samples)
-                
-                # Calculate sample size (convert to Python int for client compatibility)    
-                sample_size = n_samples if max_samples is None else int(max_samples * n_samples)
-                sample_size = int(sample_size) if hasattr(sample_size, 'item') else sample_size
-                
+
+                # Calculate sample size (convert to Python int for client compatibility)
+                sample_size = (
+                    n_samples if max_samples is None else int(max_samples * n_samples)
+                )
+                sample_size = (
+                    int(sample_size) if hasattr(sample_size, "item") else sample_size
+                )
+
                 indices = np.random.choice(
                     n_samples,
                     size=sample_size,
@@ -368,7 +376,9 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
 
         # First collect all the classes from all estimators to ensure we handle all possible classes
         if not hasattr(self, "classes_"):
-            all_classes_sets = [set(np.unique(estimator.classes_)) for estimator in self.estimators_]
+            all_classes_sets = [
+                set(np.unique(estimator.classes_)) for estimator in self.estimators_
+            ]
             all_classes = sorted(set().union(*all_classes_sets))
             self.classes_ = np.array(all_classes)
             self.n_classes_ = len(self.classes_)
@@ -384,10 +394,13 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
         for estimator in self.estimators_:
             # Get predictions from this tree
             proba = estimator.predict_proba(X)
-            
+
             # If this estimator has fewer classes than the overall set, expand it
             if proba.shape[1] < self.n_classes_:
-                expanded_proba = np.zeros((n_samples, self.n_classes_), dtype=np.float64)
+                expanded_proba = np.zeros(
+                    (n_samples, self.n_classes_),
+                    dtype=np.float64,
+                )
                 for i, class_val in enumerate(estimator.classes_):
                     # Find the index of this class in the overall classes array
                     idx = np.where(self.classes_ == class_val)[0][0]

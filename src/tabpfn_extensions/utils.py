@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import os
 import warnings
+from typing import Any, Literal, Protocol
+
 import numpy as np
-from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 
 class TabPFNEstimator(Protocol):
@@ -225,10 +226,11 @@ TabPFNClassifier, TabPFNRegressor = get_tabpfn_models()
 
 
 def infer_categorical_features(
-    X: np.ndarray, categorical_features: list[int] | None = None
+    X: np.ndarray,
+    categorical_features: list[int] | None = None,
 ) -> list[int]:
     """Infer the categorical features from the input data.
-    
+
     We take `categorical_features` as the initial list of categorical features
     and refine it based on the number of unique values in each feature.
 
@@ -242,7 +244,7 @@ def infer_categorical_features(
     """
     if categorical_features is None:
         categorical_features = []
-        
+
     max_unique_values_as_categorical_feature = 10
     min_unique_values_as_numerical_feature = 10
 

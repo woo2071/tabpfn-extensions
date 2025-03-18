@@ -6,7 +6,9 @@ try:
         GreedyWeightedEnsembleRegressor,
     )
 except ImportError:
-    raise ImportError("Please install tabpfn-extensions with the 'post_hoc_ensembles' extra: pip install 'tabpfn-extensions[post_hoc_ensembles]'")
+    raise ImportError(
+        "Please install tabpfn-extensions with the 'post_hoc_ensembles' extra: pip install 'tabpfn-extensions[post_hoc_ensembles]'",
+    )
 
 __all__ = [
     "GreedyWeightedEnsemble",

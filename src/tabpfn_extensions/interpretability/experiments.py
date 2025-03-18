@@ -2,6 +2,28 @@
 #  Licensed under the Apache License, Version 2.0
 from __future__ import annotations
 
+import copy
+from abc import ABC, abstractmethod
+
+import numpy as np
+from sklearn.base import BaseEstimator, ClassifierMixin
+
+
+class Experiment(ABC):
+    """Abstract base class for experiments."""
+
+    name = "BaseExperiment"
+
+    @abstractmethod
+    def run(self, *args, **kwargs):
+        """Run the experiment."""
+        pass
+
+    @abstractmethod
+    def plot(self, **kwargs):
+        """Plot experiment results."""
+        pass
+
 
 class FeatureSelectionExperiment(Experiment):
     """This class is used to run experiments on generating synthetic data."""

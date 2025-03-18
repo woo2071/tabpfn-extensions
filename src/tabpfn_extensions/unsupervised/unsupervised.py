@@ -41,9 +41,9 @@ Example usage:
 from __future__ import annotations
 
 import copy
-import random
 import os
-from typing import Dict, List, Optional, Tuple, Union, Any, Callable, Sequence, Iterator
+import random
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -52,7 +52,11 @@ from sklearn.base import BaseEstimator
 from tqdm import tqdm
 
 # Import TabPFN models from extensions (which handles backend compatibility)
-from tabpfn_extensions.utils import TabPFNClassifier, TabPFNRegressor, infer_categorical_features  # type: ignore
+from tabpfn_extensions.utils import (  # type: ignore
+    TabPFNClassifier,
+    TabPFNRegressor,
+    infer_categorical_features,
+)
 
 
 class TabPFNUnsupervisedModel(BaseEstimator):
@@ -205,10 +209,10 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             self.estimators[idx] = estimator
 
     def fit(
-        self, 
-        X: Union[np.ndarray, torch.Tensor, pd.DataFrame], 
-        y: Optional[Union[np.ndarray, torch.Tensor, pd.Series]] = None
-    ) -> "TabPFNUnsupervisedModel":
+        self,
+        X: np.ndarray | torch.Tensor | pd.DataFrame,
+        y: np.ndarray | torch.Tensor | pd.Series | None = None,
+    ) -> TabPFNUnsupervisedModel:
         """Fit the model to the input data.
 
         Args:
@@ -255,7 +259,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
         # Ensure all estimators have the init_model_and_get_model_config method
         self._ensure_init_model_method()
-        
+
         return self
 
     def impute_(
@@ -279,7 +283,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                 Whether to condition on all other features (True) or only previous features (False)
             fast_mode: bool, default=False
                 Whether to use faster settings for testing
-                
+
         Returns:
             torch.Tensor: Imputed data with missing values replaced
         """
@@ -305,7 +309,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             X_where_y_is_nan = impute_X[torch.isnan(y_predict)]
             X_where_y_is_nan = X_where_y_is_nan.reshape(-1, impute_X.shape[1])
 
-            densities: List[Any] = []
+            densities: list[Any] = []
             # Use fewer permutations in fast mode
             actual_n_permutations = 1 if fast_mode else n_permutations
 
@@ -424,10 +428,9 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
     def use_classifier_(self, column_idx, y):
         # Check if we should use classifier based on feature type and number of unique values
-        max_classes = getattr(self.tabpfn_clf, 'max_num_classes_', 10)
+        max_classes = getattr(self.tabpfn_clf, "max_num_classes_", 10)
         return (
-            column_idx in self.categorical_features
-            and len(np.unique(y)) < max_classes
+            column_idx in self.categorical_features and len(np.unique(y)) < max_classes
         )
 
     def density_(
@@ -476,7 +479,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
     def impute(
         self,
-        X: Union[torch.Tensor, np.ndarray, pd.DataFrame],
+        X: torch.Tensor | np.ndarray | pd.DataFrame,
         t: float = 0.000000001,
         n_permutations: int = 10,
     ) -> torch.Tensor:
@@ -512,7 +515,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             X = torch.tensor(X, dtype=torch.float32)
         elif isinstance(X, pd.DataFrame):
             X = torch.tensor(X.values, dtype=torch.float32)
-            
+
         # Check if running in test mode
         fast_mode = os.environ.get("FAST_TEST_MODE", "0") == "1"
 
@@ -646,9 +649,9 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         return pmf
 
     def outliers(
-        self, 
-        X: Union[torch.Tensor, np.ndarray, pd.DataFrame], 
-        n_permutations: int = 10
+        self,
+        X: torch.Tensor | np.ndarray | pd.DataFrame,
+        n_permutations: int = 10,
     ) -> torch.Tensor:
         """Calculate outlier scores for each sample in the input data.
 
@@ -665,7 +668,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                 Higher values may produce more stable results but increase computation time.
 
         Returns:
-            torch.Tensor: 
+            torch.Tensor:
                 Tensor of outlier scores (lower values indicate more likely outliers),
                 shape (n_samples,)
 
@@ -678,7 +681,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             X = torch.tensor(X, dtype=torch.float32)
         elif isinstance(X, pd.DataFrame):
             X = torch.tensor(X.values, dtype=torch.float32)
-            
+
         # Initialize model if needed
         self.init_model_and_get_model_config()
 
@@ -691,7 +694,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         # Use fewer permutations in fast mode
         actual_n_permutations = 1 if fast_mode else n_permutations
 
-        densities: List[Union[torch.Tensor, np.ndarray]] = []
+        densities: list[torch.Tensor | np.ndarray] = []
         for perm in efficient_random_permutation(all_features, actual_n_permutations):
             perm_density_log, perm_density = self.outliers_single_permutation_(
                 X,
@@ -701,7 +704,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
         # Average the densities across all permutations
         # Handle potential infinite values by replacing them with large finite values
-        densities_clean: List[torch.Tensor] = [
+        densities_clean: list[torch.Tensor] = [
             torch.nan_to_num(d, nan=0.0, posinf=1e30, neginf=1e-30)
             if torch.is_tensor(d)
             else torch.nan_to_num(
