@@ -31,15 +31,16 @@ def enumerate_preprocess_transforms():
 
     # Add KDI transforms if available
     try:
-        from kditransform import KDITransformer
+        import importlib.util
 
-        # Only add KDI transforms if the module is properly imported
-        names_list += [
-            ["kdi_uni"],
-            ["kdi_alpha_0.3"],
-            ["kdi_alpha_3.0"],
-            ["kdi", "quantile_uni"],
-        ]
+        if importlib.util.find_spec("kditransform") is not None:
+            # Only add KDI transforms if the module is available
+            names_list += [
+                ["kdi_uni"],
+                ["kdi_alpha_0.3"],
+                ["kdi_alpha_3.0"],
+                ["kdi", "quantile_uni"],
+            ]
     except ImportError:
         # KDI transform not available, skipping related transforms
         pass

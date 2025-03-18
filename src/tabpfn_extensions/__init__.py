@@ -8,3 +8,5 @@ except PackageNotFoundError:
 # Create alias for test_utils
 from . import test_utils
 from .utils import TabPFNClassifier, TabPFNRegressor, is_tabpfn
+
+__all__ = ["test_utils", "TabPFNClassifier", "TabPFNRegressor", "is_tabpfn"]

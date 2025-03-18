@@ -6,6 +6,7 @@ from .tuned_tabpfn import TunedTabPFNClassifier, TunedTabPFNRegressor
 
 __all__ = [
     "TabPFNSearchSpace",
+    "get_param_grid_hyperopt",
     "TunedTabPFNClassifier",
     "TunedTabPFNRegressor",
 ]

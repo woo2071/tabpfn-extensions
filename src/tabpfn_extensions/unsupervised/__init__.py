@@ -6,4 +6,4 @@
 from . import experiments
 from .unsupervised import TabPFNUnsupervisedModel
 
-__all__ = ["TabPFNUnsupervisedModel"]
+__all__ = ["TabPFNUnsupervisedModel", "experiments"]

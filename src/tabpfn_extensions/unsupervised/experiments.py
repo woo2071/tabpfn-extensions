@@ -303,8 +303,8 @@ class OutlierDetectionUnsupervisedExperiment(Experiment):
 
             if kwargs.get("should_plot", True):
                 try:
-                    import matplotlib.pyplot as plt
-
+                    # We don't need to import the module directly here
+                    # since plot_two() will do the import
                     self.plot_two()
                 except ImportError:
                     # Skip plotting if matplotlib is not available

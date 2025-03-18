@@ -2,11 +2,15 @@
 #  Licensed under the Apache License, Version 2.0
 from __future__ import annotations
 
+import itertools
 import os
 import warnings
-from typing import Any, Literal, Protocol
+from collections.abc import Iterator
+from typing import Any, Literal, Protocol, TypeVar
 
 import numpy as np
+
+T = TypeVar("T")
 
 
 class TabPFNEstimator(Protocol):
@@ -265,3 +269,27 @@ def infer_categorical_features(
             _categorical_features += [i]
 
     return _categorical_features
+
+
+def product_dict(d: dict[str, list[T]]) -> Iterator[dict[str, T]]:
+    """Cartesian product of a dictionary of lists.
+
+    This function takes a dictionary where each value is a list, and returns
+    an iterator over dictionaries where each key is mapped to one element
+    from the corresponding list.
+
+    Parameters:
+        d: A dictionary mapping keys to lists of values.
+
+    Returns:
+        An iterator over dictionaries, each being one element of the cartesian
+        product of the input dictionary.
+
+    Example:
+        >>> list(product_dict({'a': [1, 2], 'b': ['x', 'y']}))
+        [{'a': 1, 'b': 'x'}, {'a': 1, 'b': 'y'}, {'a': 2, 'b': 'x'}, {'a': 2, 'b': 'y'}]
+    """
+    keys = d.keys()
+    values = [d[key] for key in keys]
+    for combination in itertools.product(*values):
+        yield dict(zip(keys, combination))

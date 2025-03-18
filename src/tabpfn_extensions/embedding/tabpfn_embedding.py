@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Optional
 
-from tabpfn_extensions import TabPFNRegressor, TabPFNClassifier
+from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
+
 
 class TabPFNEmbedding:
     """
     TabPFNEmbedding is a utility for extracting embeddings from TabPFNClassifier or TabPFNRegressor models.
     It supports standard training (vanilla embedding) as well as K-fold cross-validation for embedding extraction.
-    
+
     - When `n_fold=0`, the model extracts vanilla embeddings by training on the entire dataset.
     - When `n_fold>0`, K-fold cross-validation is applied based on the method proposed in
       "A Closer Look at TabPFN v2: Strength, Limitation, and Extension" (https://arxiv.org/abs/2502.17361),
@@ -26,7 +26,7 @@ class TabPFNEmbedding:
     Attributes:
         model : TabPFNClassifier or TabPFNRegressor
             The model used for embedding extraction.
-    
+
     Examples:
     ```python
     >>> from tabpfn_extensions import TabPFNClassifier
@@ -40,11 +40,11 @@ class TabPFNEmbedding:
     >>> test_embeddings = embedding_extractor.get_embeddings(X_train, y_train, X_test, data_source="test")
     ```
     """
-    
+
     def __init__(
         self,
-        tabpfn_clf: Optional[TabPFNClassifier] = None,
-        tabpfn_reg: Optional[TabPFNRegressor] = None,
+        tabpfn_clf: TabPFNClassifier | None = None,
+        tabpfn_reg: TabPFNRegressor | None = None,
         n_fold: int = 0,
     ) -> None:
         """
@@ -75,44 +75,53 @@ class TabPFNEmbedding:
             raise ValueError("No model has been set.")
         self.model.fit(X_train, y_train)
 
-    def get_embeddings(self, X_train: np.ndarray, y_train: np.ndarray, X: np.ndarray, data_source: str) -> np.ndarray:
+    def get_embeddings(
+        self,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        X: np.ndarray,
+        data_source: str,
+    ) -> np.ndarray:
         """
         Extracts embeddings for the given dataset using the trained model.
-        
+
         Args:
             X_train (np.ndarray): Training feature data.
             y_train (np.ndarray): Training target labels.
             X (np.ndarray): Data for which embeddings are to be extracted.
             data_source (str): Specifies the data source ("test" for test data).
-        
+
         Returns:
             np.ndarray: The extracted embeddings.
-        
+
         Raises:
             ValueError: If no model is set before calling get_embeddings.
-        
+
         """
         if self.model is None:
             raise ValueError("No model has been set.")
-        
+
         # If no cross-validation is used, train and return embeddings directly
 
-        if self.n_fold ==0:
-           self.model.fit(X_train, y_train)
-           return self.model.get_embeddings(X,data_source=data_source)
-        elif self.n_fold >=2:
+        if self.n_fold == 0:
+            self.model.fit(X_train, y_train)
+            return self.model.get_embeddings(X, data_source=data_source)
+        elif self.n_fold >= 2:
             if data_source == "test":
                 self.model.fit(X_train, y_train)
-                return self.model.get_embeddings(X,data_source=data_source)
+                return self.model.get_embeddings(X, data_source=data_source)
             else:
                 from sklearn.model_selection import KFold
+
                 kf = KFold(n_splits=self.n_fold, shuffle=False)
                 embeddings = []
                 for train_index, val_index in kf.split(X_train):
                     X_train_fold, X_val_fold = X_train[train_index], X_train[val_index]
-                    y_train_fold, y_val_fold = y_train[train_index], y_train[val_index]
+                    y_train_fold, _y_val_fold = y_train[train_index], y_train[val_index]
                     self.model.fit(X_train_fold, y_train_fold)
-                    embeddings.append(self.model.get_embeddings(X_val_fold,data_source='test'))
+                    embeddings.append(
+                        self.model.get_embeddings(X_val_fold, data_source="test"),
+                    )
                 return np.concatenate(embeddings, axis=1)
         else:
             raise ValueError("n_fold must be greater than 1.")
