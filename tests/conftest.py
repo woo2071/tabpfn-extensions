@@ -46,9 +46,11 @@ TABPFN_SOURCE = None  # Which implementation is preferred ("tabpfn", or "tabpfn_
 try:
     # Using importlib.util.find_spec as recommended by ruff
     import importlib.util
+
     tabpfn_spec = importlib.util.find_spec("tabpfn")
     if tabpfn_spec is not None:
         from tabpfn import TabPFNClassifier, TabPFNRegressor
+
         HAS_TABPFN = True
         HAS_ANY_TABPFN = True
         if TABPFN_SOURCE is None:

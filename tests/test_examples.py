@@ -159,7 +159,9 @@ def test_example(request, example_file):
 
     # Always skip large dataset examples
     if example_file["always_skip"]:
-        pytest.skip(f"Example {file_name} skipped in test environment - too resource intensive")
+        pytest.skip(
+            f"Example {file_name} skipped in test environment - too resource intensive"
+        )
 
     # Check if this example requires TabPFN core
     if example_file["requires_tabpfn"]:

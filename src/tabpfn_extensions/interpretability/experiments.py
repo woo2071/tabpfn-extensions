@@ -19,7 +19,6 @@ class FeatureSelectionExperiment(Experiment):
         """
         from tabpfn.scripts.estimator.interpretability import feature_selection
 
-
         assert kwargs.get("dataset") is not None, "Dataset must be provided"
         dataset = copy.deepcopy(kwargs.get("dataset"))
 
@@ -80,11 +79,10 @@ class FeatureSelectionInPredictExperiment(Experiment):
         assert kwargs.get("dataset") is not None, "Dataset must be provided"
         copy.deepcopy(kwargs.get("dataset"))
 
-
         retained_indices = [0, 1, 2]
         FeatureRetainer(
-            estimator=tabpfn, retained_indices=retained_indices,
+            estimator=tabpfn,
+            retained_indices=retained_indices,
         )
-
 
         self.plot()

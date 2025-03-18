@@ -121,7 +121,6 @@ def parallel_permutation_shap(
     return np.column_stack(shap_values_per_feature)
 
 
-
 def plot_shap(shap_values: np.ndarray):
     """Plots the shap values for the given test data. It will plot aggregated shap values for each feature, as well
     as per sample shap values. Additionally, if multiple samples are provided, it will plot the 3 most important
@@ -156,7 +155,8 @@ def plot_shap_feature(shap_values_, feature_name, n_plots=1):
     # we can use shap.approximate_interactions to guess which features
     # may interact with age
     inds = shap.utils.potential_interactions(
-        shap_values_[:, feature_name], shap_values_,
+        shap_values_[:, feature_name],
+        shap_values_,
     )
 
     # make plots colored by each of the top three possible interacting features
@@ -205,11 +205,17 @@ def get_shap_values(estimator, test_x, attribute_names=None, **kwargs) -> np.nda
     def get_shap():
         if is_tabpfn(estimator):
             explainer = get_tabpfn_explainer(
-                estimator, test_x, predict_function_for_shap, **kwargs,
+                estimator,
+                test_x,
+                predict_function_for_shap,
+                **kwargs,
             )
         else:
             explainer = get_default_explainer(
-                estimator, test_x, predict_function_for_shap, **kwargs,
+                estimator,
+                test_x,
+                predict_function_for_shap,
+                **kwargs,
             )
         return explainer(test_x)
 
@@ -227,7 +233,10 @@ def get_shap_values(estimator, test_x, attribute_names=None, **kwargs) -> np.nda
 
 
 def get_tabpfn_explainer(
-    estimator, test_x, predict_function_for_shap="predict", **kwargs,
+    estimator,
+    test_x,
+    predict_function_for_shap="predict",
+    **kwargs,
 ):
     import shap
 
@@ -239,7 +248,10 @@ def get_tabpfn_explainer(
 
 
 def get_default_explainer(
-    estimator, test_x, predict_function_for_shap="predict", **kwargs,
+    estimator,
+    test_x,
+    predict_function_for_shap="predict",
+    **kwargs,
 ):
     import shap
 

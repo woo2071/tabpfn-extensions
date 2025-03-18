@@ -38,7 +38,8 @@ class WeightedAverageEnsemble(BaseEstimator, ClassifierMixin):
             pruned_classifiers = [
                 clf
                 for _, clf in sorted(
-                    zip(pruned_weights, pruned_classifiers), key=lambda pair: pair[0],
+                    zip(pruned_weights, pruned_classifiers),
+                    key=lambda pair: pair[0],
                 )
             ]
             pruned_weights = sorted(pruned_weights)
@@ -46,7 +47,9 @@ class WeightedAverageEnsemble(BaseEstimator, ClassifierMixin):
             pruned_weights = pruned_weights[-self.n_max :]
 
         self.ensemble = VotingClassifier(
-            estimators=pruned_classifiers, voting="soft", weights=pruned_weights,
+            estimators=pruned_classifiers,
+            voting="soft",
+            weights=pruned_weights,
         )
         self.ensemble.fit(X, y)
         return self

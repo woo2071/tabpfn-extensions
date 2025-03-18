@@ -12,8 +12,12 @@ from __future__ import annotations
 # Re-export the classes from the new module
 from .sklearn_based_decision_tree_tabpfn import (
     DecisionTreeTabPFNBase,
-    DecisionTreeTabPFNClassifier, 
-    DecisionTreeTabPFNRegressor
+    DecisionTreeTabPFNClassifier,
+    DecisionTreeTabPFNRegressor,
 )
 
-__all__ = ["DecisionTreeTabPFNBase", "DecisionTreeTabPFNClassifier", "DecisionTreeTabPFNRegressor"]
+__all__ = [
+    "DecisionTreeTabPFNBase",
+    "DecisionTreeTabPFNClassifier",
+    "DecisionTreeTabPFNRegressor",
+]

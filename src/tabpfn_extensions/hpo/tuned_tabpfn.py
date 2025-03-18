@@ -259,13 +259,15 @@ class TunedTabPFNBase(BaseEstimator):
                         # Use TabPFNClassifier as the base model for DT
                         base_model = TabPFNClassifier(**model_params)
                         model = DecisionTreeTabPFNClassifier(
-                            tabpfn=base_model, max_depth=max_depth,
+                            tabpfn=base_model,
+                            max_depth=max_depth,
                         )
                     else:
                         # Use TabPFNRegressor as the base model for DT
                         base_model = TabPFNRegressor(**model_params)
                         model = DecisionTreeTabPFNRegressor(
-                            tabpfn=base_model, max_depth=max_depth,
+                            tabpfn=base_model,
+                            max_depth=max_depth,
                         )
                 # Standard single model
                 elif task_type in ["binary", "multiclass"]:

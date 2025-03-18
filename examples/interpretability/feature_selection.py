@@ -1,4 +1,3 @@
-
 from sklearn.datasets import load_breast_cancer
 
 from tabpfn_extensions import TabPFNClassifier, interpretability

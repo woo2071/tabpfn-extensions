@@ -50,7 +50,8 @@ def preprocess_data(
             preprocessed_data.select_dtypes(include=["category"]).columns,
         )
         preprocessed_data = pd.get_dummies(
-            preprocessed_data, columns=categorical_columns,
+            preprocessed_data,
+            columns=categorical_columns,
         )
     # Data normalization from R -> [0, 1]
     if normalization:

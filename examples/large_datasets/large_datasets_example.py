@@ -28,14 +28,19 @@ df_classification = fetch_openml(
     version=1,  # Specific dataset version
     as_frame=True,  # Return data as pandas DataFrame
 )
-X_class, y_class = df_classification.data, df_classification.target  # Feature matrix and target vector
+X_class, y_class = (
+    df_classification.data,
+    df_classification.target,
+)  # Feature matrix and target vector
 
 le = LabelEncoder()  # Initialize label encoder
 y_class = le.fit_transform(y_class)  # Encode target variable into numeric classes
 
 # Convert all categorical columns to numeric codes
 for col in X_class.select_dtypes(["category"]).columns:
-    X_class[col] = X_class[col].cat.codes  # Convert categorical features to numeric codes
+    X_class[col] = X_class[
+        col
+    ].cat.codes  # Convert categorical features to numeric codes
 
 # Split data into training and testing sets
 X_train_class, X_test_class, y_train_class, y_test_class = train_test_split(
@@ -58,8 +63,12 @@ tabpfn_subsample_clf = TabPFNClassifier(
 )
 
 tabpfn_subsample_clf.fit(X_train_class, y_train_class)  # Train the classifier
-prediction_probabilities = tabpfn_subsample_clf.predict_proba(X_test_class)  # Probability predictions
-predictions = np.argmax(prediction_probabilities, axis=1)  # Convert probabilities to class predictions
+prediction_probabilities = tabpfn_subsample_clf.predict_proba(
+    X_test_class
+)  # Probability predictions
+predictions = np.argmax(
+    prediction_probabilities, axis=1
+)  # Convert probabilities to class predictions
 
 # Evaluate classification performance
 print(f"ROC AUC: {roc_auc_score(y_test_class, prediction_probabilities[:, 1]):.4f}")
@@ -81,7 +90,9 @@ tabpfn_tree_clf = RandomForestTabPFNClassifier(
 )
 
 tabpfn_tree_clf.fit(X_train_class, y_train_class)  # Train the tree-based classifier
-prediction_probabilities = tabpfn_tree_clf.predict_proba(X_test_class)  # Probability predictions
+prediction_probabilities = tabpfn_tree_clf.predict_proba(
+    X_test_class
+)  # Probability predictions
 predictions = np.argmax(prediction_probabilities, axis=1)  # Class predictions
 
 # Evaluate classification performance
@@ -93,7 +104,10 @@ print(f"Accuracy: {accuracy_score(y_test_class, predictions):.4f}")
 # ----------------------------
 print("\n--- Loading Regression Dataset ---")
 regression_data = load_diabetes()  # Load diabetes dataset for regression
-X_reg, y_reg = regression_data.data, regression_data.target  # Feature matrix and target vector
+X_reg, y_reg = (
+    regression_data.data,
+    regression_data.target,
+)  # Feature matrix and target vector
 
 # Split data into training and testing sets
 X_train_reg, X_test_reg, y_train_reg, y_test_reg = train_test_split(
@@ -119,8 +133,12 @@ tabpfn_subsample_reg.fit(X_train_reg, y_train_reg)  # Train the regressor
 reg_predictions = tabpfn_subsample_reg.predict(X_test_reg)  # Make predictions
 
 # Evaluate regression performance
-print(f"Mean Squared Error (MSE): {mean_squared_error(y_test_reg, reg_predictions):.4f}")
-print(f"Mean Absolute Error (MAE): {mean_absolute_error(y_test_reg, reg_predictions):.4f}")
+print(
+    f"Mean Squared Error (MSE): {mean_squared_error(y_test_reg, reg_predictions):.4f}"
+)
+print(
+    f"Mean Absolute Error (MAE): {mean_absolute_error(y_test_reg, reg_predictions):.4f}"
+)
 print(f"R^2 Score: {r2_score(y_test_reg, reg_predictions):.4f}")
 
 # ----------------------------
@@ -142,8 +160,12 @@ tabpfn_tree_reg.fit(X_train_reg, y_train_reg)  # Train the model
 reg_tree_predictions = tabpfn_tree_reg.predict(X_test_reg)  # Predict on test data
 
 # Evaluate regression performance
-print(f"Mean Squared Error (MSE): {mean_squared_error(y_test_reg, reg_tree_predictions):.4f}")
-print(f"Mean Absolute Error (MAE): {mean_absolute_error(y_test_reg, reg_tree_predictions):.4f}")
+print(
+    f"Mean Squared Error (MSE): {mean_squared_error(y_test_reg, reg_tree_predictions):.4f}"
+)
+print(
+    f"Mean Absolute Error (MAE): {mean_absolute_error(y_test_reg, reg_tree_predictions):.4f}"
+)
 print(f"R^2 Score: {r2_score(y_test_reg, reg_tree_predictions):.4f}")
 
 # ----------------------------

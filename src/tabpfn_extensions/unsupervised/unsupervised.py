@@ -110,9 +110,9 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             AssertionError
                 If both tabpfn_clf and tabpfn_reg are None.
         """
-        assert tabpfn_clf is not None or tabpfn_reg is not None, (
-            "You cannot set both `tabpfn_clf` and `tabpfn_reg` to None. You can set one to None, if your table exclusively consists of categoricals/numericals."
-        )
+        assert (
+            tabpfn_clf is not None or tabpfn_reg is not None
+        ), "You cannot set both `tabpfn_clf` and `tabpfn_reg` to None. You can set one to None, if your table exclusively consists of categoricals/numericals."
 
         self.tabpfn_clf = tabpfn_clf
         self.tabpfn_reg = tabpfn_reg
@@ -760,9 +760,9 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         """
         # TODO: Test generating one feature at a time, with train data only for that feature
         #       and previously generated features, similar to the outliers method
-        assert hasattr(self, "X_"), (
-            "You need to fit the model before generating synthetic data"
-        )
+        assert hasattr(
+            self, "X_"
+        ), "You need to fit the model before generating synthetic data"
 
         # Check if running in test mode
         import os

@@ -411,7 +411,9 @@ def _prune_to_silo_top_n(
             [base_model for af in too_large_silos for base_model in af_to_model[af]],
             key=lambda x: x[0],  # sort by validation score/loss
             reverse=maximize_metric,  # determines if higher or lower is better
-        )[-1]  # select the worst model (first element)
+        )[
+            -1
+        ]  # select the worst model (first element)
         af_to_model[worst_model[-1]].remove(worst_model)
 
     if sum(len(base_models) for base_models in af_to_model.values()) > n:

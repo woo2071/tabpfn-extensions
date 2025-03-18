@@ -11,9 +11,11 @@ if TYPE_CHECKING:
 
 
 class TabPFNEstimator(Protocol):
-    def fit(self, X: Any, y: Any) -> Any: ...
+    def fit(self, X: Any, y: Any) -> Any:
+        ...
 
-    def predict(self, X: Any) -> Any: ...
+    def predict(self, X: Any) -> Any:
+        ...
 
 
 def is_tabpfn(estimator: Any) -> bool:

@@ -20,7 +20,10 @@ from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
 # Binary
 X, y = load_breast_cancer(return_X_y=True)
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.33, random_state=42,
+    X,
+    y,
+    test_size=0.33,
+    random_state=42,
 )
 clf = AutoTabPFNClassifier(max_time=60 * 3)
 clf.fit(X_train, y_train)

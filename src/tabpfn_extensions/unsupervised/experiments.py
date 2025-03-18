@@ -73,12 +73,16 @@ class EmbeddingUnsupervisedExperiment(Experiment):
         from sklearn.model_selection import train_test_split
 
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            self.X, self.y, test_size=0.5, random_state=42,
+            self.X,
+            self.y,
+            test_size=0.5,
+            random_state=42,
         )
 
         tabpfn.fit(self.X_train, self.y_train)
         self.emb = tabpfn.get_embeddings(
-            self.X_test, per_column=kwargs.get("per_column", False),
+            self.X_test,
+            per_column=kwargs.get("per_column", False),
         )
 
         self.plot()
@@ -127,7 +131,8 @@ class GenerateSyntheticDataExperiment(Experiment):
             tabpfn.fit(self.X)
 
             self.synthetic_X = tabpfn.generate_synthetic_data(
-                n_samples=n_samples, t=temp,
+                n_samples=n_samples,
+                t=temp,
             )
 
             data_real = pd.DataFrame(
@@ -159,11 +164,13 @@ class GenerateSyntheticDataExperiment(Experiment):
             self.data_synthetic = data_synthetic
             if self.data_real.shape[0] < self.data_synthetic.shape[0]:
                 self.data_real = self.data_real.sample(
-                    n=self.data_synthetic.shape[0], replace=True,
+                    n=self.data_synthetic.shape[0],
+                    replace=True,
                 )
             elif self.data_synthetic.shape[0] < self.data_real.shape[0]:
                 self.data_synthetic = self.data_synthetic.sample(
-                    n=self.data_real.shape[0], replace=True,
+                    n=self.data_real.shape[0],
+                    replace=True,
                 )
             self.data = pd.concat([self.data_real, self.data_synthetic])
 
@@ -185,12 +192,14 @@ class OutlierDetectionUnsupervisedExperiment(Experiment):
     def plot_two(self, **kwargs):
         outlier_thresh_p = kwargs.get("outlier_thresh_p", 0.98)
         outlier_thresh = np.quantile(
-            self.data["p"][self.data["p"] > 0], outlier_thresh_p,
+            self.data["p"][self.data["p"] > 0],
+            outlier_thresh_p,
         )
 
         outlier_thresh_p_1 = kwargs.get("outlier_thresh_p_1", 0.9)
         outlier_thresh_1 = np.quantile(
-            self.data["p"][self.data["p"] > 0], outlier_thresh_p_1,
+            self.data["p"][self.data["p"] > 0],
+            outlier_thresh_p_1,
         )
 
         def outlier_f(x, thresh_0, thresh_1):
@@ -286,7 +295,8 @@ class OutlierDetectionUnsupervisedExperiment(Experiment):
 
             self.data = pd.DataFrame(
                 torch.cat(
-                    [self.p[:, np.newaxis], p_rank[:, np.newaxis], self.X], dim=1,
+                    [self.p[:, np.newaxis], p_rank[:, np.newaxis], self.X],
+                    dim=1,
                 ).numpy(),
                 columns=["p", "p_rank", *self.feature_names],
             )
@@ -294,9 +304,10 @@ class OutlierDetectionUnsupervisedExperiment(Experiment):
             if kwargs.get("should_plot", True):
                 try:
                     import matplotlib.pyplot as plt
+
                     self.plot_two()
                 except ImportError:
                     # Skip plotting if matplotlib is not available
                     pass
-                
+
             return {"outlier_scores": self.p.numpy()}

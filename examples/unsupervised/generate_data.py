@@ -26,6 +26,7 @@ clf = TabPFNClassifier()  # Use default parameters for compatibility
 
 # Import TabPFNRegressor for numerical features
 from tabpfn_extensions import TabPFNRegressor
+
 reg = TabPFNRegressor()  # Use regressor for numerical features
 
 # Initialize unsupervised model
