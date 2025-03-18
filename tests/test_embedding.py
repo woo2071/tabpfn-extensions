@@ -34,7 +34,10 @@ class TestTabPFNEmbedding:
             random_state=42,
         )
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3, random_state=42
+            X,
+            y,
+            test_size=0.3,
+            random_state=42,
         )
         return X_train, X_test, y_train, y_test
 
@@ -49,7 +52,10 @@ class TestTabPFNEmbedding:
             random_state=42,
         )
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3, random_state=42
+            X,
+            y,
+            test_size=0.3,
+            random_state=42,
         )
         return X_train, X_test, y_train, y_test
 
@@ -64,10 +70,16 @@ class TestTabPFNEmbedding:
 
         # Extract embeddings
         train_embeddings = embedding_extractor.get_embeddings(
-            X_train, y_train, X_train, data_source="train"
+            X_train,
+            y_train,
+            X_train,
+            data_source="train",
         )
         test_embeddings = embedding_extractor.get_embeddings(
-            X_train, y_train, X_test, data_source="test"
+            X_train,
+            y_train,
+            X_test,
+            data_source="test",
         )
 
         # Check embedding shapes (as numpy arrays)
@@ -77,7 +89,7 @@ class TestTabPFNEmbedding:
         assert test_embeddings.shape[1] == X_test.shape[0]
 
         # Use the first batch of embeddings
-        train_emb = train_embeddings[0]  
+        train_emb = train_embeddings[0]
         test_emb = test_embeddings[0]
 
         # Verify embeddings are useful by training a simple model on them
@@ -85,7 +97,7 @@ class TestTabPFNEmbedding:
         lr.fit(train_emb, y_train)
         y_pred = lr.predict(test_emb)
         accuracy = accuracy_score(y_test, y_pred)
-        
+
         # The accuracy should be better than random
         assert accuracy > 0.4, f"Accuracy with embeddings was only {accuracy:.2f}"
 
@@ -100,22 +112,28 @@ class TestTabPFNEmbedding:
 
         # Extract embeddings
         train_embeddings = embedding_extractor.get_embeddings(
-            X_train, y_train, X_train, data_source="train"
+            X_train,
+            y_train,
+            X_train,
+            data_source="train",
         )
         test_embeddings = embedding_extractor.get_embeddings(
-            X_train, y_train, X_test, data_source="test"
+            X_train,
+            y_train,
+            X_test,
+            data_source="test",
         )
 
         # Check embedding shapes (as numpy arrays)
         assert isinstance(train_embeddings, np.ndarray)
-        
+
         # K-fold embeddings might have different shape depending on implementation
         assert train_embeddings.ndim >= 2
-        
+
         # For test data it should work as usual
         assert test_embeddings.ndim >= 2
         assert test_embeddings.shape[1] == X_test.shape[0]
-            
+
         # Use the first batch of embeddings for tests
         if train_embeddings.ndim == 3:
             train_emb = train_embeddings[0]
@@ -129,9 +147,11 @@ class TestTabPFNEmbedding:
         lr.fit(train_emb, y_train)
         y_pred = lr.predict(test_emb)
         accuracy = accuracy_score(y_test, y_pred)
-        
+
         # The accuracy should be better than random
-        assert accuracy > 0.4, f"Accuracy with K-fold embeddings was only {accuracy:.2f}"
+        assert accuracy > 0.4, (
+            f"Accuracy with K-fold embeddings was only {accuracy:.2f}"
+        )
 
     @pytest.mark.client_compatible
     def test_reg_embedding_vanilla(self, regression_data):
@@ -144,10 +164,16 @@ class TestTabPFNEmbedding:
 
         # Extract embeddings
         train_embeddings = embedding_extractor.get_embeddings(
-            X_train, y_train, X_train, data_source="train"
+            X_train,
+            y_train,
+            X_train,
+            data_source="train",
         )
         test_embeddings = embedding_extractor.get_embeddings(
-            X_train, y_train, X_test, data_source="test"
+            X_train,
+            y_train,
+            X_test,
+            data_source="test",
         )
 
         # Check embedding shapes (as numpy arrays)
@@ -165,7 +191,7 @@ class TestTabPFNEmbedding:
         lr.fit(train_emb, y_train)
         y_pred = lr.predict(test_emb)
         r2 = r2_score(y_test, y_pred)
-        
+
         # The R2 score should be reasonable
         # In rare cases this might fail due to randomness, so we set a low bar
         assert r2 > -1.0, f"R2 score with embeddings was very low: {r2:.2f}"
@@ -178,10 +204,20 @@ class TestTabPFNEmbedding:
         # Test error when no model is provided
         with pytest.raises(ValueError):
             embedding_extractor = TabPFNEmbedding()
-            embedding_extractor.get_embeddings(X_train, y_train, X_test, data_source="test")
+            embedding_extractor.get_embeddings(
+                X_train,
+                y_train,
+                X_test,
+                data_source="test",
+            )
 
         # Test error when invalid n_fold value is provided
         with pytest.raises(ValueError):
             clf = TabPFNClassifier(n_estimators=1)
             embedding_extractor = TabPFNEmbedding(tabpfn_clf=clf, n_fold=1)
-            embedding_extractor.get_embeddings(X_train, y_train, X_test, data_source="train")
+            embedding_extractor.get_embeddings(
+                X_train,
+                y_train,
+                X_test,
+                data_source="train",
+            )

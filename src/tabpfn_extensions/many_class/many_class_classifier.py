@@ -136,7 +136,10 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         return self.n_estimators
 
     def _generate_codebook(
-        self, n_classes: int, n_estimators: int, alphabet_size: int
+        self,
+        n_classes: int,
+        n_estimators: int,
+        alphabet_size: int,
     ) -> np.ndarray:
         """Generate an efficient codebook using the provided alphabet size.
 
@@ -305,9 +308,9 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
                     ]  # / (1 - Y[i, :, rest_class])
                     # print(j, Y[i, :, j_remapped])  # noqa: ERA001
 
-        assert not (
-            (self.code_book_ != rest_class).sum(0) == 0
-        ).any(), f"Some classes are not mapped to any codeword. {self.code_book_} {self.classes_} {((self.code_book_ != rest_class).sum(0) == 0)}"
+        assert not ((self.code_book_ != rest_class).sum(0) == 0).any(), (
+            f"Some classes are not mapped to any codeword. {self.code_book_} {self.classes_} {((self.code_book_ != rest_class).sum(0) == 0)}"
+        )
 
         # Normalize the weighted probabilities to get the final class probabilities
         probabilities /= (self.code_book_ != rest_class).sum(0)
