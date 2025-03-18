@@ -34,23 +34,23 @@ os.environ["TEST_MODE"] = "1"
 
 def get_example_files() -> list[dict]:
     """Get all Python files from the examples directory with metadata.
-    
+
     Each example is categorized as:
     - fast: Can run quickly (runs in both normal and fast test mode)
     - slow: Takes longer to run (runs with a 1-second timeout, expected to timeout)
     - always_timeout: Examples with large datasets that are always skipped unless explicitly requested
     - requires_tabpfn: Requires the full TabPFN package, not just the client
     - client_compatible: Works with TabPFN client
-    
+
     Returns:
         List of dictionaries containing example file info
     """
     package_root = Path(__file__).parent.parent
     examples_dir = package_root / "examples"
-    
+
     # The only example that runs fast enough for CI
     FAST_EXAMPLES = ["generate_data.py"]
-    
+
     # These directories contain examples that work with the TabPFN client
     CLIENT_COMPATIBLE_DIRS = [
         "many_class/",
@@ -58,25 +58,25 @@ def get_example_files() -> list[dict]:
         "interpretability/",
         "post_hoc_ensembles/",
         "unsupervised/",
-        "phe/"
+        "phe/",
     ]
-    
+
     # These directories/files need the full TabPFN package
     REQUIRES_TABPFN_DIRS = ["large_datasets/"]
-    
+
     # Large dataset examples are always expected to timeout,
     # even if --run-examples is provided
     ALWAYS_TIMEOUT_PATTERNS = ["large_datasets_example.py"]
-    
+
     # Find all Python files in the examples directory
     all_file_paths = list(examples_dir.glob("**/*.py"))
     all_files = []
-    
+
     # Process each file with appropriate metadata
     for file_path in all_file_paths:
         rel_path = str(file_path.relative_to(package_root))
         file_name = file_path.name
-        
+
         file_info = {
             "path": file_path,
             "name": file_name,
@@ -85,10 +85,14 @@ def get_example_files() -> list[dict]:
             "client_compatible": False,  # Default: not client compatible
             "fast": file_name in FAST_EXAMPLES,  # Only listed examples are fast
             "slow": file_name not in FAST_EXAMPLES,  # All others are slow
-            "always_timeout": any(pattern in file_name for pattern in ALWAYS_TIMEOUT_PATTERNS),
-            "timeout": 1 if file_name not in FAST_EXAMPLES else 30,  # Short timeout for slow examples
+            "always_timeout": any(
+                pattern in file_name for pattern in ALWAYS_TIMEOUT_PATTERNS
+            ),
+            "timeout": 1
+            if file_name not in FAST_EXAMPLES
+            else 30,  # Short timeout for slow examples
         }
-        
+
         # Check backend compatibility
         if any(pattern in rel_path for pattern in REQUIRES_TABPFN_DIRS):
             # Example explicitly requires TabPFN package
@@ -97,9 +101,9 @@ def get_example_files() -> list[dict]:
         elif any(pattern in rel_path for pattern in CLIENT_COMPATIBLE_DIRS):
             # Example works with TabPFN client
             file_info["client_compatible"] = True
-        
+
         all_files.append(file_info)
-    
+
     return all_files
 
 
@@ -112,7 +116,7 @@ def import_module_from_path(path: Path, timeout: int = 60) -> object:
 
     Returns:
         The imported module object
-        
+
     Raises:
         TimeoutError: If import takes longer than the specified timeout
     """
@@ -151,18 +155,18 @@ def import_module_from_path(path: Path, timeout: int = 60) -> object:
 @pytest.mark.parametrize("example_file", get_example_files(), ids=lambda x: x["name"])
 def test_example(request, example_file):
     """Run example files to ensure they work as expected.
-    
+
     Test strategy:
-    1. Fast examples are run with normal timeout 
+    1. Fast examples are run with normal timeout
     2. Slow examples are run with 1-second timeout, expected to timeout
     3. Examples are skipped if they require missing backends
     4. In FAST_TEST_MODE, only fast examples and examples with --run-examples flag run
-    
+
     Args:
         request: PyTest request fixture
         example_file: Dictionary with example file metadata
     """
-    from conftest import HAS_TABPFN, HAS_TABPFN_CLIENT, TABPFN_SOURCE, FAST_TEST_MODE
+    from conftest import FAST_TEST_MODE, HAS_TABPFN, HAS_TABPFN_CLIENT, TABPFN_SOURCE
 
     file_name = example_file["name"]
     file_path = example_file["path"]
@@ -171,20 +175,29 @@ def test_example(request, example_file):
     if not request.config.getoption("--run-examples"):
         # In fast mode, skip non-fast examples
         if FAST_TEST_MODE and not example_file["fast"]:
-            pytest.skip(f"Example {file_name} skipped in fast test mode (use --run-examples to run)")
+            pytest.skip(
+                f"Example {file_name} skipped in fast test mode (use --run-examples to run)",
+            )
 
     # Skip if backend not available
     if example_file["requires_tabpfn"] and not HAS_TABPFN:
-        pytest.skip(f"Example {file_name} requires TabPFN package, but it's not installed")
+        pytest.skip(
+            f"Example {file_name} requires TabPFN package, but it's not installed",
+        )
     if not example_file["client_compatible"] and TABPFN_SOURCE == "tabpfn_client":
         pytest.skip(f"Example {file_name} is not compatible with TabPFN client")
 
     # Large dataset examples are always skipped with --run-examples,
     # unless they are explicitly requested by name
     this_example_explicitly_requested = file_name in str(request.node.name)
-    if example_file.get("always_timeout", False) and not this_example_explicitly_requested:
-        pytest.skip(f"Example {file_name} involves large datasets and is always skipped unless directly specified")
-    
+    if (
+        example_file.get("always_timeout", False)
+        and not this_example_explicitly_requested
+    ):
+        pytest.skip(
+            f"Example {file_name} involves large datasets and is always skipped unless directly specified",
+        )
+
     try:
         # Handle slow examples (including large datasets) differently - expect them to timeout
         if example_file.get("slow", False) or example_file.get("always_timeout", False):
@@ -193,7 +206,9 @@ def test_example(request, example_file):
                 timeout = example_file.get("timeout", 1)
                 import_module_from_path(file_path, timeout=timeout)
                 # If it somehow completes within the timeout, that's fine too
-                print(f"Note: Slow example {file_name} surprisingly completed within {timeout}s timeout")
+                print(
+                    f"Note: Slow example {file_name} surprisingly completed within {timeout}s timeout",
+                )
             except TimeoutError as e:
                 # Expected behavior: mark as successful with xfail
                 pytest.xfail(f"Example {file_name} timed out as expected: {e!s}")
@@ -209,15 +224,21 @@ def test_example(request, example_file):
         # Handle TabPFN-specific import errors
         if "tabpfn" in error_msg:
             if not HAS_TABPFN and not HAS_TABPFN_CLIENT:
-                pytest.skip(f"Example {file_name} requires TabPFN, but neither implementation is installed")
+                pytest.skip(
+                    f"Example {file_name} requires TabPFN, but neither implementation is installed",
+                )
             elif not HAS_TABPFN and example_file["requires_tabpfn"]:
-                pytest.skip(f"Example {file_name} requires TabPFN package, but only client is installed")
+                pytest.skip(
+                    f"Example {file_name} requires TabPFN package, but only client is installed",
+                )
             else:
-                pytest.fail(f"Example {file_name} failed to import TabPFN correctly: {e!s}")
+                pytest.fail(
+                    f"Example {file_name} failed to import TabPFN correctly: {e!s}",
+                )
         else:
             pytest.fail(f"Failed to import {file_name}: {e!s}")
-    except Exception as e:
-        # Any other exceptions are test failures
+    except (AttributeError, ValueError, TypeError, FileNotFoundError, NameError) as e:
+        # Specific exceptions that might be raised during imports
         pytest.fail(f"Example {file_name} raised error: {e!s}")
 
 

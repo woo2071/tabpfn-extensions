@@ -17,7 +17,7 @@ repos:
     -   id: ruff
         args: [
             '--fix',
-            '--select=E,W,F,I,COM,UP,NPY,BLE,ERA,Q', 
+            '--select=E,W,F,I,COM,UP,NPY,BLE,ERA,Q',
             '--ignore=E501,E741,NPY002'
         ]
     -   id: ruff-format

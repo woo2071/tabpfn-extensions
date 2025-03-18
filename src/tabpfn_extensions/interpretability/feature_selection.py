@@ -2,16 +2,18 @@
 #  Licensed under the Apache License, Version 2.0
 from __future__ import annotations
 
+import numpy as np
+from sklearn.base import BaseEstimator
 from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.model_selection import cross_val_score
 
 
 def feature_selection(
-    estimator : BaseEstimator,
-    X : np.ndarray,
-    y : np.ndarray,
-    n_features_to_select:int=3,
-    feature_names:List[str]=None,
+    estimator: BaseEstimator,
+    X: np.ndarray,
+    y: np.ndarray,
+    n_features_to_select: int = 3,
+    feature_names: list[str] = None,
     **kwargs,
 ):
     if hasattr(estimator, "fit_at_predict_time") and estimator.fit_at_predict_time:
