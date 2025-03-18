@@ -81,15 +81,15 @@ class DecisionTreeTabPFNBase(BaseEstimator):
     ):
         """Initialize a DecisionTreeTabPFN model."""
         # Convert numpy ints to Python ints to avoid issues with TabPFN client JSON serialization
-        if hasattr(min_samples_split, 'item'):
+        if hasattr(min_samples_split, "item"):
             min_samples_split = int(min_samples_split)
-        if hasattr(min_samples_leaf, 'item'):
+        if hasattr(min_samples_leaf, "item"):
             min_samples_leaf = int(min_samples_leaf)
-        if max_depth is not None and hasattr(max_depth, 'item'):
+        if max_depth is not None and hasattr(max_depth, "item"):
             max_depth = int(max_depth)
-        if max_leaf_nodes is not None and hasattr(max_leaf_nodes, 'item'):
+        if max_leaf_nodes is not None and hasattr(max_leaf_nodes, "item"):
             max_leaf_nodes = int(max_leaf_nodes)
-        if random_state is not None and hasattr(random_state, 'item'):
+        if random_state is not None and hasattr(random_state, "item"):
             random_state = int(random_state)
 
         # Optional args are arguments that may not be present in BaseDecisionTree,
@@ -579,6 +579,7 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
     This class combines a decision tree with TabPFN classifier models at
     the leaves, enhancing prediction performance.
     """
+
     _estimator_type = "classifier"
 
     task_type = "multiclass"
@@ -605,9 +606,11 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
         """
         # Ensure we use standard Python int (not numpy.int64) to avoid serialization issues
         # with TabPFN client when it tries to convert the value to JSON
-        leaf_id_int = int(leaf_id) if hasattr(leaf_id, 'item') else leaf_id
-        tree_seed_int = int(self.tree_seed) if hasattr(self.tree_seed, 'item') else self.tree_seed
-        
+        leaf_id_int = int(leaf_id) if hasattr(leaf_id, "item") else leaf_id
+        tree_seed_int = (
+            int(self.tree_seed) if hasattr(self.tree_seed, "item") else self.tree_seed
+        )
+
         y_eval_prob = self.init_eval_prob(X.shape[0], to_zero=True)
         classes = np.array(np.unique(list(map(int, y_train_samples))))
 
@@ -664,8 +667,9 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
             Predicted class labels
         """
         from sklearn.utils.validation import check_is_fitted
+
         check_is_fitted(self, ["tree_", "classes_"])
-                                
+
         return np.argmax(
             self.predict_proba(X, check_input),
             axis=1,
@@ -682,8 +686,9 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
             Class probabilities
         """
         from sklearn.utils.validation import check_is_fitted
+
         check_is_fitted(self, ["tree_", "classes_"])
-                                
+
         return self.predict_(X, check_input=check_input)
 
     def post_fit(self) -> None:
@@ -717,6 +722,7 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
     This class combines a decision tree with TabPFN regressor models at
     the leaves, enhancing prediction performance for regression tasks.
     """
+
     _estimator_type = "regressor"
 
     task_type = "regression"
@@ -849,12 +855,14 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
         """
         # Ensure we use standard Python int (not numpy.int64) to avoid serialization issues
         # with TabPFN client when it tries to convert the value to JSON
-        leaf_id_int = int(leaf_id) if hasattr(leaf_id, 'item') else leaf_id
-        tree_seed_int = int(self.tree_seed) if hasattr(self.tree_seed, 'item') else self.tree_seed
-        
+        leaf_id_int = int(leaf_id) if hasattr(leaf_id, "item") else leaf_id
+        tree_seed_int = (
+            int(self.tree_seed) if hasattr(self.tree_seed, "item") else self.tree_seed
+        )
+
         # Initialize prediction array
         y_pred = np.zeros(X.shape[0])
-        
+
         # TabPFN requires at least 2 samples for training
         if len(X_train_samples) < 2:
             # For single sample case, just use the target value directly
@@ -868,17 +876,17 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
             # Fill predictions with the mean target value from this leaf
             y_pred.fill(np.mean(y_train_samples))
             return y_pred
-        
+
         # Set random state (using Python ints, not NumPy ints)
         self.tabpfn.random_state = leaf_id_int + tree_seed_int
-        
+
         try:
             # Fit TabPFN on the leaf data (now we know there are at least 2 samples)
             self.tabpfn.fit(X_train_samples, y_train_samples)
             # Get predictions
             return self.tabpfn.predict(X)
-        except Exception as e:
-            # Handle any TabPFN errors gracefully
+        except (ValueError, RuntimeError, NotImplementedError) as e:
+            # Handle specific TabPFN errors gracefully
             warnings.warn(
                 f"TabPFN prediction failed for leaf {leaf_id}: {str(e)}. "
                 "Using the mean target value for predictions.",
@@ -900,8 +908,9 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
             Predicted regression values
         """
         from sklearn.utils.validation import check_is_fitted
+
         check_is_fitted(self, ["tree_"])
-        
+
         return self.predict_(X, check_input=False)
 
     def post_fit(self) -> None:
