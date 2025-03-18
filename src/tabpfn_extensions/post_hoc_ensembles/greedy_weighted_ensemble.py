@@ -240,9 +240,9 @@ class GreedyWeightedEnsemble(AbstractValidationUtils):
 
         final_weights = []
         base_models = []
-        assert len(self._estimators) == len(weights), (
-            "All iterators must have the same length!"
-        )
+        assert len(self._estimators) == len(
+            weights,
+        ), "All iterators must have the same length!"
         for bm, weight in zip(self._estimators, weights):
             if weight != 0:
                 final_weights.append(weight)

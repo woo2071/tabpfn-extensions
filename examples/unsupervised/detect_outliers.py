@@ -1,8 +1,7 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
 
-"""
-WARNING: This example may run slowly on CPU-only systems.
+"""WARNING: This example may run slowly on CPU-only systems.
 For better performance, we recommend running with GPU acceleration.
 The unsupervised model runs multiple TabPFN models for outlier detection.
 """

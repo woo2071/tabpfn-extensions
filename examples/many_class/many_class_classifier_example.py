@@ -1,7 +1,6 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
-"""
-ManyClassClassifier: TabPFN extension for handling classification with many classes.
+"""ManyClassClassifier: TabPFN extension for handling classification with many classes.
 
 This module provides a classifier that overcomes TabPFN's limitation on the number of
 classes (typically 10) by using a meta-classifier approach. It works by breaking down

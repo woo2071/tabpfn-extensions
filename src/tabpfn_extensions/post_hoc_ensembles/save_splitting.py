@@ -79,9 +79,9 @@ def fix_split_by_dropping_classes(
     org_index_max = len(X_dummy)
     invalid_index = []
 
-    assert len(too_low) == len(too_low_counts), (
-        "too_low and too_low_counts must have the same length!"
-    )
+    assert len(too_low) == len(
+        too_low_counts,
+    ), "too_low and too_low_counts must have the same length!"
     for c_val, c_count in zip(too_low, too_low_counts):
         fill_missing = n_splits - c_count
         invalid_index.extend(np.where(y == c_val)[0])

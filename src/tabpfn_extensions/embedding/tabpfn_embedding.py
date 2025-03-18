@@ -6,8 +6,7 @@ from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
 
 
 class TabPFNEmbedding:
-    """
-    TabPFNEmbedding is a utility for extracting embeddings from TabPFNClassifier or TabPFNRegressor models.
+    """TabPFNEmbedding is a utility for extracting embeddings from TabPFNClassifier or TabPFNRegressor models.
     It supports standard training (vanilla embedding) as well as K-fold cross-validation for embedding extraction.
 
     - When `n_fold=0`, the model extracts vanilla embeddings by training on the entire dataset.
@@ -47,8 +46,7 @@ class TabPFNEmbedding:
         tabpfn_reg: TabPFNRegressor | None = None,
         n_fold: int = 0,
     ) -> None:
-        """
-        Initializes the TabPFNEmbedding instance.
+        """Initializes the TabPFNEmbedding instance.
 
         Args:
             tabpfn_clf (Optional[TabPFNClassifier]): An instance of TabPFN classifier (if available).
@@ -61,8 +59,7 @@ class TabPFNEmbedding:
         self.n_fold = n_fold
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
-        """
-        Trains the TabPFN model on the given dataset.
+        """Trains the TabPFN model on the given dataset.
 
         Args:
             X_train (np.ndarray): Training feature data.
@@ -82,8 +79,7 @@ class TabPFNEmbedding:
         X: np.ndarray,
         data_source: str,
     ) -> np.ndarray:
-        """
-        Extracts embeddings for the given dataset using the trained model.
+        """Extracts embeddings for the given dataset using the trained model.
 
         Args:
             X_train (np.ndarray): Training feature data.

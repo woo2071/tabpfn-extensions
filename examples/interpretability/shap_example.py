@@ -1,5 +1,4 @@
-"""
-WARNING: This example may run slowly on CPU-only systems.
+"""WARNING: This example may run slowly on CPU-only systems.
 For better performance, we recommend running with GPU acceleration.
 SHAP value computation involves multiple TabPFN model evaluations, which is computationally intensive.
 """

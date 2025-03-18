@@ -1,6 +1,4 @@
-"""
-Embedding module for tabpfn_extensions package.
-"""
+"""Embedding module for tabpfn_extensions package."""
 
 from .tabpfn_embedding import TabPFNEmbedding
 

@@ -1,5 +1,4 @@
-"""
-WARNING: This example may run slowly on CPU-only systems.
+"""WARNING: This example may run slowly on CPU-only systems.
 For better performance, we recommend running with GPU acceleration.
 Feature selection involves training multiple TabPFN models, which is computationally intensive.
 """

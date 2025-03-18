@@ -81,7 +81,6 @@ def get_tabpfn_models() -> tuple[type, type]:
     Raises:
         ImportError: If none of the TabPFN implementations could be imported
     """
-
     # First try standard TabPFN package (if local usage is enabled)
     if USE_TABPFN_LOCAL:
         try:

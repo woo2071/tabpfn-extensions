@@ -237,10 +237,23 @@ exclude = [
     "TCH",
     "N803",
     "C901", # Too complex
+    "E501", # Line too long
 ]
-"__init__.py" = ["I002"]
+"__init__.py" = ["I002", "D104"] # Missing docstring in public package
 "examples/*" = ["INP001", "I002", "E741", "D101", "D103", "T20", "D415", "ERA001", "E402", "E501"]
 "docs/*" = ["INP001"]
+# Temporarily ignore docstring and line length issues in existing files
+"src/tabpfn_extensions/**/*.py" = [
+    "D100", # Missing docstring in public module
+    "D101", # Missing docstring in public class
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public function
+    "D105", # Missing docstring in magic method
+    "D107", # Missing docstring in public __init__
+    "D205", # Missing blank line after summary
+    "D417", # Missing argument description in docstring
+    "E501", # Line too long
+]
 
 
 [tool.ruff.lint.isort]
