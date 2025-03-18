@@ -62,7 +62,8 @@ def get_tabpfn_explainer(
     """
     # Defer the import to avoid circular imports
     try:
-        import shapiq.explainers
+        import shapiq  # Import the main package
+        # Current version of shapiq has TabPFNExplainer in the base module
     except ImportError:
         raise ImportError(
             "Package 'shapiq' is required for model explanation. "
@@ -77,7 +78,8 @@ def get_tabpfn_explainer(
     if isinstance(labels, (pd.Series, pd.DataFrame)):
         labels = labels.values
 
-    return shapiq.explainers.TabPFNExplainer(
+    # TabPFNExplainer is directly available in the shapiq module
+    return shapiq.TabPFNExplainer(
         model=model,
         data=data,
         labels=labels,
@@ -134,7 +136,8 @@ def get_tabpfn_imputation_explainer(
     """
     # Defer the import to avoid circular imports
     try:
-        import shapiq.explainers
+        import shapiq  # Import the main package
+        # Current version of shapiq has TabularExplainer in the base module
     except ImportError:
         raise ImportError(
             "Package 'shapiq' is required for model explanation. "
@@ -145,7 +148,8 @@ def get_tabpfn_imputation_explainer(
     if isinstance(data, pd.DataFrame):
         data = data.values
 
-    return shapiq.explainers.TabularExplainer(
+    # TabularExplainer is directly available in the shapiq module
+    return shapiq.TabularExplainer(
         model=model,
         data=data,
         index=index,

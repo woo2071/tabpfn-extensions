@@ -6,11 +6,11 @@ import copy
 import warnings
 from functools import partial
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import torch
-import matplotlib.pyplot as plt
 
 from tabpfn_extensions.benchmarking import Experiment
 

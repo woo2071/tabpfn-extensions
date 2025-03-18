@@ -34,7 +34,7 @@ Example usage:
 from __future__ import annotations
 
 from multiprocessing import Pool
-from typing import Any
+from typing import Any, Callable, Dict, Optional, Union, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -121,13 +121,16 @@ def parallel_permutation_shap(
     return np.column_stack(shap_values_per_feature)
 
 
-def plot_shap(shap_values: np.ndarray):
+def plot_shap(shap_values: np.ndarray) -> None:
     """Plots the shap values for the given test data. It will plot aggregated shap values for each feature, as well
     as per sample shap values. Additionally, if multiple samples are provided, it will plot the 3 most important
     interactions with the most important feature.
 
     Parameters:
-        shap_values:
+        shap_values (np.ndarray): The SHAP values to plot, typically from get_shap_values().
+    
+    Returns:
+        None: This function only produces visualizations.
     """
     import shap
 
@@ -149,7 +152,21 @@ def plot_shap(shap_values: np.ndarray):
         plot_shap_feature(shap_values, most_important)
 
 
-def plot_shap_feature(shap_values_, feature_name, n_plots=1):
+def plot_shap_feature(
+    shap_values_: Any, 
+    feature_name: Union[int, str],
+    n_plots: int = 1
+) -> None:
+    """Plot feature interactions for a specific feature based on SHAP values.
+    
+    Parameters:
+        shap_values_ (Any): SHAP values object containing the data to plot.
+        feature_name (Union[int, str]): The feature index or name to plot interactions for.
+        n_plots (int, optional): Number of interaction plots to create. Defaults to 1.
+        
+    Returns:
+        None: This function only produces visualizations.
+    """
     import shap
 
     # we can use shap.approximate_interactions to guess which features
@@ -171,15 +188,22 @@ def plot_shap_feature(shap_values_, feature_name, n_plots=1):
         )
 
 
-def get_shap_values(estimator, test_x, attribute_names=None, **kwargs) -> np.ndarray:
+def get_shap_values(
+    estimator: Any, 
+    test_x: Union[pd.DataFrame, np.ndarray, torch.Tensor],
+    attribute_names: Optional[List[str]] = None, 
+    **kwargs: Any
+) -> np.ndarray:
     """Computes SHAP (SHapley Additive exPlanations) values for the model's predictions on the given input features.
 
     Parameters:
-        test_x (Union[pd.DataFrame, np.ndarray]): The input features to compute SHAP values for.
-        kwargs (dict): Additional keyword arguments to pass to the SHAP explainer.
+        estimator (Any): The model to explain, typically a TabPFNClassifier or scikit-learn compatible model.
+        test_x (Union[pd.DataFrame, np.ndarray, torch.Tensor]): The input features to compute SHAP values for.
+        attribute_names (Optional[List[str]], optional): Column names for the features when test_x is a numpy array.
+        **kwargs (Any): Additional keyword arguments to pass to the SHAP explainer.
 
     Returns:
-        np.ndarray: The computed SHAP values.
+        np.ndarray: The computed SHAP values with shape (n_samples, n_features).
     """
     if isinstance(test_x, torch.Tensor):
         test_x = test_x.cpu().numpy()
@@ -202,7 +226,7 @@ def get_shap_values(estimator, test_x, attribute_names=None, **kwargs) -> np.nda
         if not estimator.fit_at_predict_time:
             pass
 
-    def get_shap():
+    def get_shap() -> np.ndarray:
         if is_tabpfn(estimator):
             explainer = get_tabpfn_explainer(
                 estimator,
@@ -233,32 +257,56 @@ def get_shap_values(estimator, test_x, attribute_names=None, **kwargs) -> np.nda
 
 
 def get_tabpfn_explainer(
-    estimator,
-    test_x,
-    predict_function_for_shap="predict",
-    **kwargs,
-):
+    estimator: Any,
+    test_x: pd.DataFrame,
+    predict_function_for_shap: Union[str, Callable] = "predict",
+    **kwargs: Any,
+) -> Any:
+    """Create a SHAP explainer specifically optimized for TabPFN models.
+    
+    Parameters:
+        estimator (Any): The TabPFN model to explain.
+        test_x (pd.DataFrame): The input features to compute SHAP values for.
+        predict_function_for_shap (Union[str, Callable], optional): Function name or callable to use for prediction.
+            Defaults to "predict".
+        **kwargs (Any): Additional keyword arguments to pass to the SHAP explainer.
+    
+    Returns:
+        Any: A configured SHAP explainer for the TabPFN model.
+    """
     import shap
 
     return shap.Explainer(
-        getattr(estimator, predict_function_for_shap),
+        getattr(estimator, predict_function_for_shap) if isinstance(predict_function_for_shap, str) else predict_function_for_shap,
         np.ones(test_x.iloc[0:1, :].shape) * float("nan"),
         **kwargs,
     )
 
 
 def get_default_explainer(
-    estimator,
-    test_x,
-    predict_function_for_shap="predict",
-    **kwargs,
-):
+    estimator: Any,
+    test_x: pd.DataFrame,
+    predict_function_for_shap: Union[str, Callable] = "predict",
+    **kwargs: Any,
+) -> Any:
+    """Create a standard SHAP explainer for non-TabPFN models.
+    
+    Parameters:
+        estimator (Any): The model to explain.
+        test_x (pd.DataFrame): The input features to compute SHAP values for.
+        predict_function_for_shap (Union[str, Callable], optional): Function name or callable to use for prediction.
+            Defaults to "predict".
+        **kwargs (Any): Additional keyword arguments to pass to the SHAP explainer.
+    
+    Returns:
+        Any: A configured SHAP explainer for the model.
+    """
     import shap
 
     shap.maskers.Independent(test_x, max_samples=1000)
 
     return shap.Explainer(
-        getattr(estimator, predict_function_for_shap),
+        getattr(estimator, predict_function_for_shap) if isinstance(predict_function_for_shap, str) else predict_function_for_shap,
         test_x,
         **kwargs,
     )

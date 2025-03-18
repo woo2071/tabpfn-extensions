@@ -42,15 +42,17 @@ from __future__ import annotations
 
 import copy
 import random
+import os
+from typing import Dict, List, Optional, Tuple, Union, Any, Callable, Sequence, Iterator
 
 import numpy as np
+import pandas as pd
 import torch
 from sklearn.base import BaseEstimator
 from tqdm import tqdm
 
 # Import TabPFN models from extensions (which handles backend compatibility)
-from tabpfn_extensions import utils_todo
-from tabpfn_extensions.utils import TabPFNClassifier, TabPFNRegressor  # type: ignore
+from tabpfn_extensions.utils import TabPFNClassifier, TabPFNRegressor, infer_categorical_features  # type: ignore
 
 
 class TabPFNUnsupervisedModel(BaseEstimator):
@@ -110,9 +112,9 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             AssertionError
                 If both tabpfn_clf and tabpfn_reg are None.
         """
-        assert (
-            tabpfn_clf is not None or tabpfn_reg is not None
-        ), "You cannot set both `tabpfn_clf` and `tabpfn_reg` to None. You can set one to None, if your table exclusively consists of categoricals/numericals."
+        assert tabpfn_clf is not None or tabpfn_reg is not None, (
+            "You cannot set both `tabpfn_clf` and `tabpfn_reg` to None. You can set one to None, if your table exclusively consists of categoricals/numericals."
+        )
 
         self.tabpfn_clf = tabpfn_clf
         self.tabpfn_reg = tabpfn_reg
@@ -141,50 +143,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                     # Invalid values in categorical_features
                     pass
 
-    def fit(self, X: np.ndarray, y: np.ndarray | None = None) -> None:
-        """Fit the model to the input data.
-
-        Args:
-            X : array-like of shape (n_samples, n_features)
-                Input data to fit the model.
-
-            y : array-like of shape (n_samples,), optional
-                Target values.
-
-        Returns:
-            self : TabPFNUnsupervisedModel
-                Fitted model.
-        """
-        self.X_ = copy.deepcopy(X)
-
-        # Ensure y is not None and doesn't contain NaN values
-        if y is not None:
-            # Create a dummy y if none is provided
-            y_clean = copy.deepcopy(y)
-            # Replace any NaN values with zeros
-            if torch.is_tensor(y_clean):
-                if torch.isnan(y_clean).any():
-                    y_clean = torch.nan_to_num(y_clean, nan=0.0)
-            elif hasattr(y_clean, "numpy"):
-                arr = y_clean.numpy()
-                if np.isnan(arr).any():
-                    arr = np.nan_to_num(arr, nan=0.0)
-                    y_clean = torch.tensor(arr)
-        else:
-            # Create a dummy target with zeros if none is provided
-            y_clean = torch.zeros(X.shape[0])
-
-        self.y = y_clean
-
-        # Get a numpy array from X for feature inference
-        X_np = X
-        if torch.is_tensor(X_np):
-            X_np = X_np.cpu().numpy()
-
-        self.categorical_features = utils_todo.infer_categorical_features(
-            X_np,
-            self.categorical_features,
-        )
+    # First implementation of fit - will be replaced by the updated version below
 
     def init_model_and_get_model_config(self) -> None:
         """Initialize TabPFN models for use in unsupervised learning.
@@ -245,19 +204,23 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             # Update the estimator in the list
             self.estimators[idx] = estimator
 
-    def fit(self, X: np.ndarray, y: np.ndarray | None = None) -> None:
+    def fit(
+        self, 
+        X: Union[np.ndarray, torch.Tensor, pd.DataFrame], 
+        y: Optional[Union[np.ndarray, torch.Tensor, pd.Series]] = None
+    ) -> "TabPFNUnsupervisedModel":
         """Fit the model to the input data.
 
         Args:
-            X : array-like of shape (n_samples, n_features)
-                Input data to fit the model.
+            X: Union[np.ndarray, torch.Tensor, pd.DataFrame]
+                Input data to fit the model, shape (n_samples, n_features).
 
-            y : array-like of shape (n_samples,), optional
-                Target values.
+            y: Optional[Union[np.ndarray, torch.Tensor, pd.Series]], default=None
+                Target values, shape (n_samples,). Optional since this is an unsupervised model.
 
         Returns:
-            self : TabPFNUnsupervisedModel
-                Fitted model.
+            TabPFNUnsupervisedModel
+                Fitted model instance (self).
         """
         self.X_ = copy.deepcopy(X)
 
@@ -285,13 +248,15 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         if torch.is_tensor(X_np):
             X_np = X_np.cpu().numpy()
 
-        self.categorical_features = utils_todo.infer_categorical_features(
+        self.categorical_features = infer_categorical_features(
             X_np,
             self.categorical_features,
         )
 
         # Ensure all estimators have the init_model_and_get_model_config method
         self._ensure_init_model_method()
+        
+        return self
 
     def impute_(
         self,
@@ -303,9 +268,20 @@ class TabPFNUnsupervisedModel(BaseEstimator):
     ) -> torch.Tensor:
         """Impute missing values (np.nan) in X by sampling all cells independently from the trained models.
 
-        :param X: Input data of the shape (num_examples, num_features) with missing values encoded as np.nan
-        :param t: Temperature for sampling from the imputation distribution, lower values are more deterministic
-        :return: Imputed data, with missing values replaced
+        Parameters:
+            X: torch.Tensor
+                Input data of shape (n_samples, n_features) with missing values encoded as np.nan
+            t: float, default=0.000000001
+                Temperature for sampling from the imputation distribution, lower values are more deterministic
+            n_permutations: int, default=10
+                Number of permutations to use for imputation
+            condition_on_all_features: bool, default=True
+                Whether to condition on all other features (True) or only previous features (False)
+            fast_mode: bool, default=False
+                Whether to use faster settings for testing
+                
+        Returns:
+            torch.Tensor: Imputed data with missing values replaced
         """
         n_features = X.shape[1]
         all_features = list(range(n_features))
@@ -329,7 +305,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
             X_where_y_is_nan = impute_X[torch.isnan(y_predict)]
             X_where_y_is_nan = X_where_y_is_nan.reshape(-1, impute_X.shape[1])
 
-            densities = []
+            densities: List[Any] = []
             # Use fewer permutations in fast mode
             actual_n_permutations = 1 if fast_mode else n_permutations
 
@@ -447,9 +423,11 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         return pred, pred_sampled
 
     def use_classifier_(self, column_idx, y):
+        # Check if we should use classifier based on feature type and number of unique values
+        max_classes = getattr(self.tabpfn_clf, 'max_num_classes_', 10)
         return (
             column_idx in self.categorical_features
-            and len(np.unique(y)) < 10  # TODO: self.tabpfn_clf.max_num_classes_
+            and len(np.unique(y)) < max_classes
         )
 
     def density_(
@@ -498,18 +476,18 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
     def impute(
         self,
-        X: torch.tensor,
+        X: Union[torch.Tensor, np.ndarray, pd.DataFrame],
         t: float = 0.000000001,
         n_permutations: int = 10,
-    ) -> torch.tensor:
+    ) -> torch.Tensor:
         """Impute missing values in the input data using the fitted TabPFN models.
 
         This method fills missing values (np.nan) in the input data by predicting
         each missing value based on the observed values in the same sample. The
         imputation uses multiple random feature permutations to improve robustness.
 
-        Args:
-            X: torch.tensor
+        Parameters:
+            X: Union[torch.Tensor, np.ndarray, pd.DataFrame]
                 Input data of shape (n_samples, n_features) with missing values
                 encoded as np.nan.
 
@@ -523,15 +501,19 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                 Higher values may improve robustness but increase computation time.
 
         Returns:
-            torch.tensor
+            torch.Tensor
                 Imputed data with missing values replaced, of shape (n_samples, n_features).
 
         Note:
             The model must be fitted with training data before calling this method.
         """
+        # Convert input to torch tensor if needed
+        if isinstance(X, np.ndarray):
+            X = torch.tensor(X, dtype=torch.float32)
+        elif isinstance(X, pd.DataFrame):
+            X = torch.tensor(X.values, dtype=torch.float32)
+            
         # Check if running in test mode
-        import os
-
         fast_mode = os.environ.get("FAST_TEST_MODE", "0") == "1"
 
         return self.impute_(
@@ -663,7 +645,11 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         self.X_ = X_store
         return pmf
 
-    def outliers(self, X: torch.Tensor, n_permutations: int = 10) -> torch.Tensor:
+    def outliers(
+        self, 
+        X: Union[torch.Tensor, np.ndarray, pd.DataFrame], 
+        n_permutations: int = 10
+    ) -> torch.Tensor:
         """Calculate outlier scores for each sample in the input data.
 
         This is the preferred implementation for outlier detection, which calculates
@@ -671,20 +657,28 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         each feature according to chain rule of probability. Lower probabilities
         indicate samples that are more likely to be outliers.
 
-        Args:
-            X: Samples to calculate outlier scores for, shape (n_samples, n_features)
-            n_permutations: Number of permutations to use for more robust probability estimates.
+        Parameters:
+            X: Union[torch.Tensor, np.ndarray, pd.DataFrame]
+                Samples to calculate outlier scores for, shape (n_samples, n_features)
+            n_permutations: int, default=10
+                Number of permutations to use for more robust probability estimates.
                 Higher values may produce more stable results but increase computation time.
 
         Returns:
-            Tensor of outlier scores (lower values indicate more likely outliers)
+            torch.Tensor: 
+                Tensor of outlier scores (lower values indicate more likely outliers),
+                shape (n_samples,)
 
         Raises:
             RuntimeError: If the model initialization fails
             ValueError: If the input data has incompatible dimensions
-                Outlier scores for each sample, shape (n_samples,)
-                Lower scores indicate more likely outliers.
         """
+        # Convert input to torch tensor if needed
+        if isinstance(X, np.ndarray):
+            X = torch.tensor(X, dtype=torch.float32)
+        elif isinstance(X, pd.DataFrame):
+            X = torch.tensor(X.values, dtype=torch.float32)
+            
         # Initialize model if needed
         self.init_model_and_get_model_config()
 
@@ -692,14 +686,12 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         all_features = list(range(n_features))
 
         # Check if running in test mode
-        import os
-
         fast_mode = os.environ.get("FAST_TEST_MODE", "0") == "1"
 
         # Use fewer permutations in fast mode
         actual_n_permutations = 1 if fast_mode else n_permutations
 
-        densities = []
+        densities: List[Union[torch.Tensor, np.ndarray]] = []
         for perm in efficient_random_permutation(all_features, actual_n_permutations):
             perm_density_log, perm_density = self.outliers_single_permutation_(
                 X,
@@ -709,7 +701,7 @@ class TabPFNUnsupervisedModel(BaseEstimator):
 
         # Average the densities across all permutations
         # Handle potential infinite values by replacing them with large finite values
-        densities_clean = [
+        densities_clean: List[torch.Tensor] = [
             torch.nan_to_num(d, nan=0.0, posinf=1e30, neginf=1e-30)
             if torch.is_tensor(d)
             else torch.nan_to_num(
@@ -730,14 +722,14 @@ class TabPFNUnsupervisedModel(BaseEstimator):
         n_samples: int = 100,
         t: float = 1.0,
         n_permutations: int = 3,
-    ) -> torch.tensor:
+    ) -> torch.Tensor:
         """Generate synthetic tabular data samples using the fitted TabPFN models.
 
         This method uses imputation to create synthetic data, starting with a matrix of NaN
         values and filling in each feature sequentially. Samples are generated feature by
         feature in a single pass, with each feature conditioned on previously generated features.
 
-        Args:
+        Parameters:
             n_samples: int, default=100
                 Number of synthetic samples to generate
 
@@ -751,22 +743,21 @@ class TabPFNUnsupervisedModel(BaseEstimator):
                 More permutations may provide more robust results but increase computation time
 
         Returns:
-            torch.tensor
+            torch.Tensor:
                 Generated synthetic data of shape (n_samples, n_features)
 
         Raises:
-            AssertionError
+            AssertionError:
                 If the model is not fitted (self.X_ does not exist)
         """
         # TODO: Test generating one feature at a time, with train data only for that feature
         #       and previously generated features, similar to the outliers method
         assert hasattr(
-            self, "X_"
+            self,
+            "X_",
         ), "You need to fit the model before generating synthetic data"
 
         # Check if running in test mode
-        import os
-
         fast_mode = os.environ.get("FAST_TEST_MODE", "0") == "1"
 
         # Use smaller number of samples in fast mode

@@ -1,6 +1,13 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
 
+"""
+WARNING: This example may run slowly on CPU-only systems.
+For better performance, we recommend running with GPU acceleration.
+This example performs hyperparameter optimization, which requires training
+multiple TabPFN models with different configurations.
+"""
+
 import numpy as np
 from sklearn.datasets import load_breast_cancer, load_diabetes, load_iris
 from sklearn.metrics import (

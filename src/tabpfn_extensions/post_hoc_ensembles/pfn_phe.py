@@ -16,7 +16,7 @@ from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 from sklearn.utils import check_array, check_X_y
 
 from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
-from tabpfn_extensions.rf_pfn.SklearnBasedRandomForestTabPFN import (
+from tabpfn_extensions.rf_pfn import (
     RandomForestTabPFNClassifier,
     RandomForestTabPFNRegressor,
 )
@@ -531,6 +531,7 @@ class TabPFNPostHocEnsemble:
         self.n_models = n_models
         self.device = device
         self.random_state = random_state
+        self.estimator_type = "classifier"  # Add estimator_type attribute
 
     def fit(self, X, y):
         self.classifier.fit(X, y)

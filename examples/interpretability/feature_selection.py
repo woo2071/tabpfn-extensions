@@ -1,3 +1,9 @@
+"""
+WARNING: This example may run slowly on CPU-only systems.
+For better performance, we recommend running with GPU acceleration.
+Feature selection involves training multiple TabPFN models, which is computationally intensive.
+"""
+
 from sklearn.datasets import load_breast_cancer
 
 from tabpfn_extensions import TabPFNClassifier, interpretability

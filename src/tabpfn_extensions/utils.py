@@ -4,18 +4,14 @@ from __future__ import annotations
 
 import os
 import warnings
+import numpy as np
 from typing import TYPE_CHECKING, Any, Literal, Protocol
-
-if TYPE_CHECKING:
-    import numpy as np
 
 
 class TabPFNEstimator(Protocol):
-    def fit(self, X: Any, y: Any) -> Any:
-        ...
+    def fit(self, X: Any, y: Any) -> Any: ...
 
-    def predict(self, X: Any) -> Any:
-        ...
+    def predict(self, X: Any) -> Any: ...
 
 
 def is_tabpfn(estimator: Any) -> bool:
@@ -226,3 +222,44 @@ def get_tabpfn_models() -> tuple[type, type]:
 
 
 TabPFNClassifier, TabPFNRegressor = get_tabpfn_models()
+
+
+def infer_categorical_features(
+    X: np.ndarray, categorical_features: list[int] | None = None
+) -> list[int]:
+    """Infer the categorical features from the input data.
+    
+    We take `categorical_features` as the initial list of categorical features
+    and refine it based on the number of unique values in each feature.
+
+    Parameters:
+        X (np.ndarray): The input data.
+        categorical_features (list[int], optional): Initial list of categorical feature indices.
+            If None, will start with an empty list.
+
+    Returns:
+        list[int]: The indices of the categorical features.
+    """
+    if categorical_features is None:
+        categorical_features = []
+        
+    max_unique_values_as_categorical_feature = 10
+    min_unique_values_as_numerical_feature = 10
+
+    _categorical_features: list[int] = []
+    for i in range(X.shape[-1]):
+        # Filter categorical features, with too many unique values
+        if i in categorical_features and (
+            len(np.unique(X[:, i])) <= max_unique_values_as_categorical_feature
+        ):
+            _categorical_features += [i]
+
+        # Filter non-categorical features, with few unique values
+        elif (
+            i not in categorical_features
+            and len(np.unique(X[:, i])) < min_unique_values_as_numerical_feature
+            and X.shape[0] > 100
+        ):
+            _categorical_features += [i]
+
+    return _categorical_features

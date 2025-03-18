@@ -94,7 +94,6 @@ class TunedTabPFNBase(BaseEstimator):
     def __init__(
         self,
         n_trials: int = 50,
-        max_evals: int | None = None,  # Added for backward compatibility
         n_validation_size: float = 0.2,
         metric: MetricType = MetricType.ACCURACY,
         device: str = "auto",
@@ -104,10 +103,7 @@ class TunedTabPFNBase(BaseEstimator):
         search_space: dict[str, Any] | None = None,
         objective_fn: Callable[[Any, np.ndarray, np.ndarray], float] | None = None,
     ):
-        # Handle both n_trials and max_evals parameter names (for backward compatibility)
-        self.n_trials = n_trials if max_evals is None else max_evals
-        self.max_evals = self.n_trials  # Maintain backward compatibility
-
+        self.n_trials = n_trials  # Set n_trials from the parameter
         self.n_validation_size = n_validation_size
         self.metric = MetricType(metric)  # Validate metric type
         self.device = device
@@ -390,8 +386,6 @@ class TunedTabPFNBase(BaseEstimator):
 class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
     """TabPFN Classifier with hyperparameter tuning and proper categorical handling."""
 
-    # TunedTabPFNBase already handles all parameters properly with max_evals for backwards compatibility
-
     def fit(
         self,
         X: np.ndarray,
@@ -497,8 +491,6 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
 
 class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
     """TabPFN Regressor with hyperparameter tuning and proper categorical handling."""
-
-    # TunedTabPFNBase already handles all parameters properly with max_evals for backwards compatibility
 
     def fit(
         self,

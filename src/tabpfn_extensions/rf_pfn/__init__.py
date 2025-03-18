@@ -8,6 +8,9 @@ from .sklearn_based_random_forest_tabpfn import (
     RandomForestTabPFNRegressor,
 )
 
+# Backward compatibility for imports
+# These classes were previously in CamelCase files but are now imported from snake_case files
+
 __all__ = [
     "DecisionTreeTabPFNClassifier",
     "DecisionTreeTabPFNRegressor",

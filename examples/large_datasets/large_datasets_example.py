@@ -1,101 +1,89 @@
+"""
+A colab notebook can be found at: https://colab.research.google.com/drive/154SoIzNW1LHBWyrxNwmBqtFAr1uZRZ6a#scrollTo=agAt8X7T0N6P
+"""
 # ----------------------------
 # Install and Import Libraries
 # ----------------------------
-import numpy as np  # Numerical computations
-from sklearn.datasets import fetch_openml, load_diabetes  # Datasets
-from sklearn.metrics import (  # Evaluation metrics
-    accuracy_score,  # Classification accuracy
-    mean_absolute_error,  # Regression MAE
-    mean_squared_error,  # Regression MSE
-    r2_score,  # Regression R^2 score
-    roc_auc_score,  # Area Under ROC Curve
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import (
+    accuracy_score,
+    roc_auc_score,
+    mean_squared_error,
+    mean_absolute_error,
+    r2_score,
 )
-from sklearn.model_selection import train_test_split  # Train-test splitting
-from sklearn.preprocessing import LabelEncoder  # Encoding categorical variables
-
-from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor  # TabPFN models
-from tabpfn_extensions.rf_pfn import (  # RF extensions
-    RandomForestTabPFNClassifier,
-    RandomForestTabPFNRegressor,
-)
+from sklearn.datasets import fetch_openml, load_diabetes
+from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
+from tabpfn_extensions.rf_pfn import RandomForestTabPFNClassifier, RandomForestTabPFNRegressor
 
 # ----------------------------
 # Load and Preprocess Classification Dataset
 # ----------------------------
 print("\n--- Loading Classification Dataset ---")
 df_classification = fetch_openml(
-    "electricity",  # Dataset name from OpenML
-    version=1,  # Specific dataset version
-    as_frame=True,  # Return data as pandas DataFrame
+    'electricity',
+    version=1,
+    as_frame=True
 )
-X_class, y_class = (
-    df_classification.data,
-    df_classification.target,
-)  # Feature matrix and target vector
+X_class, y_class = df_classification.data, df_classification.target
 
-le = LabelEncoder()  # Initialize label encoder
-y_class = le.fit_transform(y_class)  # Encode target variable into numeric classes
+le = LabelEncoder()
+y_class = le.fit_transform(y_class)
 
-# Convert all categorical columns to numeric codes
-for col in X_class.select_dtypes(["category"]).columns:
-    X_class[col] = X_class[
-        col
-    ].cat.codes  # Convert categorical features to numeric codes
+for col in X_class.select_dtypes(['category']).columns:
+    X_class[col] = X_class[col].cat.codes
 
-# Split data into training and testing sets
 X_train_class, X_test_class, y_train_class, y_test_class = train_test_split(
-    X_class,  # Feature matrix
-    y_class,  # Target vector
-    test_size=0.33,  # Fraction of data used for testing
-    random_state=42,  # Ensures reproducible splits
+    X_class,
+    y_class,
+    test_size=0.33,
+    random_state=42
 )
 
+
 # ----------------------------
-# Classification - Strategy 1: Subsampled Ensemble using TabPFNClassifier
+# Classification - Strategy 1: Tree-based Model with Node Subsampling
 # ----------------------------
-print("\n--- Classification: Strategy 1 (Subsampled Ensemble) ---")
-tabpfn_subsample_clf = TabPFNClassifier(
-    ignore_pretraining_limits=True,  # Allow larger datasets beyond pretraining limits
-    n_estimators=32,  # Number of ensemble estimators (more improves performance but increases runtime)
+print("\n--- Classification: Strategy 2 (Tree-based Model) ---")
+clf_base = TabPFNClassifier(
+    ignore_pretraining_limits=True,  # (bool) Allows training on larger datasets.
     inference_config={
-        "SUBSAMPLE_SAMPLES": 10000,  # Max samples per inference to manage memory usage
+        "SUBSAMPLE_SAMPLES": 10000  # (int) Number of samples to subsample for inference at each node.
     },
 )
 
-tabpfn_subsample_clf.fit(X_train_class, y_train_class)  # Train the classifier
-prediction_probabilities = tabpfn_subsample_clf.predict_proba(
-    X_test_class
-)  # Probability predictions
-predictions = np.argmax(
-    prediction_probabilities, axis=1
-)  # Convert probabilities to class predictions
+tabpfn_tree_clf = RandomForestTabPFNClassifier(
+    tabpfn=clf_base,         # (TabPFNClassifier) Base TabPFN model to be used within the Random Forest structure.
+    verbose=1,              # (int) Controls the verbosity; higher values show more details.
+    max_predict_time=60,    # (int) Maximum prediction time allowed in seconds.
+)
 
-# Evaluate classification performance
+tabpfn_tree_clf.fit(X_train_class, y_train_class)
+prediction_probabilities = tabpfn_tree_clf.predict_proba(X_test_class)
+predictions = np.argmax(prediction_probabilities, axis=1)
+
 print(f"ROC AUC: {roc_auc_score(y_test_class, prediction_probabilities[:, 1]):.4f}")
 print(f"Accuracy: {accuracy_score(y_test_class, predictions):.4f}")
 
 # ----------------------------
-# Classification - Strategy 2: Tree-based Model with Node Subsampling
+# Classification - Strategy 2: Subsampled Ensemble using TabPFNClassifier
 # ----------------------------
-print("\n--- Classification: Strategy 2 (Tree-based Model) ---")
-clf_base = TabPFNClassifier(
-    ignore_pretraining_limits=True,  # Enable larger datasets
-    inference_config={"SUBSAMPLE_SAMPLES": 10000},  # Control memory usage
+print("\n--- Classification: Strategy 1 (Subsampled Ensemble) ---")
+tabpfn_subsample_clf = TabPFNClassifier(
+    ignore_pretraining_limits=True,  # (bool) Allows the use of datasets larger than pretraining limits.
+    n_estimators=32,                 # (int) Number of estimators for ensembling; improves accuracy with higher values.
+    inference_config={
+        "SUBSAMPLE_SAMPLES": 10000  # (int) Maximum number of samples per inference step to manage memory usage.
+    },
 )
 
-tabpfn_tree_clf = RandomForestTabPFNClassifier(
-    tabpfn=clf_base,  # Base TabPFN model used within the Random Forest
-    verbose=1,  # Print detailed training progress
-    max_predict_time=60,  # Max time (in seconds) for making predictions
-)
+tabpfn_subsample_clf.fit(X_train_class, y_train_class)
+prediction_probabilities = tabpfn_subsample_clf.predict_proba(X_test_class)
+predictions = np.argmax(prediction_probabilities, axis=1)
 
-tabpfn_tree_clf.fit(X_train_class, y_train_class)  # Train the tree-based classifier
-prediction_probabilities = tabpfn_tree_clf.predict_proba(
-    X_test_class
-)  # Probability predictions
-predictions = np.argmax(prediction_probabilities, axis=1)  # Class predictions
-
-# Evaluate classification performance
 print(f"ROC AUC: {roc_auc_score(y_test_class, prediction_probabilities[:, 1]):.4f}")
 print(f"Accuracy: {accuracy_score(y_test_class, predictions):.4f}")
 
@@ -103,84 +91,57 @@ print(f"Accuracy: {accuracy_score(y_test_class, predictions):.4f}")
 # Load and Preprocess Regression Dataset
 # ----------------------------
 print("\n--- Loading Regression Dataset ---")
-regression_data = load_diabetes()  # Load diabetes dataset for regression
-X_reg, y_reg = (
-    regression_data.data,
-    regression_data.target,
-)  # Feature matrix and target vector
+regression_data = load_diabetes()
+X_reg, y_reg = regression_data.data, regression_data.target
 
-# Split data into training and testing sets
 X_train_reg, X_test_reg, y_train_reg, y_test_reg = train_test_split(
-    X_reg,  # Feature matrix
-    y_reg,  # Target vector
-    test_size=0.33,  # Fraction for testing
-    random_state=42,  # Reproducibility
+    X_reg,
+    y_reg,
+    test_size=0.33,
+    random_state=42
 )
 
 # ----------------------------
-# Regression - Strategy 1: Subsampled Ensemble using TabPFNRegressor
-# ----------------------------
-print("\n--- Regression: Strategy 1 (Subsampled Ensemble) ---")
-tabpfn_subsample_reg = TabPFNRegressor(
-    ignore_pretraining_limits=True,  # Allow handling of larger datasets
-    n_estimators=32,  # Number of estimators in ensemble
-    inference_config={
-        "SUBSAMPLE_SAMPLES": 10000,  # Limit samples per inference to prevent OOM errors
-    },
-)
-
-tabpfn_subsample_reg.fit(X_train_reg, y_train_reg)  # Train the regressor
-reg_predictions = tabpfn_subsample_reg.predict(X_test_reg)  # Make predictions
-
-# Evaluate regression performance
-print(
-    f"Mean Squared Error (MSE): {mean_squared_error(y_test_reg, reg_predictions):.4f}"
-)
-print(
-    f"Mean Absolute Error (MAE): {mean_absolute_error(y_test_reg, reg_predictions):.4f}"
-)
-print(f"R^2 Score: {r2_score(y_test_reg, reg_predictions):.4f}")
-
-# ----------------------------
-# Regression - Strategy 2: Tree-based Model with Node Subsampling
+# Regression - Strategy 1: Tree-based Model with Node Subsampling
 # ----------------------------
 print("\n--- Regression: Strategy 2 (Tree-based Model) ---")
 reg_base = TabPFNRegressor(
-    ignore_pretraining_limits=True,  # Enable large dataset support
-    inference_config={"SUBSAMPLE_SAMPLES": 10000},  # Memory management
+    ignore_pretraining_limits=True,  # (bool) Allows use with datasets larger than those used during pretraining.
+    inference_config={
+        "SUBSAMPLE_SAMPLES": 10000  # (int) Number of samples to subsample per node to manage memory usage.
+    },
 )
 
 tabpfn_tree_reg = RandomForestTabPFNRegressor(
-    tabpfn=reg_base,  # Base TabPFN regressor
-    verbose=1,  # Show detailed logs
-    max_predict_time=60,  # Max prediction time in seconds
+    tabpfn=reg_base,         # (TabPFNRegressor) Base regressor used in the Random Forest architecture.
+    verbose=1,              # (int) Level of verbosity for detailed logs.
+    max_predict_time=60,    # (int) Upper time limit for prediction in seconds.
 )
 
-tabpfn_tree_reg.fit(X_train_reg, y_train_reg)  # Train the model
-reg_tree_predictions = tabpfn_tree_reg.predict(X_test_reg)  # Predict on test data
+tabpfn_tree_reg.fit(X_train_reg, y_train_reg)
+reg_tree_predictions = tabpfn_tree_reg.predict(X_test_reg)
 
-# Evaluate regression performance
-print(
-    f"Mean Squared Error (MSE): {mean_squared_error(y_test_reg, reg_tree_predictions):.4f}"
-)
-print(
-    f"Mean Absolute Error (MAE): {mean_absolute_error(y_test_reg, reg_tree_predictions):.4f}"
-)
+print(f"Mean Squared Error (MSE): {mean_squared_error(y_test_reg, reg_tree_predictions):.4f}")
+print(f"Mean Absolute Error (MAE): {mean_absolute_error(y_test_reg, reg_tree_predictions):.4f}")
 print(f"R^2 Score: {r2_score(y_test_reg, reg_tree_predictions):.4f}")
 
-# ----------------------------
-# Settings Overview:
-# ----------------------------
-# - n_estimators: Controls ensemble size; higher improves accuracy but increases runtime.
-# - SUBSAMPLE_SAMPLES: Prevents out-of-memory errors by limiting samples per inference.
-# - max_predict_time: Limits prediction time to manage computational budgets.
-# - random_state: Ensures reproducible train-test splits.
 
 # ----------------------------
-# Notes:
+# Regression - Strategy 2: Subsampled Ensemble using TabPFNRegressor
 # ----------------------------
-# - Classification uses the 'electricity' dataset; regression uses the diabetes dataset.
-# - Ensure that the `tabpfn_extensions` package is installed with optional dependencies.
-# - Increasing `n_estimators` enhances model stability at the cost of longer training times.
-# - Subsampling is essential for large datasets to avoid memory issues.
-# - Verbose mode helps monitor training progress for debugging or long runs.
+print("\n--- Regression: Strategy 1 (Subsampled Ensemble) ---")
+tabpfn_subsample_reg = TabPFNRegressor(
+    ignore_pretraining_limits=True,  # (bool) Enables handling datasets beyond pretraining constraints.
+    n_estimators=32,                 # (int) Number of estimators in the ensemble for robustness.
+    inference_config={
+        "SUBSAMPLE_SAMPLES": 10000  # (int) Controls sample subsampling per inference to avoid OOM errors.
+    },
+)
+
+tabpfn_subsample_reg.fit(X_train_reg, y_train_reg)
+reg_predictions = tabpfn_subsample_reg.predict(X_test_reg)
+
+print(f"Mean Squared Error (MSE): {mean_squared_error(y_test_reg, reg_predictions):.4f}")
+print(f"Mean Absolute Error (MAE): {mean_absolute_error(y_test_reg, reg_predictions):.4f}")
+print(f"R^2 Score: {r2_score(y_test_reg, reg_predictions):.4f}")
+

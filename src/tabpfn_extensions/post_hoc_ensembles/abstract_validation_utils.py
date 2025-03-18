@@ -181,7 +181,7 @@ class AbstractValidationUtils(ABC, BaseEstimator):
         self,
         X,
         y,
-    ) -> tuple[int, int, int, BaseEstimator, list[int], list[int], bool, bool,]:
+    ) -> tuple[int, int, int, BaseEstimator, list[int], list[int], bool, bool]:
         n_models = len(self.estimators)
         holdout_validation = self._is_holdout
         _folds = self.n_folds if not holdout_validation else 1

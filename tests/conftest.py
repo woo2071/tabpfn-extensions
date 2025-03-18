@@ -15,10 +15,6 @@ Key fixtures provided:
 - tabpfn_classifier: Returns appropriate TabPFN classifier
 - tabpfn_regressor: Returns appropriate TabPFN regressor
 - synthetic_data: Returns synthetic dataset for testing
-
-Helper functions:
-- get_all_tabpfn_classifiers(): Returns all available classifier implementations
-- get_all_tabpfn_regressors(): Returns all available regressor implementations
 """
 
 from __future__ import annotations
@@ -42,41 +38,60 @@ HAS_TABPFN_CLIENT = False  # Is TabPFN client available?
 HAS_ANY_TABPFN = False  # Is any implementation available?
 TABPFN_SOURCE = None  # Which implementation is preferred ("tabpfn", or "tabpfn_client")
 
+# This will be set in pytest_configure based on command line option
+FORCE_BACKEND = None  # Force specific backend if set
+
 # Check if TabPFN is available
 try:
     # Using importlib.util.find_spec as recommended by ruff
     import importlib.util
-
+    
+    # For debugging
+    import sys
+    print("Python path:", sys.path)
+    print("Looking for TabPFN...")
+    
     tabpfn_spec = importlib.util.find_spec("tabpfn")
+    print("TabPFN spec:", tabpfn_spec)
+    
     if tabpfn_spec is not None:
+        print("Found tabpfn package")
         from tabpfn import TabPFNClassifier, TabPFNRegressor
-
+        print("Imported TabPFNClassifier, TabPFNRegressor")
+        
         HAS_TABPFN = True
         HAS_ANY_TABPFN = True
         if TABPFN_SOURCE is None:
             TABPFN_SOURCE = "tabpfn"
-except ImportError:
-    pass
+except ImportError as e:
+    print("ImportError when importing tabpfn:", e)
+except Exception as e:
+    print("Exception when importing tabpfn:", e)
 
 # Check if TabPFN client is available
 try:
     # Using importlib.util.find_spec as recommended by ruff
+    print("Looking for TabPFN client...")
     tabpfn_client_spec = importlib.util.find_spec("tabpfn_client")
+    print("TabPFN client spec:", tabpfn_client_spec)
+    
     if tabpfn_client_spec is not None:
-        from tabpfn_client import (
-            TabPFNClassifier as ClientTabPFNClassifier,
-            TabPFNRegressor as ClientTabPFNRegressor,
-        )
+        print("Found tabpfn_client package")
+        from tabpfn_client import TabPFNClassifier as ClientTabPFNClassifier
+        from tabpfn_client import TabPFNRegressor as ClientTabPFNRegressor
+        print("Imported ClientTabPFNClassifier, ClientTabPFNRegressor")
+        
+        HAS_TABPFN_CLIENT = True
+        HAS_ANY_TABPFN = True
+        if TABPFN_SOURCE is None:
+            TABPFN_SOURCE = "tabpfn_client"
+except ImportError as e:
+    print("ImportError when importing tabpfn_client:", e)
+except Exception as e:
+    print("Exception when importing tabpfn_client:", e)
 
-    HAS_TABPFN_CLIENT = True
-    HAS_ANY_TABPFN = True
-    if TABPFN_SOURCE is None:
-        TABPFN_SOURCE = "tabpfn_client"
-except ImportError:
-    pass
 
-
-# Add the option to run example files
+# Add command-line options
 def pytest_addoption(parser):
     """Add command-line options to pytest."""
     parser.addoption(
@@ -85,11 +100,20 @@ def pytest_addoption(parser):
         default=False,
         help="Run example files as part of the test suite",
     )
+    parser.addoption(
+        "--backend",
+        action="store",
+        default="all",
+        help="Specify which TabPFN backend to use: 'tabpfn', 'tabpfn_client', or 'all' (use both if available)",
+    )
 
 
 # Define markers for tests
 def pytest_configure(config):
-    """Configure pytest markers."""
+    """Configure pytest markers and handle backend selection."""
+    global TABPFN_SOURCE, FORCE_BACKEND
+    
+    # Register test markers
     config.addinivalue_line(
         "markers",
         "requires_tabpfn: mark test to require TabPFN package",
@@ -100,10 +124,6 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers",
-        "requires_any_tabpfn: mark test to require any TabPFN implementation",
-    )
-    config.addinivalue_line(
-        "markers",
         "client_compatible: mark test as compatible with TabPFN client",
     )
     config.addinivalue_line(
@@ -111,73 +131,189 @@ def pytest_configure(config):
         "slow: mark test as slow (will be skipped in fast test mode)",
     )
     config.addinivalue_line("markers", "example: mark test as testing an example file")
+    
+    # Handle backend selection from command line
+    backend_option = config.getoption("--backend")
+    
+    if backend_option == "tabpfn" and HAS_TABPFN:
+        print("Forcing TabPFN package backend as requested")
+        TABPFN_SOURCE = "tabpfn"
+        FORCE_BACKEND = "tabpfn"
+    elif backend_option == "tabpfn_client" and HAS_TABPFN_CLIENT:
+        print("Forcing TabPFN client backend as requested")
+        TABPFN_SOURCE = "tabpfn_client"
+        FORCE_BACKEND = "tabpfn_client"
+    elif backend_option == "auto":
+        # Auto mode uses what's available (no change to previous behavior)
+        pass
+    elif backend_option == "tabpfn" and not HAS_TABPFN:
+        print("WARNING: Requested TabPFN package backend but it's not available")
+    elif backend_option == "tabpfn_client" and not HAS_TABPFN_CLIENT:
+        print("WARNING: Requested TabPFN client backend but it's not available")
+        
+    # Print status information
+    print(f"Test configuration:")
+    print(f"  Backend: {TABPFN_SOURCE or 'none'}")
+    print(f"  TabPFN package available: {HAS_TABPFN}")
+    print(f"  TabPFN client available: {HAS_TABPFN_CLIENT}")
+    print(f"  Fast test mode: {FAST_TEST_MODE}")
+    print(f"  Default timeout: {DEFAULT_TIMEOUT} seconds")
 
+
+# Helper to determine which backends to test
+def get_backends_to_test(config):
+    """Determine which backends to test based on command line options."""
+    backend_option = config.getoption("--backend")
+    
+    if backend_option == "tabpfn" and HAS_TABPFN:
+        return ["tabpfn"]
+    elif backend_option == "tabpfn_client" and HAS_TABPFN_CLIENT:
+        return ["tabpfn_client"]
+    else:
+        # Include all available backends
+        backends = []
+        if HAS_TABPFN:
+            backends.append("tabpfn")
+        if HAS_TABPFN_CLIENT:
+            backends.append("tabpfn_client")
+        return backends
+
+# Define a parametrization hook to test with both backends
+def pytest_generate_tests(metafunc):
+    """Generate tests for each backend."""
+    if "backend" in metafunc.fixturenames:
+        backends = get_backends_to_test(metafunc.config)
+        
+        # Skip the whole test if no backends are available
+        if not backends:
+            pytest.skip("No TabPFN backends available")
+            
+        metafunc.parametrize("backend", backends, scope="function", 
+                            ids=[f"backend={b}" for b in backends])
+
+# Define a fixture to evaluate if a test should run for a given backend
+@pytest.fixture
+def backend(request):
+    """Fixture that provides each available backend."""
+    backend_name = request.param
+    
+    # Skip if the test requires a specific backend
+    requires_tabpfn = request.node.get_closest_marker("requires_tabpfn")
+    requires_client = request.node.get_closest_marker("requires_tabpfn_client")
+    
+    if requires_tabpfn and backend_name != "tabpfn":
+        pytest.skip("Test requires TabPFN package")
+    if requires_client and backend_name != "tabpfn_client":
+        pytest.skip("Test requires TabPFN client")
+        
+    # Skip if the test is not compatible with client and we're using client
+    if backend_name == "tabpfn_client" and not request.node.get_closest_marker("client_compatible"):
+        pytest.skip("Test is not compatible with TabPFN client")
+        
+    return backend_name
 
 # Define a fixture to provide TabPFN classifier
 @pytest.fixture
-def tabpfn_classifier(request):
-    """Return appropriate TabPFN classifier based on availability."""
-    if not HAS_ANY_TABPFN:
-        pytest.fail(
-            "ERROR: No TabPFN implementation available. Install TabPFN client with 'pip install tabpfn-client', or TabPFN with 'pip install tabpfn'",
-        )
-
-    # Check if test is marked to require specific implementation
-    requires_tabpfn = request.node.get_closest_marker("requires_tabpfn")
-    requires_client = request.node.get_closest_marker("requires_tabpfn_client")
-
-    if requires_tabpfn and not HAS_TABPFN:
-        pytest.fail(
-            "ERROR: Test requires TabPFN package but it's not installed. Run 'pip install tabpfn'",
-        )
-
-    if requires_client and not HAS_TABPFN_CLIENT:
-        pytest.fail(
-            "ERROR: Test requires TabPFN client but it's not installed. Run 'pip install tabpfn-client'",
-        )
-
-    # Return appropriate classifier
-    if TABPFN_SOURCE == "tabpfn":
+def tabpfn_classifier(backend):
+    """Return TabPFN classifier for the current backend."""
+    if backend == "tabpfn":
         return TabPFNClassifier()  # Let the model use the default device setting
-    if TABPFN_SOURCE == "tabpfn_client":
+    elif backend == "tabpfn_client":
         return ClientTabPFNClassifier()
-
-    pytest.fail(
-        "ERROR: No TabPFN classifier available. Install TabPFN with 'pip install tabpfn', TabPFN client with 'pip install tabpfn-client''",
-    )
+    else:
+        pytest.fail(f"Unknown backend: {backend}")
 
 
 # Define a fixture to provide TabPFN regressor
 @pytest.fixture
-def tabpfn_regressor(request):
-    """Return appropriate TabPFN regressor based on availability."""
-    if not HAS_ANY_TABPFN:
-        pytest.fail(
-            "ERROR: No TabPFN implementation available. Install TabPFN with 'pip install tabpfn', TabPFN client with 'pip install tabpfn-client''",
-        )
-
-    # Check if test is marked to require specific implementation
-    requires_tabpfn = request.node.get_closest_marker("requires_tabpfn")
-    requires_client = request.node.get_closest_marker("requires_tabpfn_client")
-
-    if requires_tabpfn and not HAS_TABPFN:
-        pytest.fail(
-            "ERROR: Test requires TabPFN package but it's not installed. Run 'pip install tabpfn'",
-        )
-
-    if requires_client and not HAS_TABPFN_CLIENT:
-        pytest.fail(
-            "ERROR: Test requires TabPFN client but it's not installed. Run 'pip install tabpfn-client'",
-        )
-
-    # Return appropriate regressor
-    if TABPFN_SOURCE == "tabpfn":
+def tabpfn_regressor(backend):
+    """Return TabPFN regressor for the current backend."""
+    if backend == "tabpfn":
         return TabPFNRegressor()  # Let the model use the default device setting
-    if TABPFN_SOURCE == "tabpfn_client":
+    elif backend == "tabpfn_client":
         return ClientTabPFNRegressor()
+    else:
+        pytest.fail(f"Unknown backend: {backend}")
 
-    pytest.fail(
-        "ERROR: No TabPFN regressor available. Install TabPFN with 'pip install tabpfn', TabPFN client with 'pip install tabpfn-client''",
+
+# Fixtures for standard datasets
+
+@pytest.fixture
+def dataset_generator():
+    """Create a dataset generator with a fixed seed."""
+    # Use relative import to avoid 'tests' module not found issue
+    import sys, os
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    from utils import DatasetGenerator
+    return DatasetGenerator(seed=42)
+
+@pytest.fixture
+def classification_data(dataset_generator):
+    """Return a simple classification dataset with 2 classes."""
+    test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
+    X, y = dataset_generator.generate_classification_data(
+        n_samples=test_size, n_features=5, n_classes=2
+    )
+    return X, y
+
+@pytest.fixture
+def multiclass_data(dataset_generator):
+    """Return a classification dataset with 3+ classes."""
+    test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
+    X, y = dataset_generator.generate_classification_data(
+        n_samples=test_size, n_features=5, n_classes=5
+    )
+    return X, y
+
+@pytest.fixture
+def regression_data(dataset_generator):
+    """Return a simple regression dataset."""
+    test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
+    X, y = dataset_generator.generate_regression_data(
+        n_samples=test_size, n_features=5
+    )
+    return X, y
+
+@pytest.fixture
+def pandas_classification_data(dataset_generator):
+    """Return a classification dataset as pandas DataFrame."""
+    test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
+    X, y = dataset_generator.generate_classification_data(
+        n_samples=test_size, n_features=5, n_classes=2, as_pandas=True
+    )
+    return X, y
+
+@pytest.fixture
+def pandas_regression_data(dataset_generator):
+    """Return a regression dataset as pandas DataFrame."""
+    test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
+    X, y = dataset_generator.generate_regression_data(
+        n_samples=test_size, n_features=5, as_pandas=True
+    )
+    return X, y
+
+@pytest.fixture
+def mixed_type_data(dataset_generator):
+    """Return a dataset with mixed numerical and categorical features."""
+    test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
+    return dataset_generator.dataset_with_mixed_types(
+        n_samples=test_size, n_numerical=3, n_categorical=2
+    )
+
+@pytest.fixture
+def data_with_missing_values(dataset_generator):
+    """Return a dataset with missing values."""
+    test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
+    return dataset_generator.dataset_with_missing_values(
+        n_samples=test_size, n_features=5
+    )
+
+@pytest.fixture
+def data_with_outliers(dataset_generator):
+    """Return a dataset with outliers."""
+    test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
+    return dataset_generator.dataset_with_outliers(
+        n_samples=test_size, n_features=5
     )
 
 
@@ -211,277 +347,3 @@ def pytest_runtest_setup(item):
     # Skip slow tests in fast mode
     if FAST_TEST_MODE and item.get_closest_marker("slow"):
         pytest.skip("Skipping slow test in fast mode")
-
-    # Skip examples that are too slow or resource-intensive for test environments
-    if item.get_closest_marker("example"):
-        try:
-            # Access the name parameter directly from the item params
-            params = item.callspec.params if hasattr(item, "callspec") else {}
-            example_file = params.get("example_file", {})
-            example_name = (
-                example_file.get("name", "") if isinstance(example_file, dict) else ""
-            )
-
-            if example_name in [
-                "large_datasets_example.py",
-            ]:
-                pytest.skip(
-                    f"Example {example_name} skipped in test environment - corresponding functionality tested separately",
-                )
-        except (AttributeError, KeyError):
-            # If we can't determine the name, continue anyway
-            pass
-
-
-# Custom class to hold data and metadata
-class TestData:
-    """Wrapper class to hold data and metadata for testing.
-
-    This class wraps a numpy array and adds metadata like categorical_features.
-    It mimics the behavior of numpy arrays for basic operations.
-    """
-
-    def __init__(self, data, categorical_features=None):
-        """Initialize with data and metadata.
-
-        Args:
-            data: numpy array of data
-            categorical_features: list of indices of categorical features
-        """
-        self.data = np.array(data)
-        self.categorical_features = categorical_features or []
-
-    def __getitem__(self, key):
-        """Support array-like indexing."""
-        result = self.data[key]
-        if isinstance(key, tuple) and len(key) == 2 and not isinstance(key[0], slice):
-            # Single element access - return raw value
-            return result
-
-        # For slices, wrap the result in TestData
-        if isinstance(result, np.ndarray):
-            return TestData(result, self.categorical_features)
-        return result
-
-    def __setitem__(self, key, value):
-        """Support array-like assignment."""
-        self.data[key] = value
-
-    @property
-    def shape(self):
-        """Return shape of underlying data."""
-        return self.data.shape
-
-    @property
-    def dtype(self):
-        """Return dtype of underlying data."""
-        return self.data.dtype
-
-    def astype(self, dtype):
-        """Cast data to the specified type."""
-        return TestData(self.data.astype(dtype), self.categorical_features)
-
-    def copy(self):
-        """Return a copy of this TestData object."""
-        return TestData(
-            self.data.copy(),
-            self.categorical_features.copy() if self.categorical_features else [],
-        )
-
-    def __array__(self, dtype=None, order=None):
-        """Support numpy array conversion with dtype and order parameters.
-
-        Args:
-            dtype: Optional data type to cast to
-            order: Optional memory layout (C or F)
-
-        Returns:
-            numpy.ndarray: The underlying data array
-        """
-        if dtype is not None:
-            return np.array(self.data, dtype=dtype, order=order)
-        return self.data
-
-    def __len__(self):
-        """Return length of first dimension."""
-        return self.shape[0]
-
-    def __repr__(self):
-        """String representation."""
-        return f"TestData(shape={self.shape}, categorical_features={self.categorical_features})"
-
-
-# Generic data fixtures for testing
-@pytest.fixture
-def synthetic_data_classification():
-    """Create synthetic classification data with controlled properties.
-
-    The dataset includes:
-    - Numerical features
-    - Categorical features (as integers)
-    - Missing values (NaN)
-    - String categorical features
-
-    This provides a comprehensive test for handling all common data types.
-
-    Returns:
-        tuple: (X_train, X_test, y_train, y_test) containing training and test data
-    """
-    n_samples = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
-
-    # Use consistent seed for reproducibility
-    rng = np.random.RandomState(42)
-
-    # Generate 5 features with mixed types:
-    # - Features 0, 1: Numerical (continuous)
-    # - Feature 2: Categorical (as integers 0-2)
-    # - Feature 3: Categorical (as strings 'A', 'B', 'C')
-    # - Feature 4: Numerical with missing values
-    X = np.zeros((n_samples, 5), dtype=object)
-
-    # Numerical features
-    X[:, 0] = rng.rand(n_samples)
-    X[:, 1] = rng.rand(n_samples)
-
-    # Categorical feature (as integers)
-    X[:, 2] = rng.randint(0, 3, size=n_samples)
-
-    # Categorical feature (as strings)
-    categories = np.array(["A", "B", "C"])
-    X[:, 3] = categories[rng.randint(0, 3, size=n_samples)]
-
-    # Numerical feature with missing values (about 10%)
-    X[:, 4] = rng.rand(n_samples)
-    missing_mask = rng.random(n_samples) < 0.1
-    X[missing_mask, 4] = np.nan
-
-    # Create a simple binary classification problem based on the numerical features
-    y = (X[:, 0].astype(float) + X[:, 1].astype(float) > 1).astype(int)
-
-    # Split into train/test
-    train_size = int(0.7 * n_samples)
-    X_train_data, X_test_data = X[:train_size], X[train_size:]
-    y_train, y_test = y[:train_size], y[train_size:]
-
-    # Wrap data in TestData with metadata
-    X_train = TestData(X_train_data, categorical_features=[2, 3])
-    X_test = TestData(X_test_data, categorical_features=[2, 3])
-
-    return X_train, X_test, y_train, y_test
-
-
-@pytest.fixture
-def synthetic_data_regression():
-    """Create synthetic regression data with controlled properties.
-
-    The dataset includes:
-    - Numerical features
-    - Categorical features (as integers)
-    - Missing values (NaN)
-    - String categorical features
-
-    This provides a comprehensive test for handling all common data types.
-
-    Returns:
-        tuple: (X_train, X_test, y_train, y_test) containing training and test data
-    """
-    n_samples = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
-
-    # Use consistent seed for reproducibility
-    rng = np.random.RandomState(42)
-
-    # Generate 5 features with mixed types:
-    # - Features 0, 1, 2: Numerical (continuous)
-    # - Feature 3: Categorical (as integers 0-3)
-    # - Feature 4: Numerical with missing values
-    X = np.zeros((n_samples, 5), dtype=object)
-
-    # Numerical features
-    X[:, 0] = rng.rand(n_samples)
-    X[:, 1] = rng.rand(n_samples)
-    X[:, 2] = rng.rand(n_samples)
-
-    # Categorical feature (as strings)
-    categories = np.array(["low", "medium", "high", "extreme"])
-    X[:, 3] = categories[rng.randint(0, 4, size=n_samples)]
-
-    # Numerical feature with missing values (about 10%)
-    X[:, 4] = rng.rand(n_samples)
-    missing_mask = rng.random(n_samples) < 0.1
-    X[missing_mask, 4] = np.nan
-
-    # Create a simple regression problem based on the numerical features
-    y = (
-        2 * X[:, 0].astype(float)
-        + 3 * X[:, 1].astype(float)
-        - 1.5 * X[:, 2].astype(float)
-        + rng.normal(0, 0.1, size=n_samples)
-    )
-
-    # Add some missing values to target (about 5%)
-    if False:  # Disabled for now as most models can't handle missing targets
-        missing_y_mask = rng.random(n_samples) < 0.05
-        y[missing_y_mask] = np.nan
-
-    # Split into train/test
-    train_size = int(0.7 * n_samples)
-    X_train_data, X_test_data = X[:train_size], X[train_size:]
-    y_train, y_test = y[:train_size], y[train_size:]
-
-    # Wrap data in TestData with metadata
-    X_train = TestData(X_train_data, categorical_features=[3])
-    X_test = TestData(X_test_data, categorical_features=[3])
-
-    return X_train, X_test, y_train, y_test
-
-
-# Helper function to get TabPFN classifiers from all available sources
-def get_all_tabpfn_classifiers():
-    """Return TabPFN classifiers from all available sources.
-
-    Returns:
-    -------
-    Dict[str, object]
-        A dictionary of classifiers, one for each available implementation source.
-        Keys are the implementation names ("tabpfn", or "tabpfn_client").
-        Values are classifier instances.
-    """
-    classifiers = {}
-
-    if HAS_TABPFN:
-        from tabpfn import TabPFNClassifier
-
-        classifiers["tabpfn"] = TabPFNClassifier()  # Use default device
-
-    if HAS_TABPFN_CLIENT:
-        from tabpfn_client import TabPFNClassifier as ClientTabPFNClassifier
-
-        classifiers["tabpfn_client"] = ClientTabPFNClassifier()
-
-    return classifiers
-
-
-# Helper function to get TabPFN regressors from all available sources
-def get_all_tabpfn_regressors():
-    """Return TabPFN regressors from all available sources.
-
-    Returns:
-    -------
-    Dict[str, object]
-        A dictionary of regressors, one for each available implementation source.
-        Keys are the implementation names ("tabpfn", or "tabpfn_client").
-        Values are regressor instances.
-    """
-    regressors = {}
-
-    if HAS_TABPFN:
-        from tabpfn import TabPFNRegressor
-
-        regressors["tabpfn"] = TabPFNRegressor()  # Use default device
-
-    if HAS_TABPFN_CLIENT:
-        from tabpfn_client import TabPFNRegressor as ClientTabPFNRegressor
-
-        regressors["tabpfn_client"] = ClientTabPFNRegressor()
-
-    return regressors

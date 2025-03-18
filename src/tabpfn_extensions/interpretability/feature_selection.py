@@ -7,11 +7,11 @@ from sklearn.model_selection import cross_val_score
 
 
 def feature_selection(
-    estimator,
-    X,
-    y,
-    n_features_to_select=3,
-    feature_names=None,
+    estimator : BaseEstimator,
+    X : np.ndarray,
+    y : np.ndarray,
+    n_features_to_select:int=3,
+    feature_names:List[str]=None,
     **kwargs,
 ):
     if hasattr(estimator, "fit_at_predict_time") and estimator.fit_at_predict_time:
