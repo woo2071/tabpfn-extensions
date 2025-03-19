@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import itertools
+import logging
 import os
 import warnings
 from collections.abc import Iterator
@@ -86,8 +87,10 @@ def get_tabpfn_models() -> tuple[type, type]:
         try:
             from tabpfn import TabPFNClassifier, TabPFNRegressor
 
+            # Debug info controlled by environment variable
+            # (using logging rather than print for better debugging)
             if os.getenv("TABPFN_DEBUG", "false").lower() == "true":
-                print("Using TabPFN package")
+                logging.info("Using TabPFN package")
 
             return TabPFNClassifier, TabPFNRegressor
         except ImportError:
@@ -100,8 +103,10 @@ def get_tabpfn_models() -> tuple[type, type]:
             TabPFNRegressor as ClientTabPFNRegressor,
         )
 
+        # Debug info controlled by environment variable
+        # (using logging rather than print for better debugging)
         if os.getenv("TABPFN_DEBUG", "false").lower() == "true":
-            print("Using TabPFN client")
+            logging.info("Using TabPFN client")
 
         # Wrapper classes to add device parameter
         # we can't use *args because scikit-learn needs to know the parameters of the constructor

@@ -256,10 +256,11 @@ def tabpfn_regressor(backend):
 def dataset_generator():
     """Create a dataset generator with a fixed seed."""
     # Use relative import to avoid 'tests' module not found issue
-    import os
     import sys
+    from pathlib import Path
 
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    # Add parent directory to path using Path for better path handling
+    sys.path.append(str(Path(__file__).parent))
     from utils import DatasetGenerator
 
     return DatasetGenerator(seed=42)
