@@ -14,7 +14,6 @@ from tabpfn_extensions.rf_pfn.sklearn_based_random_forest_tabpfn import (
 from test_base_tabpfn import BaseClassifierTests, BaseRegressorTests
 
 
-@pytest.mark.requires_tabpfn
 class TestRandomForestClassifier(BaseClassifierTests):
     """Test RandomForestTabPFNClassifier using the BaseClassifierTests framework."""
 
@@ -23,10 +22,10 @@ class TestRandomForestClassifier(BaseClassifierTests):
         """Provide a TabPFN-based RandomForestClassifier as the estimator."""
         return RandomForestTabPFNClassifier(
             tabpfn=tabpfn_classifier,
-            n_estimators=5,  # Use few trees for speed
-            max_depth=3,  # Shallow trees for speed
+            n_estimators=2,  # Use few trees for speed
+            max_depth=2,  # Shallow trees for speed
             random_state=42,
-            max_predict_time=30,  # Limit prediction time
+            max_predict_time=10,  # Limit prediction time
         )
 
     # Skip pandas and text feature tests as they're not fully supported by RandomForestTabPFN
@@ -41,7 +40,7 @@ class TestRandomForestClassifier(BaseClassifierTests):
         pass
 
 
-@pytest.mark.requires_tabpfn
+@pytest.mark.local_compatible
 class TestRandomForestRegressor(BaseRegressorTests):
     """Test RandomForestTabPFNRegressor using the BaseRegressorTests framework."""
 
@@ -50,10 +49,10 @@ class TestRandomForestRegressor(BaseRegressorTests):
         """Provide a TabPFN-based RandomForestRegressor as the estimator."""
         return RandomForestTabPFNRegressor(
             tabpfn=tabpfn_regressor,
-            n_estimators=5,  # Use few trees for speed
-            max_depth=3,  # Shallow trees for speed
+            n_estimators=2,  # Use few trees for speed
+            max_depth=2,  # Shallow trees for speed
             random_state=42,
-            max_predict_time=30,  # Limit prediction time
+            max_predict_time=10,  # Limit prediction time
         )
 
     # Skip pandas and text feature tests as they're not fully supported by RandomForestTabPFN

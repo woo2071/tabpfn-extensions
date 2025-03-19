@@ -6,9 +6,9 @@ This file tests the HPO implementations in tabpfn_extensions.hpo.
 from __future__ import annotations
 
 import pytest
-from tests.utils import get_small_test_search_space
 
 from conftest import FAST_TEST_MODE
+from utils import get_small_test_search_space
 
 # Try to import the HPO module, but skip tests if hyperopt is not available
 try:
@@ -27,7 +27,7 @@ from test_base_tabpfn import BaseClassifierTests, BaseRegressorTests
 # Using get_small_test_search_space from tests.utils - all HPO modules should use it
 
 
-@pytest.mark.requires_tabpfn
+@pytest.mark.local_compatible
 @pytest.mark.client_compatible
 class TestTunedTabPFNClassifier(BaseClassifierTests):
     """Test TunedTabPFNClassifier using the BaseClassifierTests framework."""
@@ -53,7 +53,7 @@ class TestTunedTabPFNClassifier(BaseClassifierTests):
         pass
 
 
-@pytest.mark.requires_tabpfn
+@pytest.mark.local_compatible
 @pytest.mark.client_compatible
 class TestTunedTabPFNRegressor(BaseRegressorTests):
     """Test TunedTabPFNRegressor using the BaseRegressorTests framework."""
@@ -83,7 +83,7 @@ class TestTunedTabPFNRegressor(BaseRegressorTests):
 class TestHPOSpecificFeatures:
     """Test HPO-specific features that aren't covered by the base tests."""
 
-    @pytest.mark.requires_tabpfn
+    @pytest.mark.local_compatible
     @pytest.mark.client_compatible
     def test_different_metrics(self):
         """Test different metrics for HPO."""

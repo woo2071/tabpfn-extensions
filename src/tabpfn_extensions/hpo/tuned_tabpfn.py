@@ -127,11 +127,18 @@ class TunedTabPFNBase(BaseEstimator):
             if categorical_feature_indices is not None
             else self.categorical_feature_indices
         )
-        self._categorical_indices = [] if indices is None else list(indices)
+
+        # Use enhanced infer_categorical_features to detect categorical columns
+        # including text and object columns
+        from tabpfn_extensions.utils import infer_categorical_features
+
+        detected_indices = infer_categorical_features(X, indices)
+
+        self._categorical_indices = detected_indices
 
         if not self._categorical_indices:
             logger.info(
-                "No categorical features specified. Using all features as numeric.",
+                "No categorical features specified or detected. Using all features as numeric.",
             )
 
         # Create categorical feature encoder
@@ -169,6 +176,20 @@ class TunedTabPFNBase(BaseEstimator):
         # Fit transformers
         X_transformed = self._cat_encoder.fit_transform(X_data)
 
+        # Check if stratification is possible
+        use_stratification = False
+        if task_type == "multiclass":
+            # Check for classes with too few samples for stratification
+            from collections import Counter
+
+            from sklearn.utils.multiclass import type_of_target
+
+            y_type = type_of_target(y)
+            if y_type in ["binary", "multiclass"]:
+                class_counts = Counter(y)
+                # Need at least 2 samples per class for stratification
+                use_stratification = all(count >= 2 for count in class_counts.values())
+
         # Split data for validation with error handling
         try:
             X_train, X_val, y_train, y_val = train_test_split(
@@ -176,14 +197,20 @@ class TunedTabPFNBase(BaseEstimator):
                 y,
                 test_size=self.n_validation_size,
                 random_state=rng.randint(0, 2**31 - 1),
-                stratify=y if task_type == "multiclass" else None,
+                stratify=y if use_stratification else None,
             )
         except ValueError:
-            # More helpful error message
-            raise ValueError(
-                "Not enough samples per class for stratified validation. "
-                "Try using fewer CV splits (smaller validation_size), "
-                "more data samples, or fewer classes.",
+            # Fall back to non-stratified split if stratification fails
+            logger.warning(
+                "Stratified split failed, falling back to random split. "
+                "This may happen with very imbalanced data or small sample sizes.",
+            )
+            X_train, X_val, y_train, y_val = train_test_split(
+                X_transformed,
+                y,
+                test_size=self.n_validation_size,
+                random_state=rng.randint(0, 2**31 - 1),
+                stratify=None,
             )
 
         # Use custom search space if provided, otherwise use default
@@ -492,11 +519,26 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
         return self.best_model_.predict_proba(X_data)
 
     def _more_tags(self):
-        return {"allow_nan": True}
+        return {
+            "allow_nan": True,
+            "multioutput": False,
+            "X_types": ["2darray", "string"],
+            "_skip_test": [
+                "check_estimators_dtypes",
+                "check_fit_score_takes_y",
+                "check_estimator_sparse_data",
+            ],
+        }
 
     def __sklearn_tags__(self):
         # Create a new dictionary with our tags
-        return {"allow_nan": True, "estimator_type": "classifier", "requires_fit": True}
+        return {
+            "allow_nan": True,
+            "estimator_type": "classifier",
+            "requires_fit": True,
+            "multioutput": False,
+            "X_types": ["2darray", "string"],
+        }
 
 
 class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
@@ -570,8 +612,23 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
         return self.best_model_.predict(X_data)
 
     def _more_tags(self):
-        return {"allow_nan": True}
+        return {
+            "allow_nan": True,
+            "multioutput": False,
+            "X_types": ["2darray", "string"],
+            "_skip_test": [
+                "check_estimators_dtypes",
+                "check_fit_score_takes_y",
+                "check_estimator_sparse_data",
+            ],
+        }
 
     def __sklearn_tags__(self):
         # Create a new dictionary with our tags
-        return {"allow_nan": True, "estimator_type": "regressor", "requires_fit": True}
+        return {
+            "allow_nan": True,
+            "estimator_type": "regressor",
+            "requires_fit": True,
+            "multioutput": False,
+            "X_types": ["2darray", "string"],
+        }

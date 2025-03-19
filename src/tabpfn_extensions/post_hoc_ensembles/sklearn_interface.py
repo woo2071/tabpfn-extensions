@@ -87,6 +87,12 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
         if categorical_feature_indices is not None:
             self.categorical_feature_indices = categorical_feature_indices
 
+        # Auto-detect categorical features including text columns
+        if self.categorical_feature_indices is None:
+            from tabpfn_extensions.utils import infer_categorical_features
+
+            self.categorical_feature_indices = infer_categorical_features(X)
+
         self.phe_init_args_ = {} if self.phe_init_args is None else self.phe_init_args
         rnd = check_random_state(self.random_state)
 
@@ -95,9 +101,37 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
         random.seed(rnd.randint(0, MAX_INT))
         np.random.seed(rnd.randint(0, MAX_INT))
 
-        task_type = (
-            TaskType.MULTICLASS if len(unique_labels(y)) > 2 else TaskType.BINARY
-        )
+        # Check for single class
+        self.classes_ = unique_labels(y)
+        self.n_features_in_ = X.shape[1]
+
+        # Single class case - special handling
+        if len(self.classes_) == 1:
+            self.single_class_ = True
+            self.single_class_value_ = self.classes_[0]
+            return self
+
+        # Check for extremely imbalanced classes - handle case with only 1 sample per class
+        class_counts = np.bincount(y.astype(int))
+        if np.min(class_counts[class_counts > 0]) < 2:
+            # Cannot do stratification with less than 2 samples per class
+            # Use a standard TabPFN classifier without ensemble
+            from tabpfn_extensions.utils import TabPFNClassifier, get_device
+
+            self.single_class_ = False
+            self.predictor_ = TabPFNClassifier(
+                device=get_device(self.device),
+                categorical_features_indices=self.categorical_feature_indices,
+            )
+            self.predictor_.fit(X, y)
+            # Store the classes
+            self.classes_ = self.predictor_.classes_
+            self.n_features_in_ = X.shape[1]
+            return self
+
+        # Normal case - multiple classes with sufficient samples per class
+        self.single_class_ = False
+        task_type = TaskType.MULTICLASS if len(self.classes_) > 2 else TaskType.BINARY
         # Use the device utility for automatic selection
         from tabpfn_extensions.utils import get_device
 
@@ -127,10 +161,16 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
 
     def predict(self, X):
         check_is_fitted(self)
+        if hasattr(self, "single_class_") and self.single_class_:
+            # For single class, always predict that class
+            return np.full(X.shape[0], self.single_class_value_)
         return self.predictor_.predict(X)
 
     def predict_proba(self, X):
         check_is_fitted(self)
+        if hasattr(self, "single_class_") and self.single_class_:
+            # For single class, return probabilities of 1.0
+            return np.ones((X.shape[0], 1))
         return self.predictor_.predict_proba(X)
 
     def _more_tags(self):
@@ -202,6 +242,12 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
     def fit(self, X, y, categorical_feature_indices: list[int] | None = None):
         if categorical_feature_indices is not None:
             self.categorical_feature_indices = categorical_feature_indices
+
+        # Auto-detect categorical features including text columns
+        if self.categorical_feature_indices is None:
+            from tabpfn_extensions.utils import infer_categorical_features
+
+            self.categorical_feature_indices = infer_categorical_features(X)
 
         self.phe_init_args_ = {} if self.phe_init_args is None else self.phe_init_args
         rnd = check_random_state(self.random_state)

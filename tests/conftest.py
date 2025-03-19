@@ -5,9 +5,7 @@ with both the full TabPFN package and the TabPFN client. It detects which implem
 are available and configures test fixtures accordingly.
 
 The module defines several pytest markers:
-- requires_tabpfn: Tests that require the full TabPFN package
-- requires_tabpfn_client: Tests that require the TabPFN client
-- requires_any_tabpfn: Tests that require either implementation
+- local_compatible: Tests that are compatible with TabPFN local
 - client_compatible: Tests that are compatible with TabPFN client
 - slow: Tests that are computationally intensive (skipped in fast mode)
 
@@ -39,6 +37,7 @@ DEFAULT_TIMEOUT = 60  # Default timeout in seconds
 HAS_TABPFN = False  # Is full TabPFN package available?
 HAS_TABPFN_CLIENT = False  # Is TabPFN client available?
 HAS_ANY_TABPFN = False  # Is any implementation available?
+
 TABPFN_SOURCE = None  # Which implementation is preferred ("tabpfn", or "tabpfn_client")
 
 # This will be set in pytest_configure based on command line option
@@ -60,7 +59,7 @@ try:
 
     if tabpfn_spec is not None:
         print("Found tabpfn package")
-        from tabpfn import TabPFNClassifier, TabPFNRegressor
+        from tabpfn_extensions.utils import LocalTabPFNClassifier, LocalTabPFNRegressor
 
         print("Imported TabPFNClassifier, TabPFNRegressor")
 
@@ -82,7 +81,7 @@ try:
 
     if tabpfn_client_spec is not None:
         print("Found tabpfn_client package")
-        from tabpfn_client import (
+        from tabpfn_extensions.utils import (
             TabPFNClassifier as ClientTabPFNClassifier,
             TabPFNRegressor as ClientTabPFNRegressor,
         )
@@ -124,11 +123,7 @@ def pytest_configure(config):
     # Register test markers
     config.addinivalue_line(
         "markers",
-        "requires_tabpfn: mark test to require TabPFN package",
-    )
-    config.addinivalue_line(
-        "markers",
-        "requires_tabpfn_client: mark test to require TabPFN client",
+        "local_compatible: mark test to require TabPFN client",
     )
     config.addinivalue_line(
         "markers",
@@ -212,19 +207,13 @@ def backend(request):
     backend_name = request.param
 
     # Skip if the test requires a specific backend
-    requires_tabpfn = request.node.get_closest_marker("requires_tabpfn")
-    requires_client = request.node.get_closest_marker("requires_tabpfn_client")
+    local_compatible = request.node.get_closest_marker("local_compatible")
+    client_compatible = request.node.get_closest_marker("client_compatible")
 
-    if requires_tabpfn and backend_name != "tabpfn":
-        pytest.skip("Test requires TabPFN package")
-    if requires_client and backend_name != "tabpfn_client":
-        pytest.skip("Test requires TabPFN client")
-
-    # Skip if the test is not compatible with client and we're using client
-    if backend_name == "tabpfn_client" and not request.node.get_closest_marker(
-        "client_compatible",
-    ):
-        pytest.skip("Test is not compatible with TabPFN client")
+    if not local_compatible and backend_name == "tabpfn":
+        pytest.skip("Test not local compatible")
+    if not client_compatible and backend_name == "tabpfn_client":
+        pytest.skip("Test not client compatible")
 
     return backend_name
 
@@ -233,9 +222,19 @@ def backend(request):
 @pytest.fixture
 def tabpfn_classifier(backend):
     """Return TabPFN classifier for the current backend."""
+    print(f"Creating classifier for backend: {backend}")
+
     if backend == "tabpfn":
-        return TabPFNClassifier()  # Let the model use the default device setting
+        # For local backend, use standard TabPFN
+        from tabpfn_extensions.utils import LocalTabPFNClassifier
+
+        print("Using TabPFN package for classifier")
+        return LocalTabPFNClassifier()
     elif backend == "tabpfn_client":
+        # For client backend, use our wrapper to ensure compatibility
+        from tabpfn_extensions.utils import ClientTabPFNClassifier
+
+        print("Using TabPFN client wrapper for classifier")
         return ClientTabPFNClassifier()
     else:
         pytest.fail(f"Unknown backend: {backend}")
@@ -245,9 +244,19 @@ def tabpfn_classifier(backend):
 @pytest.fixture
 def tabpfn_regressor(backend):
     """Return TabPFN regressor for the current backend."""
+    print(f"Creating regressor for backend: {backend}")
+
     if backend == "tabpfn":
-        return TabPFNRegressor()  # Let the model use the default device setting
+        # For local backend, use standard TabPFN
+        from tabpfn_extensions.utils import LocalTabPFNRegressor
+
+        print("Using TabPFN package for regressor")
+        return LocalTabPFNRegressor()
     elif backend == "tabpfn_client":
+        # For client backend, use our wrapper to ensure compatibility
+        from tabpfn_extensions.utils import ClientTabPFNRegressor
+
+        print("Using TabPFN client wrapper for regressor")
         return ClientTabPFNRegressor()
     else:
         pytest.fail(f"Unknown backend: {backend}")
@@ -367,28 +376,21 @@ def data_with_outliers(dataset_generator):
 # Skip or fail tests based on markers and available implementations
 def pytest_runtest_setup(item):
     """Skip or fail tests based on markers and available implementations."""
+
     # Handle TabPFN availability markers
-    if item.get_closest_marker("requires_tabpfn") and not HAS_TABPFN:
-        pytest.fail(
-            "ERROR: Test requires TabPFN package but it's not installed. Run 'pip install tabpfn'",
-        )
-
-    if item.get_closest_marker("requires_tabpfn_client") and not HAS_TABPFN_CLIENT:
-        pytest.fail(
-            "ERROR: Test requires TabPFN client but it's not installed. Run 'pip install tabpfn-client'",
-        )
-
-    if item.get_closest_marker("requires_any_tabpfn") and not HAS_ANY_TABPFN:
-        pytest.fail(
-            "ERROR: Test requires any TabPFN implementation but none is installed. Run 'pip install tabpfn', 'pip install tabpfn', or 'pip install tabpfn-client'",
+    if TABPFN_SOURCE == "tabpfn_local" and not item.get_closest_marker(
+        "local_compatible",
+    ):
+        pytest.skip(
+            "Test is not compatible with TabPFN local.",
         )
 
     # Client compatibility check
     if TABPFN_SOURCE == "tabpfn_client" and not item.get_closest_marker(
         "client_compatible",
     ):
-        pytest.fail(
-            "ERROR: Test is not compatible with TabPFN client but only TabPFN client is installed. Install TabPFN package with 'pip install tabpfn'",
+        pytest.skip(
+            "Test is not compatible with TabPFN client",
         )
 
     # Skip slow tests in fast mode

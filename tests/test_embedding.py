@@ -18,6 +18,7 @@ from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
 from tabpfn_extensions.embedding import TabPFNEmbedding
 
 
+@pytest.mark.local_compatible
 class TestTabPFNEmbedding:
     """Test suite for TabPFNEmbedding class."""
 
@@ -62,11 +63,10 @@ class TestTabPFNEmbedding:
     @pytest.fixture
     def dataset_generator(self):
         """Provide dataset generator for varied test cases."""
-        from tests.utils import DatasetGenerator
+        from utils import DatasetGenerator
 
         return DatasetGenerator(seed=42)
 
-    @pytest.mark.requires_tabpfn
     def test_clf_embedding_vanilla(self, classification_data):
         """Test vanilla embeddings extraction with a classifier."""
         X_train, X_test, y_train, y_test = classification_data
@@ -108,7 +108,6 @@ class TestTabPFNEmbedding:
         # The accuracy should be better than random
         assert accuracy > 0.4, f"Accuracy with embeddings was only {accuracy:.2f}"
 
-    @pytest.mark.requires_tabpfn
     def test_clf_embedding_kfold(self, classification_data):
         """Test K-fold embeddings extraction with a classifier."""
         X_train, X_test, y_train, y_test = classification_data
@@ -160,7 +159,6 @@ class TestTabPFNEmbedding:
             accuracy > 0.4
         ), f"Accuracy with K-fold embeddings was only {accuracy:.2f}"
 
-    @pytest.mark.requires_tabpfn
     def test_reg_embedding_vanilla(self, regression_data):
         """Test vanilla embeddings extraction with a regressor."""
         X_train, X_test, y_train, y_test = regression_data
@@ -203,7 +201,6 @@ class TestTabPFNEmbedding:
         # In rare cases this might fail due to randomness, so we set a low bar
         assert r2 > -1.0, f"R2 score with embeddings was very low: {r2:.2f}"
 
-    @pytest.mark.requires_tabpfn
     def test_embedding_errors(self, classification_data):
         """Test error handling in TabPFNEmbedding."""
         X_train, X_test, y_train, _ = classification_data
@@ -229,17 +226,17 @@ class TestTabPFNEmbedding:
                 data_source="train",
             )
 
-    @pytest.mark.requires_tabpfn
     def test_embeddings_with_missing_values(self, dataset_generator):
         """Test embedding extraction with missing values."""
-        # Generate classification data with missing values
-        X, y = dataset_generator.generate_classification_data(
+        # Use the missing values dataset generator
+        X_missing, y = dataset_generator.generate_missing_values_dataset(
             n_samples=30 if FAST_TEST_MODE else 60,
             n_features=5,
-            with_missing=True,
+            missing_rate=0.1,
+            task_type="classification",
         )
         X_train, X_test, y_train, y_test = train_test_split(
-            X,
+            X_missing,
             y,
             test_size=0.3,
             random_state=42,
@@ -280,7 +277,6 @@ class TestTabPFNEmbedding:
         # Set a low threshold since missing values might reduce accuracy
         assert accuracy > 0.3, f"Accuracy with missing values was only {accuracy:.2f}"
 
-    @pytest.mark.requires_tabpfn
     def test_embeddings_with_pandas(self, dataset_generator):
         """Test embedding extraction with pandas DataFrames."""
         # Generate pandas DataFrame data
@@ -329,22 +325,17 @@ class TestTabPFNEmbedding:
 
         assert accuracy > 0.4, f"Accuracy with pandas data was only {accuracy:.2f}"
 
-    @pytest.mark.requires_tabpfn
     def test_embeddings_with_text_features(self, dataset_generator):
         """Test embedding extraction with text features."""
         # Generate data with text features
-        X, y = dataset_generator.generate_classification_data(
+        X_original, y = dataset_generator.generate_text_dataset(
             n_samples=30 if FAST_TEST_MODE else 60,
-            n_features=5,
-            with_text=True,
+            task_type="classification",
         )
-
-        # Dataset generator returns both the data and encoded version
-        X_encoded, X_original = X
 
         # Split the data
         X_train, X_test, y_train, y_test = train_test_split(
-            X_encoded,
+            X_original,  # Use the DataFrame with text features
             y,
             test_size=0.3,
             random_state=42,
@@ -384,7 +375,6 @@ class TestTabPFNEmbedding:
         # Lower threshold for text features as they can be harder to model
         assert accuracy > 0.3, f"Accuracy with text features was only {accuracy:.2f}"
 
-    @pytest.mark.requires_tabpfn
     def test_embeddings_with_multiclass(self, dataset_generator):
         """Test embedding extraction with multiclass data."""
         # Generate multiclass classification data

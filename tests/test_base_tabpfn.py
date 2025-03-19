@@ -30,6 +30,7 @@ class BaseClassifierTests:
     """
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_fit_predict(self, estimator, classification_data):
         """Test basic fit and predict functionality."""
         X, y = classification_data
@@ -49,6 +50,7 @@ class BaseClassifierTests:
         assert accuracy > 0.6, f"Accuracy was only {accuracy:.2f}"
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_predict_proba(self, estimator, classification_data):
         """Test probability prediction functionality."""
         X, y = classification_data
@@ -70,6 +72,7 @@ class BaseClassifierTests:
         assert np.all(y_proba <= 1)
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_not_fitted(self, estimator, classification_data):
         """Test appropriate error raising when not fitted."""
         X, _ = classification_data
@@ -79,6 +82,7 @@ class BaseClassifierTests:
             estimator.predict(X)
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_with_pandas(self, estimator, pandas_classification_data):
         """Test that estimator works with pandas DataFrames."""
         X, y = pandas_classification_data
@@ -97,6 +101,7 @@ class BaseClassifierTests:
         assert accuracy > 0.6
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_with_multiclass(self, estimator, multiclass_data):
         """Test that estimator works with multi-class data."""
         X, y = multiclass_data
@@ -116,7 +121,7 @@ class BaseClassifierTests:
         assert accuracy > 0.5, f"Multiclass accuracy was only {accuracy:.2f}"
 
     @pytest.mark.client_compatible
-    @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_is_sklearn_compatible(self, estimator):
         """Test that estimator follows scikit-learn conventions."""
         # Check that it follows the estimator API
@@ -129,6 +134,7 @@ class BaseClassifierTests:
 
     @pytest.mark.slow
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_with_various_datasets(self, estimator, dataset_generator):
         """Test estimator with various types of datasets."""
         data_types = ["basic", "correlated", "outliers", "special_values"]
@@ -154,10 +160,11 @@ class BaseClassifierTests:
             ), f"Failed with data_type {data_type}: accuracy {accuracy:.2f}"
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_with_missing_values(self, estimator, dataset_generator):
         """Test with missing values (requires imputation)."""
         # Use the enhanced utility for missing data
-        _, _, X_imputed, y = dataset_generator.generate_missing_values_dataset(
+        X, y = dataset_generator.generate_missing_values_dataset(
             n_samples=30 if FAST_TEST_MODE else 60,
             n_features=5,
             missing_rate=0.1,
@@ -165,31 +172,33 @@ class BaseClassifierTests:
         )
 
         # Fit and predict
-        estimator.fit(X_imputed, y)
-        y_pred = estimator.predict(X_imputed)
+        estimator.fit(X, y)
+        y_pred = estimator.predict(X)
 
         # Check accuracy
         accuracy = accuracy_score(y, y_pred)
         assert accuracy > 0.6
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_with_text_features(self, estimator, dataset_generator):
         """Test with text features (after encoding)."""
         # Use the dedicated text feature dataset generator
-        _, X_encoded, y = dataset_generator.generate_text_dataset(
+        X, y = dataset_generator.generate_text_dataset(
             n_samples=30 if FAST_TEST_MODE else 60,
             task_type="classification",
         )
 
         # Fit and predict
-        estimator.fit(X_encoded, y)
-        y_pred = estimator.predict(X_encoded)
+        estimator.fit(X, y)
+        y_pred = estimator.predict(X)
 
         # Check accuracy
         accuracy = accuracy_score(y, y_pred)
         assert accuracy > 0.6
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_extreme_cases(self, estimator):
         """Test TabPFN classifier with extreme cases."""
         # Very small dataset
@@ -221,14 +230,10 @@ class BaseClassifierTests:
         assert y_pred.shape == y_unbalanced.shape
 
     @pytest.mark.slow
-    @pytest.mark.requires_tabpfn
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_passes_estimator_checks(self, estimator):
         """Run scikit-learn's estimator compatibility checks."""
-        if FAST_TEST_MODE:
-            pytest.skip("Skipping estimator checks in fast mode")
-
-        # This runs all the sklearn estimator checks
         check_estimator(estimator)
 
 
@@ -245,6 +250,7 @@ class BaseRegressorTests:
     """
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_fit_predict(self, estimator, regression_data):
         """Test basic fit and predict functionality."""
         X, y = regression_data
@@ -261,9 +267,11 @@ class BaseRegressorTests:
 
         # Check R2 score
         r2 = r2_score(y, y_pred)
+        print(f"DEBUG: R2 score: {r2}")
         assert r2 > 0.5, f"R2 score was only {r2:.2f}"
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_not_fitted(self, estimator, regression_data):
         """Test appropriate error raising when not fitted."""
         X, _ = regression_data
@@ -273,6 +281,7 @@ class BaseRegressorTests:
             estimator.predict(X)
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_with_pandas(self, estimator, pandas_regression_data):
         """Test that estimator works with pandas DataFrames."""
         X, y = pandas_regression_data
@@ -291,6 +300,7 @@ class BaseRegressorTests:
         assert r2 > 0.5
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_is_sklearn_compatible(self, estimator):
         """Test that estimator follows scikit-learn conventions."""
         # Check that it follows the estimator API
@@ -302,6 +312,7 @@ class BaseRegressorTests:
 
     @pytest.mark.slow
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_with_various_datasets(self, estimator, dataset_generator):
         """Test estimator with various types of datasets."""
         data_types = ["basic", "correlated", "outliers", "special_values"]
@@ -324,10 +335,11 @@ class BaseRegressorTests:
             assert r2 > 0.5, f"Failed with data_type {data_type}: R2 {r2:.2f}"
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_with_missing_values(self, estimator, dataset_generator):
         """Test with missing values (requires imputation)."""
         # Use the enhanced utility for missing data
-        _, _, X_imputed, y = dataset_generator.generate_missing_values_dataset(
+        X, y = dataset_generator.generate_missing_values_dataset(
             n_samples=30 if FAST_TEST_MODE else 60,
             n_features=5,
             missing_rate=0.1,
@@ -335,31 +347,33 @@ class BaseRegressorTests:
         )
 
         # Fit and predict
-        estimator.fit(X_imputed, y)
-        y_pred = estimator.predict(X_imputed)
+        estimator.fit(X, y)
+        y_pred = estimator.predict(X)
 
         # Check R2 score
         r2 = r2_score(y, y_pred)
         assert r2 > 0.5
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_with_text_features(self, estimator, dataset_generator):
         """Test with text features (after encoding)."""
         # Use the dedicated text feature dataset generator
-        _, X_encoded, y = dataset_generator.generate_text_dataset(
+        X, y = dataset_generator.generate_text_dataset(
             n_samples=30 if FAST_TEST_MODE else 60,
             task_type="regression",
         )
 
         # Fit and predict
-        estimator.fit(X_encoded, y)
-        y_pred = estimator.predict(X_encoded)
+        estimator.fit(X, y)
+        y_pred = estimator.predict(X)
 
         # Check R2 score
         r2 = r2_score(y, y_pred)
         assert r2 > 0.5
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_extreme_cases(self, estimator):
         """Test TabPFN regressor with extreme cases."""
         # Very small dataset
@@ -385,13 +399,10 @@ class BaseRegressorTests:
         assert y_pred.shape == y_outlier.shape
 
     @pytest.mark.slow
-    @pytest.mark.requires_tabpfn
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_passes_estimator_checks(self, estimator):
         """Run scikit-learn's estimator compatibility checks."""
-        if FAST_TEST_MODE:
-            pytest.skip("Skipping estimator checks in fast mode")
-
         # This runs all the sklearn estimator checks
         check_estimator(estimator)
 
@@ -408,6 +419,7 @@ class TestTabPFNClassifier(BaseClassifierTests):
         return tabpfn_classifier
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_ensemble_configurations(self, estimator, classification_data):
         """Test classifier with different ensemble configurations."""
         X, y = classification_data
@@ -440,6 +452,7 @@ class TestTabPFNRegressor(BaseRegressorTests):
         return tabpfn_regressor
 
     @pytest.mark.client_compatible
+    @pytest.mark.local_compatible
     def test_ensemble_configurations(self, estimator, regression_data):
         """Test regressor with different ensemble configurations."""
         X, y = regression_data
@@ -456,6 +469,44 @@ class TestTabPFNRegressor(BaseRegressorTests):
 
             # Check predictions
             assert y_pred.shape == y.shape
+
+    @pytest.mark.local_compatible
+    @pytest.mark.client_compatible
+    def test_bar_distribution_return(self, estimator, regression_data):
+        """Test that the regressor can return bar distributions."""
+        X, y = regression_data
+
+        # Fit the model
+        estimator.fit(X, y)
+
+        # Print information about the estimator type for debugging
+        estimator_type = str(type(estimator))
+        is_client = "client" in estimator_type.lower()
+
+        print(f"DEBUG: Estimator type is: {estimator_type}")
+        print(f"DEBUG: Is client version: {is_client}")
+
+        # Get predictions with distribution
+        try:
+            # Use the output_type="full" parameter supported by TabPFN package
+            result = estimator.predict(X, output_type="full")
+
+            # Debug: show keys in result
+            print(f"DEBUG: Result keys: {list(result.keys())}")
+
+        except (TypeError, ValueError, RuntimeError) as e:
+            # Skip if not supported
+            pytest.skip(f"Distribution output not supported: {str(e)}")
+
+        # Check that result is a dictionary with the expected keys
+        assert isinstance(result, dict), "Distribution result should be a dictionary"
+        assert "logits" in result, "Distribution result should have 'logits' key"
+        assert "criterion" in result, "Distribution result should have 'criterion' key"
+
+        # Check that criterion object is present and has required methods
+        criterion = result["criterion"]
+        assert criterion is not None, "Criterion should not be None"
+        assert hasattr(criterion, "sample"), "Criterion should have sample method"
 
     @pytest.mark.skip(reason="Slow test not required as this is tested in base package")
     def test_passes_estimator_checks(self, estimator):

@@ -60,7 +60,7 @@ def get_small_test_search_space():
         ),
         "inference_config/POLYNOMIAL_FEATURES": hp.choice(
             "POLYNOMIAL_FEATURES",
-            [False],
+            ["no"],  # Use "no" to match the TabPFN 2.0.6 expected values
         ),
         "inference_config/OUTLIER_REMOVAL_STD": hp.choice(
             "OUTLIER_REMOVAL_STD",
@@ -258,7 +258,6 @@ class DatasetGenerator:
 
         Returns:
             X_original: DataFrame with text features
-            X_encoded: DataFrame with encoded text features
             y: Target values
         """
         # Generate numerical features
@@ -289,12 +288,11 @@ class DatasetGenerator:
         # Remove feature used for target
         X_original = df.drop("numeric_0", axis=1)
 
-        # Create encoded version
-        X_encoded = X_original.copy()
-        for col in X_original.select_dtypes(include=["object"]).columns:
-            X_encoded[col] = pd.factorize(X_encoded[col])[0]
+        # Explicitly mark categorical columns with pandas category dtype for better detection
+        X_original["text_cat1"] = X_original["text_cat1"].astype("category")
+        X_original["text_cat2"] = X_original["text_cat2"].astype("category")
 
-        return X_original, X_encoded, y
+        return X_original, y
 
     def generate_missing_values_dataset(
         self,
@@ -312,9 +310,7 @@ class DatasetGenerator:
             task_type: 'classification' or 'regression'
 
         Returns:
-            X_complete: Dataset without missing values
             X_missing: Dataset with missing values
-            X_imputed: Dataset with imputed values
             y: Target values
         """
         # Generate complete data
@@ -332,11 +328,7 @@ class DatasetGenerator:
         # Add missing values
         X_missing = self.add_missing_values(X_complete, missing_rate)
 
-        # Create imputed version
-        imputer = SimpleImputer(strategy="mean")
-        X_imputed = imputer.fit_transform(X_missing)
-
-        return X_complete, X_missing, X_imputed, y
+        return X_missing, y
 
     def generate_mixed_types_dataset(
         self,

@@ -73,7 +73,7 @@ except ImportError:
 
 3. **Add appropriate test markers** in your tests:
    - `client_compatible` if your extension works with TabPFN client
-   - `requires_tabpfn` if it requires the full TabPFN package
+   - `local_compatible` if it requires the full TabPFN package
 
 ## 📁 Repository Structure
 
@@ -118,7 +118,7 @@ Each extension should include:
 - Write tests using pytest
 - For quick test development, use `FAST_TEST_MODE=1 pytest tests/test_your_package.py`
 - Only run long tests (like full dataset tests) when `FAST_TEST_MODE` is not set
-- Use appropriate markers: `client_compatible`, `requires_tabpfn`, `requires_any_tabpfn`
+- Use appropriate markers: `client_compatible`, `local_compatible`
 - Use the fixtures provided in conftest.py for TabPFN instances
 - Focus on testing your core functionality first, not edge cases
 

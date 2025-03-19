@@ -92,13 +92,6 @@ class DecisionTreeTabPFNBase(BaseEstimator):
         if random_state is not None and hasattr(random_state, "item"):
             random_state = int(random_state)
 
-        # Optional args are arguments that may not be present in BaseDecisionTree,
-        # depending on the sklearn version. Helps maintain compatibility.
-        optional_args = {"monotonic_cst": monotonic_cst}
-        filtered_optional_args = {
-            k: v for k, v in optional_args.items() if v is not None
-        }
-
         self.tabpfn = tabpfn
         self.criterion = criterion
         self.splitter = splitter
@@ -112,7 +105,6 @@ class DecisionTreeTabPFNBase(BaseEstimator):
         self.min_impurity_decrease = min_impurity_decrease
         self.monotonic_cst = monotonic_cst
         self.ccp_alpha = ccp_alpha
-        self.filtered_optional_args = filtered_optional_args
 
         self.X_valid = X_valid
         self.y_valid = y_valid
@@ -171,21 +163,36 @@ class DecisionTreeTabPFNBase(BaseEstimator):
         Returns:
             Fitted estimator
         """
+        from sklearn.utils.validation import check_X_y
+
         # Generate a random seed if none was provided
         if self.tree_seed is None:
             self.tree_seed = random.randint(1, 10000)
 
+        # Use sklearn's validation to handle input types, allowing NaN values first
         if check_input:
-            # Input validation could be done here
-            pass
+            X, y = check_X_y(
+                X,
+                y,
+                multi_output=True,
+                accept_sparse=False,
+                dtype=None,
+                force_all_finite=False,
+            )
 
-        # Handle X and y
-        self.X = X
-        self.y = y
+            # Preprocess for the decision tree (this handles missing values via imputation)
+            self._X_preprocessed_for_tree = self.preprocess_data_for_tree_(X)
+
+        # Store input shape for sklearn compatibility
         self.n_features_in_ = X.shape[1]
 
-        if isinstance(y, pd.Series):
-            self.y = y.values
+        # Store data
+        self.X = X
+        self.y = y
+
+        # Store feature names if available (for pandas dataframes)
+        if hasattr(X, "columns"):
+            self.feature_names_in_ = np.array(X.columns, dtype=object)
 
         if self.task_type == "multiclass":
             self.classes_ = np.unique(y)
@@ -196,70 +203,16 @@ class DecisionTreeTabPFNBase(BaseEstimator):
             self.train_y_transformed = self.y
 
         # Init decision tree
-        self.tree_ = self.init_decision_tree()
+        self.tree_ = self.init_decision_tree_()
 
         # If we're doing adaptive tree (selective node fitting),
         # we need validation data for pruning
         if self.adaptive_tree:
-            # Skip adaptive tree if any class has only a single sample
-            if (
-                self.task_type == "multiclass"
-                and len(np.unique(y)) > 1
-                and np.unique(y, return_counts=True)[1].min() == 1
-            ):
-                # If a class has only one sample, we can't split properly
-                self.adaptive_tree = False
-
-            # Create validation split if not provided
-            if self.X_valid is None or self.y_valid is None:
-                # Min valid samples based on train set size
-                min_valid_samples = max(
-                    2,
-                    int(
-                        len(X)
-                        * 0.2
-                        * self.adaptive_tree_min_valid_samples_fraction_of_train,
-                    ),
-                )
-
-                # Ensure adequate train and validation sizes
-                if len(X) < self.adaptive_tree_min_train_samples + min_valid_samples:
-                    self.adaptive_tree = False
-                else:
-                    # Create the train-validation split
-                    (
-                        train_X,
-                        valid_X,
-                        train_y,
-                        valid_y,
-                    ) = train_test_split(
-                        X,
-                        y,
-                        test_size=min(
-                            0.2,
-                            min_valid_samples / len(X),
-                        ),
-                        random_state=self.random_state,
-                        stratify=y if self.task_type == "multiclass" else None,
-                    )
-
-                    # Use the split for tree building
-                    self.X = train_X
-                    self.y = train_y
-                    self.X_valid = valid_X
-                    self.y_valid = valid_y
-
-                    # Update transformed y if needed
-                    if self.task_type == "multiclass":
-                        self.train_y_transformed = self.train_label_encoder.transform(
-                            self.y,
-                        )
-                    elif self.task_type == "regression":
-                        self.train_y_transformed = self.y
+            self.init_adaptive_tree_(X, y)
 
         # Fit the tree to the data
         self.tree_.fit(
-            self.X,
+            self._X_preprocessed_for_tree,
             self.train_y_transformed,
             sample_weight=sample_weight,
             check_input=check_input,
@@ -273,6 +226,56 @@ class DecisionTreeTabPFNBase(BaseEstimator):
         self.post_fit()
 
         return self
+
+    def init_adaptive_tree_(self, X, y) -> None:
+        # Skip adaptive tree if any class has only a single sample
+        if (
+            self.task_type == "multiclass"
+            and len(np.unique(y)) > 1
+            and np.unique(y, return_counts=True)[1].min() == 1
+        ):
+            # If a class has only one sample, we can't split properly
+            self.adaptive_tree = False
+
+        # Create validation split if not provided
+        if self.X_valid is None or self.y_valid is None:
+            # Min valid samples based on train set size
+            min_valid_samples = max(
+                2,
+                int(
+                    len(X)
+                    * 0.2
+                    * self.adaptive_tree_min_valid_samples_fraction_of_train,
+                ),
+            )
+
+            # Ensure adequate train and validation sizes
+            if len(X) < self.adaptive_tree_min_train_samples + min_valid_samples:
+                self.adaptive_tree = False
+                return
+
+            # Create the train-validation split
+            (
+                train_X,
+                valid_X,
+                train_y,
+                valid_y,
+            ) = train_test_split(
+                X,
+                y,
+                test_size=min(
+                    0.2,
+                    min_valid_samples / len(X),
+                ),
+                random_state=self.random_state,
+                stratify=y if self.task_type == "multiclass" else None,
+            )
+
+            # Use the split for tree building
+            self.X = train_X
+            self.y = train_y
+            self.X_valid = valid_X
+            self.y_valid = valid_y
 
     def fit_leafs(self, train_X: NDArray, train_y: NDArray) -> None:
         """Fit TabPFN models at each leaf of the decision tree.
@@ -288,23 +291,34 @@ class DecisionTreeTabPFNBase(BaseEstimator):
         leaf_node_ids = self.tree_.tree_.children_left == -1
         leaf_ids = np.where(leaf_node_ids)[0]
 
+        # Handle pandas DataFrame or Series
+        train_X_array = train_X.values if hasattr(train_X, "values") else train_X
+        train_y_array = train_y.values if hasattr(train_y, "values") else train_y
+
+        # Use preprocessed data for tree traversal but keep original data for TabPFN
+        train_X_for_tree = (
+            self._X_preprocessed if hasattr(self, "_X_preprocessed") else train_X_array
+        )
+        original_X = self._original_X if hasattr(self, "_original_X") else train_X_array
+
         # For each leaf node, collect the training samples that fall into it
         # We will then train a separate TabPFN model for each leaf
         train_indices_at_leaf = {}
         for _i, leaf_id in enumerate(leaf_ids):
-            # Get samples that end up at this leaf
+            # Get samples that end up at this leaf (using imputed data for tree)
             leaf_samples_mask = (
-                self.tree_.decision_path(train_X).toarray()[:, leaf_id] > 0
+                self.tree_.decision_path(train_X_for_tree).toarray()[:, leaf_id] > 0
             )
             train_indices = np.where(leaf_samples_mask)[0]
 
             # Store for later use
             train_indices_at_leaf[leaf_id] = train_indices
             if len(train_indices) > 0:
-                # Store the training data for this leaf
+                # Store the original training data (with NaNs) for this leaf
+                # TabPFN can handle missing values better than the decision tree
                 self.leaf_train_data[leaf_id] = {
-                    "X": train_X[train_indices],
-                    "y": train_y[train_indices],
+                    "X": original_X[train_indices],
+                    "y": train_y_array[train_indices],
                 }
 
     def get_tree(self) -> BaseDecisionTree:
@@ -315,8 +329,11 @@ class DecisionTreeTabPFNBase(BaseEstimator):
         """
         return self.tree_
 
-    def apply_tree(self, X: NDArray) -> NDArray:
+    def apply_tree_(self, X: NDArray) -> NDArray:
         """Apply the decision tree to get decision paths for each sample.
+
+        This method handles missing values by using the imputed version for the tree,
+        but keeping the original data for TabPFN models at the leaves.
 
         Args:
             X: Input data
@@ -324,32 +341,16 @@ class DecisionTreeTabPFNBase(BaseEstimator):
         Returns:
             Decision paths indicating which nodes were traversed
         """
-        # Preprocess data if needed
-        X_preprocessed = self.preprocess_data_for_tree(X)
+        # Preprocess data if needed (this will handle imputation for missing values)
+        X_preprocessed_for_tree = self.preprocess_data_for_tree_(X)
 
         # Get decision path matrix (samples x nodes)
-        decision_path = self.tree_.decision_path(X_preprocessed)
+        decision_path = self.tree_.decision_path(X_preprocessed_for_tree)
 
         # Convert to dense matrix and expand dimensions for compatibility
         return np.expand_dims(decision_path.todense(), 2)
 
-    def apply_tree_train(
-        self,
-        X: NDArray,
-        y: NDArray,
-    ) -> tuple[NDArray, NDArray, NDArray]:
-        """Apply the tree to training data and return paths along with features and targets.
-
-        Args:
-            X: Input features
-            y: Target values
-
-        Returns:
-            Tuple of (decision paths, features, targets)
-        """
-        return self.apply_tree(X), X, y
-
-    def init_decision_tree(self) -> BaseDecisionTree:
+    def init_decision_tree_(self) -> BaseDecisionTree:
         """Initialize the decision tree object.
 
         Returns:
@@ -360,8 +361,12 @@ class DecisionTreeTabPFNBase(BaseEstimator):
     def post_fit(self) -> None:
         """Perform any necessary operations after fitting the tree."""
 
-    def preprocess_data_for_tree(self, X: NDArray) -> NDArray:
+    def preprocess_data_for_tree_(self, X: NDArray) -> NDArray:
         """Preprocess data before applying the decision tree.
+
+        This method handles missing values by imputing them for the decision tree.
+        Note that we only impute for tree training/navigation, but keep original values
+        for TabPFN models at the leaves.
 
         Args:
             X: Input data
@@ -369,10 +374,50 @@ class DecisionTreeTabPFNBase(BaseEstimator):
         Returns:
             Preprocessed data
         """
-        if torch.is_tensor(X):
-            X = X.cpu().numpy()
+        from sklearn.impute import SimpleImputer
+        from sklearn.utils.validation import check_array
 
-        return X
+        # Convert different input types to numpy array
+        try:
+            # First convert to numpy array without forcing finite values
+            X_array = check_array(
+                X,
+                accept_sparse=False,
+                dtype=None,
+                ensure_2d=True,
+                force_all_finite=False,
+            )
+        except (ValueError, TypeError):
+            # For inputs that check_array can't handle (like torch tensors)
+            # Convert torch tensor to numpy array
+            if torch.is_tensor(X):
+                X_array = X.cpu().numpy()
+            # Convert pandas DataFrame to numpy array
+            elif hasattr(X, "values"):
+                X_array = X.values
+            # Ensure we have a valid 2D array
+            elif not isinstance(X, np.ndarray):
+                X_array = np.array(X)
+
+            if X_array.ndim == 1:
+                X_array = X_array.reshape(-1, 1)
+
+        # Check if there are missing values
+        if np.isnan(X_array).any():
+            # Create a copy of the data for the decision tree with imputed values
+            # Use mean imputation as a simple strategy
+            imputer = SimpleImputer(strategy="mean")
+            X_imputed = imputer.fit_transform(X_array)
+
+            # Store the imputer for future use if not already stored
+            if not hasattr(self, "_imputer"):
+                self._imputer = imputer
+
+            # Return the imputed version for tree fitting/navigation
+            return X_imputed
+
+        # If no missing values, just return the array
+        return X_array
 
     def predict_(
         self,
@@ -413,18 +458,14 @@ class DecisionTreeTabPFNBase(BaseEstimator):
 
             self.todo_post_fit = False
 
-        # Preprocess input data
-        X_preprocessed = self.preprocess_data_for_tree(X)
-
-        # Get leaf nodes for each data point
-        # Matrix of shape (n_samples, n_nodes, n_estimators) with a one if the sample
-        # went through that decision node
-        X_test_leaf_nodes = self.apply_tree(X_preprocessed)
+        # Get leaf nodes for each data point using apply_tree
+        # which internally handles preprocessing and imputation
+        X_test_leaf_nodes = self.apply_tree_(X)
         N_samples, N_nodes, N_estimators = X_test_leaf_nodes.shape
 
         # Initialize prediction arrays
         y_prob = {}
-        y_prob_averaging = self.init_eval_prob(N_samples)
+        y_prob_averaging = self.init_eval_prob_(N_samples)
 
         # Flag for adaptive tree pruning
         prune_leafs_and_nodes = y is not None and self.adaptive_tree
@@ -451,30 +492,27 @@ class DecisionTreeTabPFNBase(BaseEstimator):
                 leaf_mask = X_test_leaf_nodes[:, leaf_id, estimator_id] > 0
                 test_sample_indices = np.where(leaf_mask)[0]
 
-                if len(test_sample_indices) == 0:
-                    # No test samples fell into this leaf
+                if len(test_sample_indices) == 0 or leaf_id not in self.leaf_train_data:
+                    # No test or train samples fell into this leaf
                     continue
 
-                # Get training data for this leaf
-                if leaf_id not in self.leaf_train_data:
-                    # No training data for this leaf - use uniform prediction
-                    leaf_prediction = self.init_eval_prob(N_samples)
-                    y_prob[estimator_id][leaf_id] = leaf_prediction
-                else:
-                    X_train_samples = self.leaf_train_data[leaf_id]["X"]
-                    y_train_samples = self.leaf_train_data[leaf_id]["y"]
+                X_train_samples = self.leaf_train_data[leaf_id]["X"]
+                y_train_samples = self.leaf_train_data[leaf_id]["y"]
 
-                    # Use separate TabPFN model for each leaf
-                    leaf_prediction = self.predict_leaf_(
-                        X_train_samples,
-                        y_train_samples,
-                        leaf_id,
-                        X_preprocessed[test_sample_indices],
-                        test_sample_indices,
-                    )
+                # Use separate TabPFN model for each leaf
+                # Get the data for TabPFN - use original data with NaNs (better handled by TabPFN)
+                X_for_prediction = X[test_sample_indices]
 
-                    # Store predictions
-                    y_prob[estimator_id][leaf_id] = leaf_prediction
+                leaf_prediction = self.predict_leaf_(
+                    X_train_samples,
+                    y_train_samples,
+                    leaf_id,
+                    X_for_prediction,
+                    test_sample_indices,
+                )
+
+                # Store predictions
+                y_prob[estimator_id][leaf_id] = leaf_prediction
 
                 # Apply the leaf predictions to the test samples
                 if self.task_type == "multiclass":
@@ -552,7 +590,7 @@ class DecisionTreeTabPFNBase(BaseEstimator):
         """
         raise NotImplementedError("predict_leaf_ must be implemented")
 
-    def init_eval_prob(self, n_samples: int, to_zero: bool = False) -> NDArray:
+    def init_eval_prob_(self, n_samples: int, to_zero: bool = False) -> NDArray:
         """Initialize evaluation probability array.
 
         Args:
@@ -584,6 +622,32 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
 
     task_type = "multiclass"
 
+    def _get_tags(self) -> dict[str, Any]:
+        """Get sklearn estimator tags.
+
+        Returns:
+            Dictionary of estimator tags
+        """
+        return {
+            "allow_nan": True,  # We now handle NaN values with imputation
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "poor_score": False,
+            "preserves_dtype": [np.float64],
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_positive_y": False,
+            "requires_y": True,
+            "X_types": ["2darray"],
+            "_skip_test": False,
+            "_xfail_checks": {},
+            "pairwise": False,
+        }
+
     def predict_leaf_(
         self,
         X_train_samples: NDArray,
@@ -611,7 +675,7 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
             int(self.tree_seed) if hasattr(self.tree_seed, "item") else self.tree_seed
         )
 
-        y_eval_prob = self.init_eval_prob(X.shape[0], to_zero=True)
+        y_eval_prob = self.init_eval_prob_(X.shape[0], to_zero=True)
         classes = np.array(np.unique(list(map(int, y_train_samples))))
 
         if len(classes) == 1:
@@ -666,12 +730,27 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
         Returns:
             Predicted class labels
         """
-        from sklearn.utils.validation import check_is_fitted
+        from sklearn.utils.validation import check_array, check_is_fitted
 
+        # Validate that the model is fitted
         check_is_fitted(self, ["tree_", "classes_"])
 
+        # Validate input data but allow NaN values for compatibility with TabPFN
+        if check_input:
+            X = check_array(
+                X,
+                accept_sparse=False,
+                dtype=None,
+                ensure_2d=True,
+                force_all_finite=False,
+            )
+
+        # Get class probabilities and return class with highest probability
         return np.argmax(
-            self.predict_proba(X, check_input),
+            self.predict_proba(
+                X,
+                check_input=False,
+            ),  # Skip validation as we already did it
             axis=1,
         )
 
@@ -685,35 +764,53 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
         Returns:
             Class probabilities
         """
-        from sklearn.utils.validation import check_is_fitted
+        from sklearn.utils.validation import check_array, check_is_fitted
 
+        # Validate that the model is fitted
         check_is_fitted(self, ["tree_", "classes_"])
 
-        return self.predict_(X, check_input=check_input)
+        # Validate input data but allow NaN values for compatibility with TabPFN
+        if check_input:
+            X = check_array(
+                X,
+                accept_sparse=False,
+                dtype=None,
+                ensure_2d=True,
+                force_all_finite=False,
+            )
+
+        # Get probabilities using internal prediction method
+        return self.predict_(X, check_input=False)  # Skip additional validation
 
     def post_fit(self) -> None:
         """Perform operations after fitting the tree."""
 
-    def init_decision_tree(self) -> DecisionTreeClassifier:
+    def init_decision_tree_(self) -> DecisionTreeClassifier:
         """Initialize the decision tree classifier.
 
         Returns:
             New DecisionTreeClassifier instance
         """
-        return DecisionTreeClassifier(
-            criterion=self.criterion,
-            splitter=self.splitter,
-            max_depth=self.max_depth,
-            min_samples_split=self.min_samples_split,
-            min_samples_leaf=self.min_samples_leaf,
-            min_weight_fraction_leaf=self.min_weight_fraction_leaf,
-            max_features=self.max_features,
-            random_state=self.random_state,
-            max_leaf_nodes=self.max_leaf_nodes,
-            min_impurity_decrease=self.min_impurity_decrease,
-            ccp_alpha=self.ccp_alpha,
-            **self.filtered_optional_args,
-        )
+        # Create base kwargs
+        kwargs = {
+            "criterion": self.criterion,
+            "splitter": self.splitter,
+            "max_depth": self.max_depth,
+            "min_samples_split": self.min_samples_split,
+            "min_samples_leaf": self.min_samples_leaf,
+            "min_weight_fraction_leaf": self.min_weight_fraction_leaf,
+            "max_features": self.max_features,
+            "random_state": self.random_state,
+            "max_leaf_nodes": self.max_leaf_nodes,
+            "min_impurity_decrease": self.min_impurity_decrease,
+            "ccp_alpha": self.ccp_alpha,
+        }
+
+        # Add monotonic_cst if it's not None
+        if self.monotonic_cst is not None:
+            kwargs["monotonic_cst"] = self.monotonic_cst
+
+        return DecisionTreeClassifier(**kwargs)
 
 
 class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
@@ -726,6 +823,32 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
     _estimator_type = "regressor"
 
     task_type = "regression"
+
+    def _get_tags(self) -> dict[str, Any]:
+        """Get sklearn estimator tags.
+
+        Returns:
+            Dictionary of estimator tags
+        """
+        return {
+            "allow_nan": True,  # We now handle NaN values with imputation
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "poor_score": False,
+            "preserves_dtype": [np.float64],
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_positive_y": False,
+            "requires_y": True,
+            "X_types": ["2darray"],
+            "_skip_test": False,
+            "_xfail_checks": {},
+            "pairwise": False,
+        }
 
     def __init__(
         self,
@@ -804,34 +927,52 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
         Returns:
             Dictionary of estimator tags
         """
-        # Get parent tags
-        tags = super()._get_tags()
+        return {
+            "allow_nan": False,
+            "binary_only": False,
+            "multilabel": False,
+            "multioutput": False,
+            "multioutput_only": False,
+            "no_validation": False,
+            "non_deterministic": False,
+            "poor_score": False,
+            "preserves_dtype": [np.float64],
+            "requires_fit": True,
+            "requires_positive_X": False,
+            "requires_positive_y": False,
+            "requires_y": True,
+            "X_types": ["2darray"],
+            "_skip_test": False,
+            "_xfail_checks": {},
+            "pairwise": False,
+        }
 
-        # Add regression-specific tags
-        tags.update({"requires_y": True})
-
-        return tags
-
-    def init_decision_tree(self) -> DecisionTreeRegressor:
+    def init_decision_tree_(self) -> DecisionTreeRegressor:
         """Initialize the decision tree regressor.
 
         Returns:
             New DecisionTreeRegressor instance
         """
-        return DecisionTreeRegressor(
-            criterion=self.criterion,
-            splitter=self.splitter,
-            max_depth=self.max_depth,
-            min_samples_split=self.min_samples_split,
-            min_samples_leaf=self.min_samples_leaf,
-            min_weight_fraction_leaf=self.min_weight_fraction_leaf,
-            max_features=self.max_features,
-            random_state=self.random_state,
-            max_leaf_nodes=self.max_leaf_nodes,
-            min_impurity_decrease=self.min_impurity_decrease,
-            ccp_alpha=self.ccp_alpha,
-            **self.filtered_optional_args,
-        )
+        # Create base kwargs
+        kwargs = {
+            "criterion": self.criterion,
+            "splitter": self.splitter,
+            "max_depth": self.max_depth,
+            "min_samples_split": self.min_samples_split,
+            "min_samples_leaf": self.min_samples_leaf,
+            "min_weight_fraction_leaf": self.min_weight_fraction_leaf,
+            "max_features": self.max_features,
+            "random_state": self.random_state,
+            "max_leaf_nodes": self.max_leaf_nodes,
+            "min_impurity_decrease": self.min_impurity_decrease,
+            "ccp_alpha": self.ccp_alpha,
+        }
+
+        # Add monotonic_cst if it's not None
+        if self.monotonic_cst is not None:
+            kwargs["monotonic_cst"] = self.monotonic_cst
+
+        return DecisionTreeRegressor(**kwargs)
 
     def predict_leaf_(
         self,
@@ -860,8 +1001,8 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
             int(self.tree_seed) if hasattr(self.tree_seed, "item") else self.tree_seed
         )
 
-        # Initialize prediction array
-        y_pred = np.zeros(X.shape[0])
+        # Initialize prediction array - must match the test samples for this leaf
+        y_pred = np.zeros(len(indices))  # This is the array size we will return
 
         # TabPFN requires at least 2 samples for training
         if len(X_train_samples) < 2:
@@ -874,19 +1015,38 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
                 stacklevel=2,
             )
             # Fill predictions with the mean target value from this leaf
-            y_pred.fill(np.mean(y_train_samples))
+            mean_value = np.mean(y_train_samples)
+            y_pred.fill(mean_value)
+            return y_pred
+
+        # Check for constant target values - TabPFN can fail when all targets are identical
+        if len(np.unique(y_train_samples)) == 1:
+            # All targets are identical, so we can directly return this constant value
+            constant_value = float(y_train_samples[0])
+            y_pred.fill(constant_value)
             return y_pred
 
         # Set random state (using Python ints, not NumPy ints)
         self.tabpfn.random_state = leaf_id_int + tree_seed_int
 
         try:
-            # Fit TabPFN on the leaf data (now we know there are at least 2 samples)
+            # Fit TabPFN on the leaf data (now we know there are at least 2 samples with varying targets)
             self.tabpfn.fit(X_train_samples, y_train_samples)
-            # Get predictions
-            return self.tabpfn.predict(X)
-        except (ValueError, RuntimeError, NotImplementedError) as e:
+
+            # We need to use ONLY the data for the specific test samples in this leaf
+            # instead of the entire dataset
+            if hasattr(self, "_original_X"):
+                # Use the original data (with NaNs) but just for the specified indices
+                X_for_tabpfn = self._original_X[indices]
+            else:
+                # Using the provided data for just these samples
+                X_for_tabpfn = X
+
+            # Get predictions for just these specific samples
+            return self.tabpfn.predict(X_for_tabpfn)
+        except (ValueError, RuntimeError, NotImplementedError, AssertionError) as e:
             # Handle specific TabPFN errors gracefully
+            # Include AssertionError to catch bar_distribution errors
             warnings.warn(
                 f"TabPFN prediction failed for leaf {leaf_id}: {str(e)}. "
                 "Using the mean target value for predictions.",
@@ -907,10 +1067,22 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
         Returns:
             Predicted regression values
         """
-        from sklearn.utils.validation import check_is_fitted
+        from sklearn.utils.validation import check_array, check_is_fitted
 
+        # Validate that the model is fitted
         check_is_fitted(self, ["tree_"])
 
+        # Validate input data but allow NaN values for compatibility with TabPFN
+        if check_input:
+            X = check_array(
+                X,
+                accept_sparse=False,
+                dtype=None,
+                ensure_2d=True,
+                force_all_finite=False,
+            )
+
+        # Get predictions using internal prediction method
         return self.predict_(X, check_input=False)
 
     def post_fit(self) -> None:

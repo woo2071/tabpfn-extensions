@@ -7,6 +7,14 @@ except PackageNotFoundError:
 
 # Create alias for test_utils
 from . import test_utils
-from .utils import TabPFNClassifier, TabPFNRegressor, is_tabpfn
+
+# Import our wrapped TabPFN classes from utils.py (where we define the wrappers)
+from .utils import get_tabpfn_models
+
+# Get the TabPFN models with our wrappers applied
+TabPFNClassifier, TabPFNRegressor = get_tabpfn_models()
+
+# Also import the utilities
+from .utils import is_tabpfn
 
 __all__ = ["test_utils", "TabPFNClassifier", "TabPFNRegressor", "is_tabpfn"]

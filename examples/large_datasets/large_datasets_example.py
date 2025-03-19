@@ -34,7 +34,7 @@ le = LabelEncoder()
 y_class = le.fit_transform(y_class)
 
 for col in X_class.select_dtypes(["category"]).columns:
-    X_class[col] = X_class[col].cat.codes
+    X_class.loc[:, col] = X_class.loc[:, col].cat.codes
 
 X_train_class, X_test_class, y_train_class, y_test_class = train_test_split(
     X_class,

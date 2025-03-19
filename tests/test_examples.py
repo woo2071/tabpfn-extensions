@@ -39,8 +39,8 @@ def get_example_files() -> list[dict]:
     - fast: Can run quickly (runs in both normal and fast test mode)
     - slow: Takes longer to run (runs with a 1-second timeout, expected to timeout)
     - always_timeout: Examples with large datasets that are always skipped unless explicitly requested
-    - requires_tabpfn: Requires the full TabPFN package, not just the client
-    - client_compatible: Works with TabPFN client
+    - requires_tabpfn: If True, requires the full TabPFN package and won't work with client;
+                       if False, works with either TabPFN package or TabPFN client
 
     Returns:
         List of dictionaries containing example file info
@@ -51,18 +51,8 @@ def get_example_files() -> list[dict]:
     # The only example that runs fast enough for CI
     FAST_EXAMPLES = ["generate_data.py"]
 
-    # These directories contain examples that work with the TabPFN client
-    CLIENT_COMPATIBLE_DIRS = [
-        "many_class/",
-        "rf_pfn/",
-        "interpretability/",
-        "post_hoc_ensembles/",
-        "unsupervised/",
-        "phe/",
-    ]
-
-    # These directories/files need the full TabPFN package
-    REQUIRES_TABPFN_DIRS = ["large_datasets/"]
+    # These directories/files need the full TabPFN package and won't work with client
+    REQUIRES_TABPFN_DIRS = ["large_datasets/", "embedding/"]
 
     # Large dataset examples are always expected to timeout,
     # even if --run-examples is provided
@@ -80,9 +70,8 @@ def get_example_files() -> list[dict]:
         file_info = {
             "path": file_path,
             "name": file_name,
-            # Default classification
-            "requires_tabpfn": True,  # Default: requires TabPFN package
-            "client_compatible": False,  # Default: not client compatible
+            # Default classification - most examples work with both implementations
+            "requires_tabpfn": False,  # By default, examples work with either implementation
             "fast": file_name in FAST_EXAMPLES,  # Only listed examples are fast
             "slow": file_name not in FAST_EXAMPLES,  # All others are slow
             "always_timeout": any(
@@ -93,14 +82,10 @@ def get_example_files() -> list[dict]:
             else 30,  # Short timeout for slow examples
         }
 
-        # Check backend compatibility
+        # Check if example requires full TabPFN package
         if any(pattern in rel_path for pattern in REQUIRES_TABPFN_DIRS):
             # Example explicitly requires TabPFN package
             file_info["requires_tabpfn"] = True
-            file_info["client_compatible"] = False
-        elif any(pattern in rel_path for pattern in CLIENT_COMPATIBLE_DIRS):
-            # Example works with TabPFN client
-            file_info["client_compatible"] = True
 
         all_files.append(file_info)
 
@@ -180,12 +165,15 @@ def test_example(request, example_file):
             )
 
     # Skip if backend not available
-    if example_file["requires_tabpfn"] and not HAS_TABPFN:
-        pytest.skip(
-            f"Example {file_name} requires TabPFN package, but it's not installed",
-        )
-    if not example_file["client_compatible"] and TABPFN_SOURCE == "tabpfn_client":
-        pytest.skip(f"Example {file_name} is not compatible with TabPFN client")
+    if example_file["requires_tabpfn"]:
+        if not HAS_TABPFN:
+            pytest.skip(
+                f"Example {file_name} requires TabPFN package, but it's not installed",
+            )
+        elif TABPFN_SOURCE == "tabpfn_client":
+            pytest.skip(
+                f"Example {file_name} requires TabPFN package, not compatible with client",
+            )
 
     # Large dataset examples are always skipped with --run-examples,
     # unless they are explicitly requested by name

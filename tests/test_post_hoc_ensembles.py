@@ -15,7 +15,7 @@ from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
 from test_base_tabpfn import BaseClassifierTests, BaseRegressorTests
 
 
-@pytest.mark.requires_tabpfn
+@pytest.mark.local_compatible
 @pytest.mark.client_compatible
 class TestAutoTabPFNClassifier(BaseClassifierTests):
     """Test AutoTabPFNClassifier using the BaseClassifierTests framework."""
@@ -30,8 +30,8 @@ class TestAutoTabPFNClassifier(BaseClassifierTests):
         phe_init_args = {}
         if FAST_TEST_MODE:
             phe_init_args = {
-                "n_repeats": 1,  # Minimum repeats
-                "max_models": 1,  # Use only one model
+                "n_repeats": 2,  # Minimum repeats
+                "max_models": 2,  # Use only one model
             }
 
         return AutoTabPFNClassifier(
@@ -46,7 +46,7 @@ class TestAutoTabPFNClassifier(BaseClassifierTests):
         pass
 
 
-@pytest.mark.requires_tabpfn
+@pytest.mark.local_compatible
 @pytest.mark.client_compatible
 class TestAutoTabPFNRegressor(BaseRegressorTests):
     """Test AutoTabPFNRegressor using the BaseRegressorTests framework."""
@@ -61,8 +61,8 @@ class TestAutoTabPFNRegressor(BaseRegressorTests):
         phe_init_args = {}
         if FAST_TEST_MODE:
             phe_init_args = {
-                "n_repeats": 1,  # Minimum repeats
-                "max_models": 1,  # Use only one model
+                "n_repeats": 2,  # Minimum repeats
+                "max_models": 2,  # Use only one model
             }
 
         return AutoTabPFNRegressor(

@@ -196,7 +196,7 @@ def get_param_grid_hyperopt(task_type: str) -> dict:
         ),
         "inference_config/POLYNOMIAL_FEATURES": hp.choice(
             "POLYNOMIAL_FEATURES",
-            ["no", 50],
+            ["no"],  # Only use "no" to avoid polynomial feature computation errors
         ),
         "inference_config/OUTLIER_REMOVAL_STD": hp.choice(
             "OUTLIER_REMOVAL_STD",
