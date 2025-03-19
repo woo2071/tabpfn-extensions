@@ -134,6 +134,7 @@ select = [
     "ARG",
     "B",
     "BLE",
+    # COM812 removed to avoid conflicts with formatter
     "COM",
     "C4",
     "D",
@@ -170,7 +171,8 @@ select = [
     "T10",
     "T20",
     "TID",
-    "TCH",
+    # TC003 replaced TCH003
+    "TC",
     "UP",
     "N",
     "W",
@@ -190,7 +192,8 @@ ignore = [
     "S101", # Use of assert detected.
     "W292", # No newline at end of file
     "PLC1901", # "" can be simplified to be falsey
-    "TCH003", # Move stdlib import into TYPE_CHECKING
+    "TC003", # Move stdlib import into TYPE_CHECKING
+    "COM812", # Missing trailing comma in imports
     "PLR2004", # Magic numbers, gets in the way a lot
     "PLR0915", # Too many statements
     "N803", # Argument name `X` should be lowercase
