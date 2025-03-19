@@ -58,6 +58,7 @@ def enumerate_preprocess_transforms():
                         transforms += [
                             [
                                 {
+                                    # Use "name" parameter as expected by TabPFN PreprocessorConfig
                                     "name": name,
                                     "global_transformer_name": global_transformer_name,
                                     "subsample_features": subsample_features,

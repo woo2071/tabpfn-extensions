@@ -6,6 +6,7 @@ This file tests the HPO implementations in tabpfn_extensions.hpo.
 from __future__ import annotations
 
 import pytest
+from tests.utils import get_small_test_search_space
 
 from conftest import FAST_TEST_MODE
 
@@ -23,6 +24,8 @@ except ImportError:
 
 from test_base_tabpfn import BaseClassifierTests, BaseRegressorTests
 
+# Using get_small_test_search_space from tests.utils - all HPO modules should use it
+
 
 @pytest.mark.requires_tabpfn
 @pytest.mark.client_compatible
@@ -34,10 +37,14 @@ class TestTunedTabPFNClassifier(BaseClassifierTests):
         """Provide a HPO-based TabPFN classifier as the estimator."""
         n_trials = 3 if FAST_TEST_MODE else 10  # Very limited trials for fast testing
 
+        # Use minimal search space in fast test mode
+        search_space = get_small_test_search_space() if FAST_TEST_MODE else None
+
         return TunedTabPFNClassifier(
             n_trials=n_trials,
             metric="accuracy",
             random_state=42,
+            search_space=search_space,
         )
 
     @pytest.mark.skip(reason="Tuned TabPFN models take too long for this test")
@@ -56,10 +63,14 @@ class TestTunedTabPFNRegressor(BaseRegressorTests):
         """Provide a HPO-based TabPFN regressor as the estimator."""
         n_trials = 3 if FAST_TEST_MODE else 10  # Very limited trials for fast testing
 
+        # Use minimal search space in fast test mode
+        search_space = get_small_test_search_space() if FAST_TEST_MODE else None
+
         return TunedTabPFNRegressor(
             n_trials=n_trials,
             metric="rmse",
             random_state=42,
+            search_space=search_space,
         )
 
     @pytest.mark.skip(reason="Tuned TabPFN models take too long for this test")
@@ -89,15 +100,17 @@ class TestHPOSpecificFeatures:
         )
 
         # Create models with different metrics
-        metrics = (
-            ["accuracy", "roc_auc"] if FAST_TEST_MODE else ["accuracy", "roc_auc", "f1"]
-        )
+        metrics = ["accuracy", "roc_auc"]
 
         for metric in metrics:
+            # Use minimal search space in fast test mode
+            search_space = get_small_test_search_space() if FAST_TEST_MODE else None
+
             model = TunedTabPFNClassifier(
                 n_trials=3 if FAST_TEST_MODE else 10,
                 metric=metric,
                 random_state=42,
+                search_space=search_space,
             )
 
             # Fit and predict

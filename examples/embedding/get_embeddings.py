@@ -1,8 +1,21 @@
+"""
+TabPFN Embedding Example
+
+This example demonstrates how to extract embeddings from TabPFN models and use them
+for classification and regression tasks.
+
+NOTE: This example requires the full TabPFN implementation (pip install tabpfn).
+It will not work with the TabPFN client (pip install tabpfn-client) because
+the embedding functionality is not available in the client version.
+"""
+
 from sklearn.datasets import fetch_openml
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import accuracy_score, r2_score
 from sklearn.model_selection import train_test_split
 
+# Note: You need to install the full TabPFN package for this example
+# pip install tabpfn
 from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
 from tabpfn_extensions.embedding import TabPFNEmbedding
 

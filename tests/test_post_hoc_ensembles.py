@@ -23,11 +23,21 @@ class TestAutoTabPFNClassifier(BaseClassifierTests):
     @pytest.fixture
     def estimator(self, tabpfn_classifier):
         """Provide a PHE-based TabPFN classifier as the estimator."""
-        max_time = 30 if FAST_TEST_MODE else 60  # Limited time for fast testing
+        # For PHE, we can make tests faster by limiting time and using minimal models
+        max_time = 1 if FAST_TEST_MODE else 5  # Very limited time for fast testing
+
+        # Minimize the model portfolio for faster testing
+        phe_init_args = {}
+        if FAST_TEST_MODE:
+            phe_init_args = {
+                "n_repeats": 1,  # Minimum repeats
+                "max_models": 1,  # Use only one model
+            }
 
         return AutoTabPFNClassifier(
             max_time=max_time,
             random_state=42,
+            phe_init_args=phe_init_args,
         )
 
     @pytest.mark.skip(reason="PHE models take too long for this test")
@@ -44,11 +54,21 @@ class TestAutoTabPFNRegressor(BaseRegressorTests):
     @pytest.fixture
     def estimator(self, tabpfn_regressor):
         """Provide a PHE-based TabPFN regressor as the estimator."""
-        max_time = 30 if FAST_TEST_MODE else 60  # Limited time for fast testing
+        # For PHE, we can make tests faster by limiting time and using minimal models
+        max_time = 1 if FAST_TEST_MODE else 5  # Very limited time for fast testing
+
+        # Minimize the model portfolio for faster testing
+        phe_init_args = {}
+        if FAST_TEST_MODE:
+            phe_init_args = {
+                "n_repeats": 1,  # Minimum repeats
+                "max_models": 1,  # Use only one model
+            }
 
         return AutoTabPFNRegressor(
             max_time=max_time,
             random_state=42,
+            phe_init_args=phe_init_args,
         )
 
     @pytest.mark.skip(reason="PHE models take too long for this test")

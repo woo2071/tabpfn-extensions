@@ -59,7 +59,7 @@ class TestTabPFNEmbedding:
         )
         return X_train, X_test, y_train, y_test
 
-    @pytest.mark.client_compatible
+    @pytest.mark.requires_tabpfn
     def test_clf_embedding_vanilla(self, classification_data):
         """Test vanilla embeddings extraction with a classifier."""
         X_train, X_test, y_train, y_test = classification_data
@@ -101,7 +101,7 @@ class TestTabPFNEmbedding:
         # The accuracy should be better than random
         assert accuracy > 0.4, f"Accuracy with embeddings was only {accuracy:.2f}"
 
-    @pytest.mark.client_compatible
+    @pytest.mark.requires_tabpfn
     def test_clf_embedding_kfold(self, classification_data):
         """Test K-fold embeddings extraction with a classifier."""
         X_train, X_test, y_train, y_test = classification_data
@@ -153,7 +153,7 @@ class TestTabPFNEmbedding:
             accuracy > 0.4
         ), f"Accuracy with K-fold embeddings was only {accuracy:.2f}"
 
-    @pytest.mark.client_compatible
+    @pytest.mark.requires_tabpfn
     def test_reg_embedding_vanilla(self, regression_data):
         """Test vanilla embeddings extraction with a regressor."""
         X_train, X_test, y_train, y_test = regression_data
@@ -196,7 +196,7 @@ class TestTabPFNEmbedding:
         # In rare cases this might fail due to randomness, so we set a low bar
         assert r2 > -1.0, f"R2 score with embeddings was very low: {r2:.2f}"
 
-    @pytest.mark.client_compatible
+    @pytest.mark.requires_tabpfn
     def test_embedding_errors(self, classification_data):
         """Test error handling in TabPFNEmbedding."""
         X_train, X_test, y_train, _ = classification_data

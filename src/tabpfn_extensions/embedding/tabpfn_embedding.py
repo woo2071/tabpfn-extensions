@@ -14,6 +14,10 @@ class TabPFNEmbedding:
       "A Closer Look at TabPFN v2: Strength, Limitation, and Extension" (https://arxiv.org/abs/2502.17361),
       where a larger `n_fold` improves embedding effectiveness.
 
+    NOTE: This functionality requires the full TabPFN implementation (pip install tabpfn)
+    and is not compatible with the TabPFN client (pip install tabpfn-client). The client
+    version does not provide access to model embeddings.
+
     Parameters:
         tabpfn_clf : TabPFNClassifier, optional
             An instance of TabPFNClassifier to handle classification tasks.
@@ -28,7 +32,7 @@ class TabPFNEmbedding:
 
     Examples:
     ```python
-    >>> from tabpfn_extensions import TabPFNClassifier
+    >>> from tabpfn import TabPFNClassifier  # Must use full TabPFN package
     >>> from sklearn.model_selection import train_test_split
     >>> from sklearn.datasets import fetch_openml
     >>> X, y = fetch_openml(name='kc1', version=1, as_frame=False, return_X_y=True)
@@ -52,11 +56,29 @@ class TabPFNEmbedding:
             tabpfn_clf (Optional[TabPFNClassifier]): An instance of TabPFN classifier (if available).
             tabpfn_reg (Optional[TabPFNRegressor]): An instance of TabPFN regressor (if available).
             n_fold (int): Number of folds for cross-validation. If 0, cross-validation is not used.
+
+        Raises:
+            ImportError: If using TabPFN client implementation which doesn't support embeddings.
         """
         self.tabpfn_clf = tabpfn_clf
         self.tabpfn_reg = tabpfn_reg
         self.model = self.tabpfn_clf if self.tabpfn_clf is not None else self.tabpfn_reg
         self.n_fold = n_fold
+
+        # Check if the model is the full TabPFN implementation, not the client
+        if self.model is not None:
+            if "tabpfn_client" in str(self.model.__class__.__module__):
+                raise ImportError(
+                    "TabPFNEmbedding requires the full TabPFN implementation (pip install tabpfn). "
+                    "The TabPFN client (pip install tabpfn-client) does not support embedding extraction.",
+                )
+
+            # Verify the model has a get_embeddings method
+            if not hasattr(self.model, "get_embeddings"):
+                raise AttributeError(
+                    f"The provided model of type {type(self.model)} does not have a get_embeddings method. "
+                    "Make sure you're using the full TabPFN implementation (pip install tabpfn).",
+                )
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
         """Trains the TabPFN model on the given dataset.
