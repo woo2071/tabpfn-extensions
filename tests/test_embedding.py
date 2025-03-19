@@ -149,9 +149,9 @@ class TestTabPFNEmbedding:
         accuracy = accuracy_score(y_test, y_pred)
 
         # The accuracy should be better than random
-        assert accuracy > 0.4, (
-            f"Accuracy with K-fold embeddings was only {accuracy:.2f}"
-        )
+        assert (
+            accuracy > 0.4
+        ), f"Accuracy with K-fold embeddings was only {accuracy:.2f}"
 
     @pytest.mark.client_compatible
     def test_reg_embedding_vanilla(self, regression_data):

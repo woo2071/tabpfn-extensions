@@ -149,9 +149,9 @@ class BaseClassifierTests:
 
             # Check accuracy
             accuracy = accuracy_score(y, y_pred)
-            assert accuracy > 0.6, (
-                f"Failed with data_type {data_type}: accuracy {accuracy:.2f}"
-            )
+            assert (
+                accuracy > 0.6
+            ), f"Failed with data_type {data_type}: accuracy {accuracy:.2f}"
 
     @pytest.mark.client_compatible
     def test_with_missing_values(self, estimator, dataset_generator):
