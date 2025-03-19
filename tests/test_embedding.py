@@ -59,6 +59,13 @@ class TestTabPFNEmbedding:
         )
         return X_train, X_test, y_train, y_test
 
+    @pytest.fixture
+    def dataset_generator(self):
+        """Provide dataset generator for varied test cases."""
+        from tests.utils import DatasetGenerator
+
+        return DatasetGenerator(seed=42)
+
     @pytest.mark.requires_tabpfn
     def test_clf_embedding_vanilla(self, classification_data):
         """Test vanilla embeddings extraction with a classifier."""
@@ -221,3 +228,208 @@ class TestTabPFNEmbedding:
                 X_test,
                 data_source="train",
             )
+
+    @pytest.mark.requires_tabpfn
+    def test_embeddings_with_missing_values(self, dataset_generator):
+        """Test embedding extraction with missing values."""
+        # Generate classification data with missing values
+        X, y = dataset_generator.generate_classification_data(
+            n_samples=30 if FAST_TEST_MODE else 60,
+            n_features=5,
+            with_missing=True,
+        )
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=0.3,
+            random_state=42,
+        )
+
+        # Create classifier and embedding extractor
+        clf = TabPFNClassifier(n_estimators=1, random_state=42)
+        embedding_extractor = TabPFNEmbedding(tabpfn_clf=clf, n_fold=0)
+
+        # Extract embeddings
+        train_embeddings = embedding_extractor.get_embeddings(
+            X_train,
+            y_train,
+            X_train,
+            data_source="train",
+        )
+        test_embeddings = embedding_extractor.get_embeddings(
+            X_train,
+            y_train,
+            X_test,
+            data_source="test",
+        )
+
+        # Check embedding shapes
+        assert isinstance(train_embeddings, np.ndarray)
+        assert train_embeddings.ndim >= 2
+
+        # Use embeddings to make predictions
+        train_emb = train_embeddings[0]
+        test_emb = test_embeddings[0]
+
+        # Verify embeddings are useful
+        lr = LogisticRegression()
+        lr.fit(train_emb, y_train)
+        y_pred = lr.predict(test_emb)
+        accuracy = accuracy_score(y_test, y_pred)
+
+        # Set a low threshold since missing values might reduce accuracy
+        assert accuracy > 0.3, f"Accuracy with missing values was only {accuracy:.2f}"
+
+    @pytest.mark.requires_tabpfn
+    def test_embeddings_with_pandas(self, dataset_generator):
+        """Test embedding extraction with pandas DataFrames."""
+        # Generate pandas DataFrame data
+        X, y = dataset_generator.generate_classification_data(
+            n_samples=30 if FAST_TEST_MODE else 60,
+            n_features=5,
+            as_pandas=True,
+        )
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=0.3,
+            random_state=42,
+        )
+
+        # Create classifier and embedding extractor
+        clf = TabPFNClassifier(n_estimators=1, random_state=42)
+        embedding_extractor = TabPFNEmbedding(tabpfn_clf=clf, n_fold=0)
+
+        # Extract embeddings
+        train_embeddings = embedding_extractor.get_embeddings(
+            X_train,
+            y_train,
+            X_train,
+            data_source="train",
+        )
+        test_embeddings = embedding_extractor.get_embeddings(
+            X_train,
+            y_train,
+            X_test,
+            data_source="test",
+        )
+
+        # Check embedding shapes
+        assert isinstance(train_embeddings, np.ndarray)
+        assert train_embeddings.ndim >= 2
+
+        # Verify embeddings
+        train_emb = train_embeddings[0]
+        test_emb = test_embeddings[0]
+
+        lr = LogisticRegression()
+        lr.fit(train_emb, y_train)
+        y_pred = lr.predict(test_emb)
+        accuracy = accuracy_score(y_test, y_pred)
+
+        assert accuracy > 0.4, f"Accuracy with pandas data was only {accuracy:.2f}"
+
+    @pytest.mark.requires_tabpfn
+    def test_embeddings_with_text_features(self, dataset_generator):
+        """Test embedding extraction with text features."""
+        # Generate data with text features
+        X, y = dataset_generator.generate_classification_data(
+            n_samples=30 if FAST_TEST_MODE else 60,
+            n_features=5,
+            with_text=True,
+        )
+
+        # Dataset generator returns both the data and encoded version
+        X_encoded, X_original = X
+
+        # Split the data
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_encoded,
+            y,
+            test_size=0.3,
+            random_state=42,
+        )
+
+        # Create classifier and embedding extractor
+        clf = TabPFNClassifier(n_estimators=1, random_state=42)
+        embedding_extractor = TabPFNEmbedding(tabpfn_clf=clf, n_fold=0)
+
+        # Extract embeddings using the encoded data
+        train_embeddings = embedding_extractor.get_embeddings(
+            X_train,
+            y_train,
+            X_train,
+            data_source="train",
+        )
+        test_embeddings = embedding_extractor.get_embeddings(
+            X_train,
+            y_train,
+            X_test,
+            data_source="test",
+        )
+
+        # Check embedding shapes
+        assert isinstance(train_embeddings, np.ndarray)
+        assert train_embeddings.ndim >= 2
+
+        # Verify embeddings are useful
+        train_emb = train_embeddings[0]
+        test_emb = test_embeddings[0]
+
+        lr = LogisticRegression()
+        lr.fit(train_emb, y_train)
+        y_pred = lr.predict(test_emb)
+        accuracy = accuracy_score(y_test, y_pred)
+
+        # Lower threshold for text features as they can be harder to model
+        assert accuracy > 0.3, f"Accuracy with text features was only {accuracy:.2f}"
+
+    @pytest.mark.requires_tabpfn
+    def test_embeddings_with_multiclass(self, dataset_generator):
+        """Test embedding extraction with multiclass data."""
+        # Generate multiclass classification data
+        X, y = dataset_generator.generate_classification_data(
+            n_samples=30 if FAST_TEST_MODE else 60,
+            n_features=5,
+            n_classes=3,  # Use 3 classes
+        )
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=0.3,
+            random_state=42,
+        )
+
+        # Create classifier and embedding extractor
+        clf = TabPFNClassifier(n_estimators=1, random_state=42)
+        embedding_extractor = TabPFNEmbedding(tabpfn_clf=clf, n_fold=0)
+
+        # Extract embeddings
+        train_embeddings = embedding_extractor.get_embeddings(
+            X_train,
+            y_train,
+            X_train,
+            data_source="train",
+        )
+        test_embeddings = embedding_extractor.get_embeddings(
+            X_train,
+            y_train,
+            X_test,
+            data_source="test",
+        )
+
+        # Check embedding shapes
+        assert isinstance(train_embeddings, np.ndarray)
+        assert train_embeddings.ndim >= 2
+
+        # Verify embeddings
+        train_emb = train_embeddings[0]
+        test_emb = test_embeddings[0]
+
+        lr = LogisticRegression()
+        lr.fit(train_emb, y_train)
+        y_pred = lr.predict(test_emb)
+        accuracy = accuracy_score(y_test, y_pred)
+
+        # A bit more challenging with multiclass
+        assert accuracy > 0.3, f"Accuracy with multiclass data was only {accuracy:.2f}"
