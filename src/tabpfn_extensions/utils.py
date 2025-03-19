@@ -7,10 +7,13 @@ import logging
 import os
 import warnings
 from collections.abc import Iterator
-from typing import Any, Literal, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar
 
 import numpy as np
-from numpy.typing import NDArray
+
+# Type checking imports
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 T = TypeVar("T")
 
@@ -204,7 +207,7 @@ try:
             **kwargs : Additional keyword arguments
                 Passed to the parent predict method.
 
-            Returns
+            Returns:
             -------
             y : array-like of shape (n_samples,) or dict
                 The predicted values or the full distribution output dictionary.
@@ -317,7 +320,6 @@ def infer_categorical_features(
     Returns:
         list[int]: The indices of the categorical features.
     """
-
     if categorical_features is None:
         categorical_features = []
 
@@ -363,12 +365,7 @@ def infer_categorical_features(
             continue
 
         # Get unique values - handle differently for pandas and numpy
-        if is_pandas:
-            # Get column by position (iloc) for pandas DataFrame
-            n_unique = X.iloc[:, i].nunique()
-        else:
-            # NumPy array - use direct indexing
-            n_unique = len(np.unique(X[:, i]))
+        n_unique = X.iloc[:, i].nunique() if is_pandas else len(np.unique(X[:, i]))
 
         # Filter categorical features, with too many unique values
         if (

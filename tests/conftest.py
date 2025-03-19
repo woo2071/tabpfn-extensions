@@ -59,7 +59,10 @@ try:
 
     if tabpfn_spec is not None:
         print("Found tabpfn package")
-        from tabpfn_extensions.utils import LocalTabPFNClassifier, LocalTabPFNRegressor
+        from tabpfn_extensions.utils import (  # noqa: F401
+            LocalTabPFNClassifier,
+            LocalTabPFNRegressor,
+        )
 
         print("Imported TabPFNClassifier, TabPFNRegressor")
 
@@ -81,7 +84,7 @@ try:
 
     if tabpfn_client_spec is not None:
         print("Found tabpfn_client package")
-        from tabpfn_extensions.utils import (
+        from tabpfn_extensions.utils import (  # noqa: F401
             TabPFNClassifier as ClientTabPFNClassifier,
             TabPFNRegressor as ClientTabPFNRegressor,
         )
@@ -376,7 +379,6 @@ def data_with_outliers(dataset_generator):
 # Skip or fail tests based on markers and available implementations
 def pytest_runtest_setup(item):
     """Skip or fail tests based on markers and available implementations."""
-
     # Handle TabPFN availability markers
     if TABPFN_SOURCE == "tabpfn_local" and not item.get_closest_marker(
         "local_compatible",

@@ -1,5 +1,4 @@
-"""
-TabPFN Embedding Example
+"""TabPFN Embedding Example
 
 This example demonstrates how to extract embeddings from TabPFN models and use them
 for classification and regression tasks.

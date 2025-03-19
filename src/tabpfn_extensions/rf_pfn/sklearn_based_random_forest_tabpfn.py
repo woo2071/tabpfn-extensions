@@ -57,6 +57,36 @@ class RandomForestTabPFNBase:
         """
         return self.n_estimators
 
+    def _validate_tabpfn(self):
+        """Validate that tabpfn is not None and is of the correct type.
+
+        Raises:
+            ValueError: If tabpfn is None
+            TypeError: If tabpfn is not of the expected type
+        """
+        if self.tabpfn is None:
+            raise ValueError(
+                f"The tabpfn parameter cannot be None. Please provide a TabPFN{'Classifier' if self.task_type == 'multiclass' else 'Regressor'} instance.",
+            )
+
+        if self.task_type == "multiclass":
+            # For classifier, check for predict_proba method
+            if not hasattr(self.tabpfn, "predict_proba"):
+                raise TypeError(
+                    f"Expected a TabPFNClassifier instance with predict_proba method, but got {type(self.tabpfn).__name__}",
+                )
+        else:
+            # For regressor, check for predict method but no predict_proba
+            if not hasattr(self.tabpfn, "predict"):
+                raise TypeError(
+                    f"Expected a TabPFNRegressor instance with predict method, but got {type(self.tabpfn).__name__}",
+                )
+            if hasattr(self.tabpfn, "predict_proba"):
+                raise TypeError(
+                    "Expected a TabPFNRegressor instance, but got a classifier with predict_proba method. "
+                    "Please use TabPFNRegressor with RandomForestTabPFNRegressor.",
+                )
+
     def fit(self, X: np.ndarray, y: np.ndarray, sample_weight: np.ndarray = None):
         """Fits RandomForestTabPFN.
 
@@ -70,7 +100,12 @@ class RandomForestTabPFNBase:
 
         Raises:
             ValueError: If n_estimators is not positive
+            ValueError: If tabpfn is None
+            TypeError: If tabpfn is not of the expected type
         """
+        # Validate tabpfn parameter
+        self._validate_tabpfn()
+
         self.estimator = self.init_base_estimator()
         self.X = X
         self.n_estimators = self.get_n_estimators(X)
@@ -268,6 +303,17 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
             ccp_alpha=ccp_alpha,
             max_samples=max_samples,
         )
+
+        if tabpfn is None:
+            raise ValueError(
+                "The tabpfn parameter cannot be None. Please provide a TabPFNClassifier instance.",
+            )
+
+        # Check if tabpfn is a classifier instance
+        if not hasattr(tabpfn, "predict_proba"):
+            raise TypeError(
+                f"Expected a TabPFNClassifier instance with predict_proba method, but got {type(tabpfn).__name__}",
+            )
 
         self.tabpfn = tabpfn
 
