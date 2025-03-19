@@ -85,4 +85,4 @@ jobs:
 
       - name: Run Tests
         run: |
-          pytest tests/
+          FAST_TEST_MODE=1 pytest tests/ --run-examples
