@@ -4,6 +4,11 @@ import re
 
 
 def main() -> None:
+    """Extract maximum version constraints from dependencies in pyproject.toml.
+
+    Creates a requirements.txt file with the maximum allowed versions
+    of each dependency, preserving upper bounds but removing lower bounds.
+    """
     with open("pyproject.toml") as f:
         content = f.read()
 

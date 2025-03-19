@@ -4,6 +4,11 @@ import re
 
 
 def main() -> None:
+    """Extract minimum version constraints from dependencies in pyproject.toml.
+
+    Creates a requirements.txt file with the minimum required versions
+    of each dependency, converting lower bounds to exact version requirements.
+    """
     with open("pyproject.toml") as f:
         content = f.read()
 
