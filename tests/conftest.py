@@ -29,6 +29,10 @@ FAST_TEST_MODE = (
 )  # Skip slow tests by default
 SMALL_TEST_SIZE = 20  # Number of samples to use in fast test mode
 DEFAULT_TEST_SIZE = 100  # Number of samples to use in regular mode
+# Larger sizes for specific tests that require more samples
+MULTICLASS_TEST_SIZE = (
+    50  # Size for multiclass tests (needs more samples for stratification)
+)
 DEFAULT_TIMEOUT = 60  # Default timeout in seconds
 
 # Global variables to track TabPFN implementation availability
@@ -281,7 +285,10 @@ def classification_data(dataset_generator):
 @pytest.fixture
 def multiclass_data(dataset_generator):
     """Return a classification dataset with 3+ classes."""
-    test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
+    # For multiclass data, we need more samples to ensure proper stratification
+    # even with small validation splits (for tuned models)
+    test_size = MULTICLASS_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
+
     X, y = dataset_generator.generate_classification_data(
         n_samples=test_size,
         n_features=5,

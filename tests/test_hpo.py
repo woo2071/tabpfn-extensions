@@ -8,7 +8,19 @@ from __future__ import annotations
 import pytest
 
 from conftest import FAST_TEST_MODE
-from tabpfn_extensions.hpo import TunedTabPFNClassifier, TunedTabPFNRegressor
+
+# Try to import the HPO module, but skip tests if hyperopt is not available
+try:
+    from tabpfn_extensions.hpo import TunedTabPFNClassifier, TunedTabPFNRegressor
+
+    HYPEROPT_AVAILABLE = True
+except ImportError:
+    HYPEROPT_AVAILABLE = False
+    pytest.skip(
+        "hyperopt not installed. Install with 'pip install \"tabpfn-extensions[hpo]\"'",
+        allow_module_level=True,
+    )
+
 from test_base_tabpfn import BaseClassifierTests, BaseRegressorTests
 
 

@@ -108,7 +108,9 @@ class TunedTabPFNBase(BaseEstimator):
         self.metric = MetricType(metric)  # Validate metric type
         self.device = device
         self.random_state = random_state
-        self.categorical_feature_indices = categorical_feature_indices or []
+        self.categorical_feature_indices = (
+            categorical_feature_indices  # Don't modify the parameter
+        )
         self.verbose = verbose
         self.search_space = search_space
         self.objective_fn = objective_fn
@@ -119,14 +121,18 @@ class TunedTabPFNBase(BaseEstimator):
         categorical_feature_indices: list[int] | None = None,
     ):
         """Set up categorical and label encoders."""
-        if categorical_feature_indices is not None:
-            self.categorical_feature_indices = categorical_feature_indices
+        # Use provided indices or instance attribute, create a working copy
+        indices = (
+            categorical_feature_indices
+            if categorical_feature_indices is not None
+            else self.categorical_feature_indices
+        )
+        self._categorical_indices = [] if indices is None else list(indices)
 
-        if not self.categorical_feature_indices:
+        if not self._categorical_indices:
             logger.info(
                 "No categorical features specified. Using all features as numeric.",
             )
-            self.categorical_feature_indices = []
 
         # Create categorical feature encoder
         self._cat_encoder = ColumnTransformer(
@@ -137,7 +143,7 @@ class TunedTabPFNBase(BaseEstimator):
                         handle_unknown="use_encoded_value",
                         unknown_value=-1,
                     ),
-                    self.categorical_feature_indices,
+                    self._categorical_indices,
                 ),
             ],
             remainder="passthrough",
@@ -154,9 +160,7 @@ class TunedTabPFNBase(BaseEstimator):
 
         # Store original categorical feature indices before transformation
         original_categorical_indices = (
-            self.categorical_feature_indices.copy()
-            if self.categorical_feature_indices
-            else []
+            self._categorical_indices.copy() if self._categorical_indices else []
         )
 
         # Check for TestData object and extract raw data
@@ -164,17 +168,23 @@ class TunedTabPFNBase(BaseEstimator):
 
         # Fit transformers
         X_transformed = self._cat_encoder.fit_transform(X_data)
-        if hasattr(self, "_label_encoder"):
-            y = self._label_encoder.transform(y)
 
-        # Split data for validation
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_transformed,
-            y,
-            test_size=self.n_validation_size,
-            random_state=rng.randint(0, 2**31 - 1),
-            stratify=y if task_type == "multiclass" else None,
-        )
+        # Split data for validation with error handling
+        try:
+            X_train, X_val, y_train, y_val = train_test_split(
+                X_transformed,
+                y,
+                test_size=self.n_validation_size,
+                random_state=rng.randint(0, 2**31 - 1),
+                stratify=y if task_type == "multiclass" else None,
+            )
+        except ValueError:
+            # More helpful error message
+            raise ValueError(
+                "Not enough samples per class for stratified validation. "
+                "Try using fewer CV splits (smaller validation_size), "
+                "more data samples, or fewer classes.",
+            )
 
         # Use custom search space if provided, otherwise use default
         if hasattr(self, "search_space") and self.search_space is not None:
@@ -415,14 +425,14 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
         # Set up encoders
         self._setup_data_encoders(X, categorical_feature_indices)
         self._label_encoder = LabelEncoder()
-        y = self._label_encoder.fit_transform(y)
+        y_transformed = self._label_encoder.fit_transform(y)
 
         # Store classes
-        self.classes_ = self._label_encoder.classes_
+        self.classes_ = self._label_encoder.classes_.copy()
 
         # Determine task type and optimize
         task_type = "multiclass" if len(self.classes_) > 2 else "binary"
-        self._optimize(X, y, task_type)
+        self._optimize(X, y_transformed, task_type)
 
         # Mark as fitted for sklearn
         self.is_fitted_ = True

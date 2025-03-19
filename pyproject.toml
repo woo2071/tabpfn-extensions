@@ -18,6 +18,7 @@ dependencies = [
 requires-python = ">=3.9"
 authors = [
     { name = "Noah Hollmann", email = "noah.hollmann@charite.de" },
+    { name = "Leo Grinsztajn" },
     { name = "Samuel Müller", email = "muellesa@cs.uni-freiburg.de" },
     { name = "Lennart Purucker" },
     { name = "Arjun Krishnakumar" },
@@ -25,10 +26,7 @@ authors = [
     { name = "Shi Bin Hoo" },
     { name = "Robin Tibor Schirrmeister" },
     { name = "Frank Hutter", email = "fh@cs.uni-freiburg.de" },
-
-    { name = "Eddie Bergman"},
-
-    { name = "Leo Grinsztajn"}
+    { name = "Eddie Bergman" }
 ]
 readme = "README.md"
 description = "TabPFN: Foundation model for tabular data"
