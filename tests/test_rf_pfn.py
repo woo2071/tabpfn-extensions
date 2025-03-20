@@ -40,7 +40,7 @@ class TestRandomForestClassifier(BaseClassifierTests):
         pass
 
     @pytest.mark.skip(
-        reason="RandomForestTabPFN needs additional work to pass all sklearn estimator checks"
+        reason="RandomForestTabPFN needs additional work to pass all sklearn estimator checks",
     )
     def test_passes_estimator_checks(self, estimator):
         pass
@@ -73,7 +73,7 @@ class TestRandomForestRegressor(BaseRegressorTests):
         pass
 
     @pytest.mark.skip(
-        reason="RandomForestTabPFN needs additional work to pass all sklearn estimator checks"
+        reason="RandomForestTabPFN needs additional work to pass all sklearn estimator checks",
     )
     def test_passes_estimator_checks(self, estimator):
         pass

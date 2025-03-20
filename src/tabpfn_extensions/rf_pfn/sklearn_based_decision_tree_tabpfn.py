@@ -110,7 +110,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
     average_logits : bool
         Whether to average logits (True) or probabilities (False) when combining predictions.
     adaptive_tree_skip_class_missing : bool
-        If True, skip re-fitting if the node’s training set does not contain all classes (classification only).
+        If True, skip re-fitting if the nodes training set does not contain all classes (classification only).
     """
 
     # Task type set by subclasses: "multiclass" or "regression"
@@ -398,7 +398,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
                     stratify=stratify,
                 )
 
-                # Safety check – if split is empty, revert
+                # Safety check - if split is empty, revert
                 if len(y_train) == 0 or len(y_valid) == 0:
                     self.adaptive_tree = False
                     X_train, X_preproc_train, y_train, sw_train = (
@@ -639,7 +639,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
             # Now fit leaves again using the entire dataset (train + valid, effectively)
             self.fit_leaves(self.X, self.y)
 
-        # Assign TabPFN’s categorical features if needed
+        # Assign TabPFNs categorical features if needed
         if self.tabpfn is not None:
             self.tabpfn.categorical_features_indices = self.categorical_features
 
@@ -697,7 +697,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
                     continue
 
                 # Determine if this is a final leaf
-                # If the sum of membership in subsequent nodes is zero, it’s final
+                # If the sum of membership in subsequent nodes is zero, its final
                 is_leaf = (
                     X_leaf_nodes[test_sample_indices, leaf_id + 1 :, est_id].sum()
                     == 0.0
@@ -795,7 +795,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
                     # If not validating and not adaptive, just use replacement
                     y_prob[est_id][leaf_id] = y_prob_replacement
 
-        # Final predictions come from the last estimator’s last node
+        # Final predictions come from the last estimators last node
         return y_prob[n_estims - 1][n_nodes - 1]
 
     def _pruning_init_node_predictions(
@@ -918,7 +918,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         leaf_id: int,
     ) -> None:
         """Decide which approach is better: “averaging” vs “replacement” vs “previous,”
-        using the node’s previous metric vs new metrics.
+        using the nodes previous metric vs new metrics.
 
         Parameters
         ----------
@@ -1120,7 +1120,7 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
         X_full: np.ndarray,
         indices: np.ndarray,
     ) -> np.ndarray:
-        """Fit a TabPFNClassifier on the leaf’s train data and predict_proba for the relevant samples.
+        """Fit a TabPFNClassifier on the leafs train data and predict_proba for the relevant samples.
 
         Parameters
         ----------
@@ -1305,7 +1305,7 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
         X_full: np.ndarray,
         indices: np.ndarray,
     ) -> np.ndarray:
-        """Fit a TabPFNRegressor on the node’s train data, then predict for the relevant samples.
+        """Fit a TabPFNRegressor on the nodes train data, then predict for the relevant samples.
 
         Parameters
         ----------
