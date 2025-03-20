@@ -16,10 +16,8 @@ df = load_breast_cancer(return_X_y=False)
 X, y = df["data"], df["target"]
 attribute_names = df["feature_names"]
 
-# Initialize models with compatible parameters
-# Using defaults for compatibility between TabPFN and client
-clf = TabPFNClassifier()
-reg = TabPFNRegressor()
+clf = TabPFNClassifier(n_estimators=3)
+reg = TabPFNRegressor(n_estimators=3)
 model_unsupervised = unsupervised.TabPFNUnsupervisedModel(
     tabpfn_clf=clf,
     tabpfn_reg=reg,

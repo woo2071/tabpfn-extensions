@@ -518,27 +518,16 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
         )
         return self.best_model_.predict_proba(X_data)
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, Any]:
         return {
             "allow_nan": True,
-            "multioutput": False,
-            "X_types": ["2darray", "string"],
-            "_skip_test": [
-                "check_estimators_dtypes",
-                "check_fit_score_takes_y",
-                "check_estimator_sparse_data",
-            ],
         }
 
     def __sklearn_tags__(self):
-        # Create a new dictionary with our tags
-        return {
-            "allow_nan": True,
-            "estimator_type": "classifier",
-            "requires_fit": True,
-            "multioutput": False,
-            "X_types": ["2darray", "string"],
-        }
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "regressor"
+        return tags
 
 
 class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
@@ -611,24 +600,13 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
         )
         return self.best_model_.predict(X_data)
 
-    def _more_tags(self):
+    def _more_tags(self) -> dict[str, Any]:
         return {
             "allow_nan": True,
-            "multioutput": False,
-            "X_types": ["2darray", "string"],
-            "_skip_test": [
-                "check_estimators_dtypes",
-                "check_fit_score_takes_y",
-                "check_estimator_sparse_data",
-            ],
         }
 
     def __sklearn_tags__(self):
-        # Create a new dictionary with our tags
-        return {
-            "allow_nan": True,
-            "estimator_type": "regressor",
-            "requires_fit": True,
-            "multioutput": False,
-            "X_types": ["2darray", "string"],
-        }
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "regressor"
+        return tags

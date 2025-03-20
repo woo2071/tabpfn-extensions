@@ -241,26 +241,18 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
             raise ValueError("TabPFN was None at runtime - cannot proceed.")
 
     def _more_tags(self) -> dict[str, Any]:
-        """Additional sklearn tags (for older sklearn versions).
+        return {
+            "allow_nan": True,
+        }
 
-        Returns:
-            Dict[str, Any]: A dictionary of tags recognized by scikit-learn.
-        """
-        return {"multilabel": True, "allow_nan": True}
-
-    def __sklearn_tags__(self) -> dict[str, Any]:
-        """Official sklearn method for returning estimator tags.
-
-        Returns:
-            Dict[str, Any]: A dictionary of tags recognized by scikit-learn.
-        """
+    def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
-        tags["allow_nan"] = True
-        # Usually "estimator_type" gets set automatically, but ensure it here:
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "regressor"
         if self.task_type == "multiclass":
-            tags["estimator_type"] = "classifier"
+            tags.estimator_type = "classifier"
         else:
-            tags["estimator_type"] = "regressor"
+            tags.estimator_type = "regressor"
         return tags
 
     def fit(

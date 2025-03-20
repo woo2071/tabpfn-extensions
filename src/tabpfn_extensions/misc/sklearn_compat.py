@@ -1,4 +1,3 @@
-# ruff: noqa
 # mypy: ignore-errors
 # taken from https://github.com/sklearn-compat/sklearn-compat
 """Ease developer experience to support multiple versions of scikit-learn.
@@ -389,7 +388,7 @@ if sklearn_version < parse_version("1.6"):
             return 'unknown'.
             """
             if raise_unknown and target_type == "unknown":
-                input = input_name if input_name else "data"
+                input = input_name if input_name else "data"  # noqa: A001
                 raise ValueError(f"Unknown label type for {input}: {y!r}")
             return target_type
 

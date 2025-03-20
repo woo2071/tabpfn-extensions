@@ -77,14 +77,15 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
         self.categorical_feature_indices = categorical_feature_indices
         self.ignore_pretraining_limits = ignore_pretraining_limits
 
-    def __sklearn_js_tags__(self):
-        """Return tags for sklearn compatibility."""
-        return {"allow_nan": True}
+    def _more_tags(self):
+        return {
+            "allow_nan": True,
+        }
 
-    def _get_tags(self):
-        """Return tags from parent and for this estimator."""
-        tags = super()._get_tags()
-        tags.update({"allow_nan": True})
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "classifier"
         return tags
 
     def fit(self, X, y, categorical_feature_indices: list[int] | None = None):
@@ -251,14 +252,15 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
         self.categorical_feature_indices = categorical_feature_indices
         self.ignore_pretraining_limits = ignore_pretraining_limits
 
-    def __sklearn_js_tags__(self):
-        """Return tags for sklearn compatibility."""
-        return {"allow_nan": True}
+    def _more_tags(self):
+        return {
+            "allow_nan": True,
+        }
 
-    def _get_tags(self):
-        """Return tags from parent and for this estimator."""
-        tags = super()._get_tags()
-        tags.update({"allow_nan": True})
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "regressor"
         return tags
 
     def fit(self, X, y, categorical_feature_indices: list[int] | None = None):

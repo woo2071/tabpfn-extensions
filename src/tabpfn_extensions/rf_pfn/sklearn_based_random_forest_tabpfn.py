@@ -343,22 +343,13 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
 
     def _get_tags(self):
         """Return tags from parent and for this estimator."""
-        # Use get_tags from sklearn_compat which works with all sklearn versions
-        from tabpfn_extensions.misc.sklearn_compat import get_tags
+        # Use get_tags and update_tags from sklearn_compat
+        from tabpfn_extensions.misc.sklearn_compat import get_tags, update_tags
 
         tags = get_tags(super())
 
-        # Set allow_nan flag consistently across sklearn versions
-        if hasattr(tags, "input_tags"):
-            # For sklearn 1.6+
-            tags.input_tags.allow_nan = True
-        else:
-            # For older sklearn versions
-            tags_dict = dict(tags) if not isinstance(tags, dict) else tags.copy()
-            tags_dict["allow_nan"] = True
-            return tags_dict
-
-        return tags
+        # Update tags with consistent interface across sklearn versions
+        return update_tags(tags, {"allow_nan": True, "estimator_type": "classifier"})
 
     def init_base_estimator(self):
         """Initialize a base decision tree estimator.
@@ -545,27 +536,15 @@ class RandomForestTabPFNRegressor(RandomForestTabPFNBase, RandomForestRegressor)
 
     task_type = "regression"
 
-    def __sklearn_js_tags__(self):
-        """Return tags for sklearn compatibility."""
-        return {"allow_nan": True}
+    def _more_tags(self):
+        return {
+            "allow_nan": True,
+        }
 
-    def _get_tags(self):
-        """Return tags from parent and for this estimator."""
-        # Use get_tags from sklearn_compat which works with all sklearn versions
-        from tabpfn_extensions.misc.sklearn_compat import get_tags
-
-        tags = get_tags(super())
-
-        # Set allow_nan flag consistently across sklearn versions
-        if hasattr(tags, "input_tags"):
-            # For sklearn 1.6+
-            tags.input_tags.allow_nan = True
-        else:
-            # For older sklearn versions
-            tags_dict = dict(tags) if not isinstance(tags, dict) else tags.copy()
-            tags_dict["allow_nan"] = True
-            return tags_dict
-
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "regressor"
         return tags
 
     def __init__(
