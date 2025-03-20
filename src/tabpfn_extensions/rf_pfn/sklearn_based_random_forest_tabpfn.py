@@ -340,7 +340,7 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
     def __sklearn_js_tags__(self):
         """Return tags for sklearn compatibility."""
         return {"allow_nan": True}
-        
+
     def _get_tags(self):
         """Return tags from parent and for this estimator."""
         tags = super()._get_tags()
@@ -535,7 +535,7 @@ class RandomForestTabPFNRegressor(RandomForestTabPFNBase, RandomForestRegressor)
     def __sklearn_js_tags__(self):
         """Return tags for sklearn compatibility."""
         return {"allow_nan": True}
-        
+
     def _get_tags(self):
         """Return tags from parent and for this estimator."""
         tags = super()._get_tags()
