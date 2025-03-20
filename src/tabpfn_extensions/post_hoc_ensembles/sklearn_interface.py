@@ -80,7 +80,7 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
     def __sklearn_js_tags__(self):
         """Return tags for sklearn compatibility."""
         return {"allow_nan": True}
-        
+
     def _get_tags(self):
         """Return tags from parent and for this estimator."""
         tags = super()._get_tags()
@@ -89,10 +89,10 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
 
     def fit(self, X, y, categorical_feature_indices: list[int] | None = None):
         # Validate input data
-        from sklearn.utils.validation import check_array, check_X_y
+        from sklearn.utils.validation import check_X_y
 
         # Will raise ValueError if X is empty or invalid
-        X, y = check_X_y(X, y, ensure_2d=True, allow_nd=False, dtype=None, multi_output=False, 
+        X, y = check_X_y(X, y, ensure_2d=True, allow_nd=False, dtype=None, multi_output=False,
                          force_all_finite=False)  # allow_nan is handled internally
 
         if categorical_feature_indices is not None:
@@ -247,7 +247,7 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
     def __sklearn_js_tags__(self):
         """Return tags for sklearn compatibility."""
         return {"allow_nan": True}
-        
+
     def _get_tags(self):
         """Return tags from parent and for this estimator."""
         tags = super()._get_tags()
@@ -256,12 +256,12 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
 
     def fit(self, X, y, categorical_feature_indices: list[int] | None = None):
         # Validate input data
-        from sklearn.utils.validation import check_array, check_X_y
+        from sklearn.utils.validation import check_X_y
 
         # Will raise ValueError if X is empty or invalid
         # For regressor, ensure y is numeric
-        X, y = check_X_y(X, y, ensure_2d=True, allow_nd=False, 
-                         dtype={"X": None, "y": np.float64},  # Force y to be float64
+        X, y = check_X_y(X, y, ensure_2d=True, allow_nd=False,
+                         dtype=np.float64,  # Force all data to be float64
                          multi_output=False, force_all_finite=False)
 
         if categorical_feature_indices is not None:
