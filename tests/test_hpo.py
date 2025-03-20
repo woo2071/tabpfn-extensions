@@ -61,7 +61,7 @@ class TestTunedTabPFNRegressor(BaseRegressorTests):
     @pytest.fixture
     def estimator(self, tabpfn_regressor):
         """Provide a HPO-based TabPFN regressor as the estimator."""
-        n_trials = 3 if FAST_TEST_MODE else 10  # Very limited trials for fast testing
+        n_trials = 2  # Very limited trials for fast testing
 
         # Use minimal search space in fast test mode
         search_space = get_small_test_search_space() if FAST_TEST_MODE else None

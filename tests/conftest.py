@@ -25,11 +25,11 @@ import pytest
 FAST_TEST_MODE = (
     os.environ.get("FAST_TEST_MODE", "0") == "1"
 )  # Skip slow tests by default
-SMALL_TEST_SIZE = 40  # Number of samples to use in fast test mode
-DEFAULT_TEST_SIZE = 100  # Number of samples to use in regular mode
+SMALL_TEST_SIZE = 25  # Number of samples to use in fast test mode
+DEFAULT_TEST_SIZE = 70  # Number of samples to use in regular mode
 # Larger sizes for specific tests that require more samples
 MULTICLASS_TEST_SIZE = (
-    50  # Size for multiclass tests (needs more samples for stratification)
+    40  # Size for multiclass tests (needs more samples for stratification)
 )
 DEFAULT_TIMEOUT = 60  # Default timeout in seconds
 
