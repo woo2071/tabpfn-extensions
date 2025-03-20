@@ -343,8 +343,21 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
 
     def _get_tags(self):
         """Return tags from parent and for this estimator."""
-        tags = super()._get_tags()
-        tags.update({"allow_nan": True})
+        # Use get_tags from sklearn_compat which works with all sklearn versions
+        from tabpfn_extensions.misc.sklearn_compat import get_tags
+
+        tags = get_tags(super())
+
+        # Set allow_nan flag consistently across sklearn versions
+        if hasattr(tags, "input_tags"):
+            # For sklearn 1.6+
+            tags.input_tags.allow_nan = True
+        else:
+            # For older sklearn versions
+            tags_dict = dict(tags) if not isinstance(tags, dict) else tags.copy()
+            tags_dict["allow_nan"] = True
+            return tags_dict
+
         return tags
 
     def init_base_estimator(self):
@@ -538,8 +551,21 @@ class RandomForestTabPFNRegressor(RandomForestTabPFNBase, RandomForestRegressor)
 
     def _get_tags(self):
         """Return tags from parent and for this estimator."""
-        tags = super()._get_tags()
-        tags.update({"allow_nan": True})
+        # Use get_tags from sklearn_compat which works with all sklearn versions
+        from tabpfn_extensions.misc.sklearn_compat import get_tags
+
+        tags = get_tags(super())
+
+        # Set allow_nan flag consistently across sklearn versions
+        if hasattr(tags, "input_tags"):
+            # For sklearn 1.6+
+            tags.input_tags.allow_nan = True
+        else:
+            # For older sklearn versions
+            tags_dict = dict(tags) if not isinstance(tags, dict) else tags.copy()
+            tags_dict["allow_nan"] = True
+            return tags_dict
+
         return tags
 
     def __init__(

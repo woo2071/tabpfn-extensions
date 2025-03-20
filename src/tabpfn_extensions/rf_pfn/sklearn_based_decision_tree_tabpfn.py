@@ -498,7 +498,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         if torch.is_tensor(X):
             X = X.cpu().numpy()
         X = np.array(X, dtype=np.float64)
-        np.nan_to_num(X, copy=False, nan=0.0)
+        X = np.nan_to_num(X, nan=-1000.0)
         return X
 
     def _apply_tree(self, X: np.ndarray) -> np.ndarray:
@@ -510,7 +510,8 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
             A dense matrix of shape (n_samples, n_nodes, n_estimators),
             though we typically only have 1 estimator.
         """
-        decision_path = self.get_tree().decision_path(X)
+        X_preprocessed = self._preprocess_data_for_tree(X)
+        decision_path = self.get_tree().decision_path(X_preprocessed)
         return np.expand_dims(decision_path.todense(), axis=2)
 
     def _apply_tree_train(
@@ -644,8 +645,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
             self.tabpfn.categorical_features_indices = self.categorical_features
 
         # Find leaf membership in X
-        X_preprocessed = self._preprocess_data_for_tree(X)
-        X_leaf_nodes = self._apply_tree(X_preprocessed)
+        X_leaf_nodes = self._apply_tree(X)
         n_samples, n_nodes, n_estims = X_leaf_nodes.shape
 
         # Track intermediate predictions
@@ -752,7 +752,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
                     X_train_leaf,
                     y_train_leaf,
                     leaf_id,
-                    X_preprocessed,
+                    X,
                     test_sample_indices,
                 )
 

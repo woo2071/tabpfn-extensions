@@ -37,9 +37,6 @@ def feature_selection(
         SequentialFeatureSelector: Fitted feature selector that can be used
             to transform data to use only the selected features
     """
-    if hasattr(estimator, "fit_at_predict_time") and estimator.fit_at_predict_time:
-        pass
-
     if hasattr(estimator, "show_progress"):
         show_progress_ = estimator.show_progress
         estimator.show_progress = False
