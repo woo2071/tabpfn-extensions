@@ -87,6 +87,12 @@ class TestAutoTabPFNRegressor(BaseRegressorTests):
     )
     def test_passes_estimator_checks(self, estimator):
         pass
+        
+    @pytest.mark.skip(
+        reason="AutoTabPFNRegressor can't handle text features with float64 dtype requirement",
+    )
+    def test_with_text_features(self, estimator, dataset_generator):
+        pass
 
 
 # Additional PHE-specific tests

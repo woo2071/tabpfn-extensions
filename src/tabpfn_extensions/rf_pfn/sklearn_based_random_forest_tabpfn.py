@@ -337,28 +337,14 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
         self.adaptive_tree_skip_class_missing = adaptive_tree_skip_class_missing
         self.n_estimators = n_estimators
 
-    def __sklearn_tags__(self):
-        # Create a dictionary of tags directly (without relying on parent __sklearn_tags__)
-        # This avoids issues with sklearn's internal estimation of "allow_nan" which
-        # tries to create a new base estimator without tabpfn
-        tags = {
-            "allow_nan": True,
-            "estimator_type": "classifier",
-            "poor_score": False,
-            "no_validation": False,
-            "multioutput": False,
-            "requires_positive_X": False,
-            "requires_positive_y": False,
-            "X_types": ["2darray"],
-            "preserves_dtype": [],
-            # Skip tests that aren't compatible with a nested TabPFN implementation
-            "_skip_test": [
-                "check_estimators_dtypes",
-                "check_fit_score_takes_y",
-                "check_estimator_sparse_data",
-                "check_parameters_default_constructible",
-            ],
-        }
+    def __sklearn_js_tags__(self):
+        """Return tags for sklearn compatibility."""
+        return {"allow_nan": True}
+        
+    def _get_tags(self):
+        """Return tags from parent and for this estimator."""
+        tags = super()._get_tags()
+        tags.update({"allow_nan": True})
         return tags
 
     def init_base_estimator(self):
@@ -546,28 +532,14 @@ class RandomForestTabPFNRegressor(RandomForestTabPFNBase, RandomForestRegressor)
 
     task_type = "regression"
 
-    def __sklearn_tags__(self):
-        # Create a dictionary of tags directly (without relying on parent __sklearn_tags__)
-        # This avoids issues with sklearn's internal estimation of "allow_nan" which
-        # tries to create a new base estimator without tabpfn
-        tags = {
-            "allow_nan": True,
-            "estimator_type": "regressor",
-            "poor_score": False,
-            "no_validation": False,
-            "multioutput": False,
-            "requires_positive_X": False,
-            "requires_positive_y": False,
-            "X_types": ["2darray"],
-            "preserves_dtype": [],
-            # Skip tests that aren't compatible with a nested TabPFN implementation
-            "_skip_test": [
-                "check_estimators_dtypes",
-                "check_fit_score_takes_y",
-                "check_estimator_sparse_data",
-                "check_parameters_default_constructible",
-            ],
-        }
+    def __sklearn_js_tags__(self):
+        """Return tags for sklearn compatibility."""
+        return {"allow_nan": True}
+        
+    def _get_tags(self):
+        """Return tags from parent and for this estimator."""
+        tags = super()._get_tags()
+        tags.update({"allow_nan": True})
         return tags
 
     def __init__(
