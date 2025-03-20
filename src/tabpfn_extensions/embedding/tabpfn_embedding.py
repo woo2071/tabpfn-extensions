@@ -32,7 +32,7 @@ class TabPFNEmbedding:
 
     Examples:
     ```python
-    >>> from tabpfn import TabPFNClassifier  # Must use full TabPFN package
+    >>> from tabpfn_extensions import TabPFNClassifier  # Must use full TabPFN package
     >>> from sklearn.model_selection import train_test_split
     >>> from sklearn.datasets import fetch_openml
     >>> X, y = fetch_openml(name='kc1', version=1, as_frame=False, return_X_y=True)
