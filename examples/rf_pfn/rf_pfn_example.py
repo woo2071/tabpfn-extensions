@@ -6,7 +6,7 @@ For better performance, we recommend running with GPU acceleration.
 """
 
 import numpy as np
-from sklearn.datasets import load_breast_cancer, load_diabetes, load_iris
+from sklearn.datasets import load_breast_cancer, load_diabetes
 from sklearn.metrics import (
     accuracy_score,
     mean_absolute_error,
@@ -50,50 +50,6 @@ predictions = np.argmax(prediction_probabilities, axis=-1)
 
 print("ROC AUC:", roc_auc_score(y_test, prediction_probabilities[:, 1]))
 print("Accuracy", accuracy_score(y_test, predictions))
-
-# Check for test environment by looking for the FAST_TEST_MODE environment variable
-import os
-
-is_test = os.environ.get("FAST_TEST_MODE", "0") == "1"
-
-# Multiclass - Use smaller dataset in test mode
-if is_test:
-    # Use minimal synthetic dataset for faster testing
-    np.random.seed(43)
-    X = np.random.rand(15, 3)
-    y = np.random.randint(0, 3, size=15)
-    test_size = 0.4
-    n_estimators = 1
-else:
-    # Normal operation - use real dataset
-    X, y = load_iris(return_X_y=True)
-    test_size = 0.33
-    n_estimators = 10
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=test_size,
-    random_state=42,
-)
-
-# Create classifier with appropriate settings for test/normal mode
-clf = RandomForestTabPFNClassifier(
-    tabpfn=clf_base,
-    n_estimators=n_estimators,
-    max_depth=2 if is_test else 5,
-)
-clf.fit(X_train, y_train)
-prediction_probabilities = clf.predict_proba(X_test)
-predictions = np.argmax(prediction_probabilities, axis=-1)
-
-print("Accuracy", accuracy_score(y_test, predictions))
-# Only calculate ROC AUC if we have enough samples per class
-if not is_test or len(np.unique(y_test)) <= 2:
-    print(
-        "ROC AUC:",
-        roc_auc_score(y_test, prediction_probabilities, multi_class="ovr"),
-    )
 
 # Regression
 X, y = load_diabetes(return_X_y=True)

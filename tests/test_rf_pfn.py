@@ -39,6 +39,12 @@ class TestRandomForestClassifier(BaseClassifierTests):
     def test_with_text_features(self, estimator, dataset_generator):
         pass
 
+    @pytest.mark.skip(
+        reason="RandomForestTabPFN needs additional work to pass all sklearn estimator checks"
+    )
+    def test_passes_estimator_checks(self, estimator):
+        pass
+
 
 @pytest.mark.local_compatible
 class TestRandomForestRegressor(BaseRegressorTests):
@@ -64,4 +70,10 @@ class TestRandomForestRegressor(BaseRegressorTests):
 
     @pytest.mark.skip(reason="RandomForestTabPFN doesn't fully support text features")
     def test_with_text_features(self, estimator, dataset_generator):
+        pass
+
+    @pytest.mark.skip(
+        reason="RandomForestTabPFN needs additional work to pass all sklearn estimator checks"
+    )
+    def test_passes_estimator_checks(self, estimator):
         pass

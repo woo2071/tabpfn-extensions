@@ -1,4 +1,9 @@
-"""This example demonstrates how to use the SHAP-IQ library to explain a TabPFN model."""
+"""This example demonstrates how to use the SHAP-IQ library to explain a TabPFN model.
+
+WARNING: This example may run slowly on CPU-only systems.
+For better performance, we recommend running with GPU acceleration.
+SHAP value computation involves multiple TabPFN model evaluations, which is computationally intensive.
+"""
 
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split

@@ -8,7 +8,7 @@ It will not work with the TabPFN client (pip install tabpfn-client) because
 the embedding functionality is not available in the client version.
 """
 
-from sklearn.datasets import fetch_openml
+from sklearn.datasets import load_breast_cancer, load_diabetes
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import accuracy_score, r2_score
 from sklearn.model_selection import train_test_split
@@ -20,13 +20,18 @@ from tabpfn_extensions.embedding import TabPFNEmbedding
 
 # Load and evaluate classification dataset
 print("Loading classification dataset (kc1)...")
-X, y = fetch_openml(name="kc1", version=1, as_frame=False, return_X_y=True)
+df = load_breast_cancer(return_X_y=False)
+X, y = df["data"], df["target"]
+attribute_names = df["feature_names"]
+
+# Split the data
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
-    test_size=0.33,
+    test_size=0.5,
     random_state=42,
 )
+
 
 # Train and evaluate vanilla logistic regression
 model = LogisticRegression()
@@ -83,8 +88,7 @@ print(
 )
 
 # Load and evaluate regression dataset
-print("\nLoading regression dataset (kin8nm)...")
-X, y = fetch_openml(name="kin8nm", version=1, as_frame=False, return_X_y=True)
+X, y = load_diabetes(return_X_y=True)
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,

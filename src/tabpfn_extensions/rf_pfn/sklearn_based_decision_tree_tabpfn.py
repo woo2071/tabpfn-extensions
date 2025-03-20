@@ -5,11 +5,15 @@ from __future__ import annotations
 
 import random
 import warnings
-from typing import Any
+
+# For type checking only
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch
-from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -18,71 +22,13 @@ from sklearn.tree import (
     DecisionTreeClassifier,
     DecisionTreeRegressor,
 )
+from sklearn.utils.validation import check_is_fitted
 
+from tabpfn_extensions.scoring.scoring_utils import (
+    score_classification,
+    score_regression,
+)
 from tabpfn_extensions.utils import softmax
-
-
-class ScoringUtils:
-    """Utility class for scoring classification and regression models.
-
-    This class provides static methods for scoring classification and regression
-    models with various metrics. It is used by the decision tree models to
-    evaluate performance during adaptive tree pruning.
-    """
-
-    @staticmethod
-    def score_classification(
-        metric_name: str,
-        y_true: NDArray[Any] | None = None,
-        y_proba: NDArray[np.float64] | None = None,
-    ) -> float:
-        """Score classification results with the given metric.
-
-        Parameters
-        ----------
-        metric_name : str
-            Name of the metric to use, e.g. "roc"
-        y_true : NDArray[Any], optional
-            True labels
-        y_proba : NDArray[float], optional
-            Predicted probabilities
-
-        Returns
-        -------
-        float
-            Score value (higher is better).
-        """
-        if metric_name == "roc":
-            # Dummy ROC-like measure
-            return 0.5
-        return 0.0
-
-    @staticmethod
-    def score_regression(
-        metric_name: str,
-        y_true: NDArray[np.float64],
-        y_pred: NDArray[np.float64],
-    ) -> float:
-        """Score regression results with the given metric.
-
-        Parameters
-        ----------
-        metric_name : str
-            Name of the metric to use, e.g. "rmse"
-        y_true : NDArray[float]
-            True values
-        y_pred : NDArray[float]
-            Predicted values
-
-        Returns
-        -------
-        float
-            Score value (lower is better for error metrics).
-        """
-        if metric_name == "rmse":
-            return np.sqrt(np.mean((y_true - y_pred) ** 2))
-        return 9999.0
-
 
 ###############################################################################
 #                             BASE DECISION TREE                              #
@@ -240,7 +186,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
 
         # Initialize internal flags/structures that will be set during fit
         self._need_post_fit: bool = False
-        self.decision_tree = None
+        self._decision_tree = None
 
         # Handling possible differences in sklearn versions, specifically monotonic_cst
         optional_args_filtered = {}
@@ -271,15 +217,11 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
     def _validate_tabpfn_init(self, tabpfn: Any) -> None:
         """Ensure the `tabpfn` argument is not None during initialization.
 
-        Parameters
-        ----------
-        tabpfn : Any
-            The TabPFN instance to validate
+        Args:
+            tabpfn: The TabPFN instance to validate
 
-        Raises
-        ------
-        ValueError
-            If tabpfn is None
+        Raises:
+            ValueError: If tabpfn is None
         """
         if tabpfn is None:
             raise ValueError(
@@ -292,10 +234,8 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         This ensures the TabPFN instance is still available when needed during
         prediction or fitting operations.
 
-        Raises
-        ------
-        ValueError
-            If self.tabpfn is None at runtime
+        Raises:
+            ValueError: If self.tabpfn is None at runtime
         """
         if self.tabpfn is None:
             raise ValueError("TabPFN was None at runtime - cannot proceed.")
@@ -303,20 +243,16 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
     def _more_tags(self) -> dict[str, Any]:
         """Additional sklearn tags (for older sklearn versions).
 
-        Returns
-        -------
-        Dict[str, Any]
-            A dictionary of tags recognized by scikit-learn.
+        Returns:
+            Dict[str, Any]: A dictionary of tags recognized by scikit-learn.
         """
         return {"multilabel": True, "allow_nan": True}
 
     def __sklearn_tags__(self) -> dict[str, Any]:
         """Official sklearn method for returning estimator tags.
 
-        Returns
-        -------
-        Dict[str, Any]
-            A dictionary of tags recognized by scikit-learn.
+        Returns:
+            Dict[str, Any]: A dictionary of tags recognized by scikit-learn.
         """
         tags = super().__sklearn_tags__()
         tags["allow_nan"] = True
@@ -341,21 +277,15 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         2. Fitting TabPFN models at the leaves (or at all nodes if fit_nodes=True)
         3. Optionally performing adaptive pruning if adaptive_tree=True
 
-        Parameters
-        ----------
-        X : NDArray of shape (n_samples, n_features)
-            The training input samples.
-        y : NDArray of shape (n_samples,) or (n_samples, n_outputs)
-            The target values (class labels for classification, real values for regression).
-        sample_weight : NDArray, optional
-            Sample weights. If None, then samples are equally weighted.
-        check_input : bool, default=True
-            Whether to validate the input data arrays.
+        Args:
+            X: The training input samples, shape (n_samples, n_features).
+            y: The target values (class labels for classification, real values for regression),
+                shape (n_samples,) or (n_samples, n_outputs).
+            sample_weight: Sample weights. If None, then samples are equally weighted.
+            check_input: Whether to validate the input data arrays. Default is True.
 
-        Returns
-        -------
-        self : DecisionTreeTabPFNBase
-            Fitted estimator.
+        Returns:
+            self: Fitted estimator.
         """
         return self._fit(X, y, sample_weight=sample_weight, check_input=check_input)
 
@@ -382,7 +312,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         missing_values_in_feature_mask : np.ndarray, optional
             Unused placeholder for older code or possible expansions.
 
-        Returns
+        Returns:
         -------
         self : DecisionTreeTabPFNBase
             The fitted model.
@@ -394,6 +324,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         self._leaf_train_data = {}
         self._label_encoder = LabelEncoder()
         self._need_post_fit = False
+        self._node_prediction_type = {}
 
         # Make sure tabpfn is valid
         self._validate_tabpfn_runtime()
@@ -505,9 +436,9 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
             X_valid = X_preproc_valid = y_valid = sw_valid = None
 
         # Build the sklearn decision tree
-        self.decision_tree = self._init_decision_tree()
-        self.decision_tree.fit(X_preproc_train, y_train, sample_weight=sw_train)
-        self._tree = self.decision_tree  # for sklearn compatibility
+        self._decision_tree = self._init_decision_tree()
+        self._decision_tree.fit(X_preproc_train, y_train, sample_weight=sw_train)
+        self._tree = self._decision_tree  # for sklearn compatibility
 
         # Keep references for potential post-fitting (leaf-level fitting)
         self.X = X
@@ -537,7 +468,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
 
         Overridden by child classes for classifier vs regressor.
 
-        Returns
+        Returns:
         -------
         BaseDecisionTree
             An instance of a scikit-learn DecisionTreeClassifier or DecisionTreeRegressor.
@@ -547,7 +478,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
     def _post_fit(self) -> None:
         """Hook after the decision tree is fitted. Can be used for final prints/logs."""
         if self.verbose:
-            print("DecisionTree + TabPFN fit completed (tree structure built).")
+            pass
 
     def _preprocess_data_for_tree(self, X: np.ndarray) -> np.ndarray:
         """Handle missing data prior to feeding into the decision tree.
@@ -559,7 +490,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         X : np.ndarray
             Input features, possibly containing NaNs.
 
-        Returns
+        Returns:
         -------
         np.ndarray
             A copy of X with NaNs replaced by 0.0.
@@ -573,7 +504,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
     def _apply_tree(self, X: np.ndarray) -> np.ndarray:
         """Apply the fitted tree to X, returning a matrix of leaf membership.
 
-        Returns
+        Returns:
         -------
         np.ndarray
             A dense matrix of shape (n_samples, n_nodes, n_estimators),
@@ -589,7 +520,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Apply the tree for training data, returning leaf membership plus (X, y) unchanged.
 
-        Returns
+        Returns:
         -------
         leaf_matrix : np.ndarray
             Shape (n_samples, n_nodes, n_estimators)
@@ -603,27 +534,21 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
     def get_tree(self) -> BaseDecisionTree:
         """Return the underlying fitted sklearn decision tree.
 
-        Returns
-        -------
-        DecisionTreeClassifier or DecisionTreeRegressor
-            The fitted decision tree.
+        Returns:
+            DecisionTreeClassifier or DecisionTreeRegressor: The fitted decision tree.
 
-        Raises
-        ------
-        AttributeError
-            If the model has not been fitted yet.
+        Raises:
+            sklearn.exceptions.NotFittedError: If the model has not been fitted yet.
         """
-        if not hasattr(self, "_tree"):
-            raise AttributeError(
-                "Tree not initialized. Call 'fit' before using this estimator.",
-            )
+        # This will raise NotFittedError if the model is not fitted
+        check_is_fitted(self, ["_tree", "X", "y"])
         return self._tree
 
     @property
     def tree_(self):
         """Expose the fitted tree for sklearn compatibility.
 
-        Returns
+        Returns:
         -------
         sklearn.tree._tree.Tree
             Underlying scikit-learn tree object.
@@ -688,7 +613,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         check_input : bool, default=True
             Whether to validate input arrays.
 
-        Returns
+        Returns:
         -------
         np.ndarray
             The final predictions (probabilities for classification, or continuous values for regression).
@@ -844,15 +769,17 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
 
                 # Decide best approach if in adaptive mode
                 if self.adaptive_tree:
-                    if y is not None:
-                        self._pruning_set_node_prediction_type(
-                            y,
-                            y_prob_averaging,
-                            y_prob_replacement,
-                            y_metric,
-                            est_id,
-                            leaf_id,
-                        )
+                    # If not adaptive, we simply do replacement
+                    y_prob[est_id][leaf_id] = y_prob_replacement
+                elif y is not None:
+                    self._pruning_set_node_prediction_type(
+                        y,
+                        y_prob_averaging,
+                        y_prob_replacement,
+                        y_metric,
+                        est_id,
+                        leaf_id,
+                    )
                     self._pruning_set_predictions(
                         y_prob,
                         y_prob_averaging,
@@ -860,13 +787,12 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
                         est_id,
                         leaf_id,
                     )
-                    if y is not None:
-                        y_metric[est_id][leaf_id] = self._score(
-                            y,
-                            y_prob[est_id][leaf_id],
-                        )
+                    y_metric[est_id][leaf_id] = self._score(
+                        y,
+                        y_prob[est_id][leaf_id],
+                    )
                 else:
-                    # If not adaptive, we simply do replacement
+                    # If not validating and not adaptive, just use replacement
                     y_prob[est_id][leaf_id] = y_prob_replacement
 
         # Final predictions come from the last estimator’s last node
@@ -933,7 +859,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         leaf_id : int
             Index of the current leaf/node.
 
-        Returns
+        Returns:
         -------
         y_prob_averaging : np.ndarray
             Updated predictions using an “averaging” rule.
@@ -973,7 +899,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
                 row_sums = y_prob_averaging.sum(axis=1, keepdims=True)
                 row_sums[row_sums == 0] = 1.0
                 y_prob_averaging /= row_sums
-        else:
+        elif self.task_type == "regression":
             # Regression -> simply average
             y_prob_averaging[test_sample_indices] += leaf_prediction[
                 test_sample_indices
@@ -1074,7 +1000,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
             If True, fill with zeros. Otherwise use uniform for classification,
             or zeros for regression.
 
-        Returns
+        Returns:
         -------
         np.ndarray
             An appropriately sized array of initial predictions.
@@ -1100,7 +1026,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         y_pred : np.ndarray
             Predictions (probabilities for classification, continuous for regression).
 
-        Returns
+        Returns:
         -------
         float
             The performance score (higher is better for classification,
@@ -1108,14 +1034,16 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         """
         metric = self._get_optimize_metric()
         if self.task_type == "multiclass":
-            return ScoringUtils.score_classification(metric, y_true, y_pred)
+            return score_classification(metric, y_true, y_pred)
+        elif self.task_type == "regression":
+            return score_regression(metric, y_true, y_pred)
         else:
-            return ScoringUtils.score_regression(metric, y_true, y_pred)
+            raise NotImplementedError
 
     def _get_optimize_metric(self) -> str:
         """Return which metric name to use for scoring.
 
-        Returns
+        Returns:
         -------
         str
             The metric name, e.g. "roc" for classification or "rmse" for regression.
@@ -1149,7 +1077,7 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         indices : np.ndarray
             The indices in X_full that belong to this leaf.
 
-        Returns
+        Returns:
         -------
         np.ndarray
             Predictions for all n_samples, but only indices are filled meaningfully.
@@ -1207,7 +1135,7 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
         indices : np.ndarray
             Indices of X_full that belong to this leaf.
 
-        Returns
+        Returns:
         -------
         np.ndarray
             A (n_samples, n_classes) array of probabilities, with only `indices` updated for this leaf.
@@ -1249,42 +1177,36 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
     def predict(self, X: np.ndarray, check_input: bool = True) -> np.ndarray:
         """Predict class labels for X.
 
-        Parameters
-        ----------
-        X : np.ndarray
-            Input features.
-        check_input : bool, default=True
-            Whether to validate input arrays.
+        Args:
+            X: Input features.
+            check_input: Whether to validate input arrays. Default is True.
 
-        Returns
-        -------
-        np.ndarray
-            Predicted class labels.
+        Returns:
+            np.ndarray: Predicted class labels.
         """
+        # Validate the model is fitted
+        check_is_fitted(self, ["_tree", "X", "y"])
         proba = self.predict_proba(X, check_input=check_input)
         return np.argmax(proba, axis=1)
 
     def predict_proba(self, X: np.ndarray, check_input: bool = True) -> np.ndarray:
         """Predict class probabilities for X using the TabPFN leaves.
 
-        Parameters
-        ----------
-        X : np.ndarray
-            Input features.
-        check_input : bool, default=True
-            Whether to validate input arrays.
+        Args:
+            X: Input features.
+            check_input: Whether to validate input arrays. Default is True.
 
-        Returns
-        -------
-        np.ndarray
-            Predicted probabilities of shape (n_samples, n_classes).
+        Returns:
+            np.ndarray: Predicted probabilities of shape (n_samples, n_classes).
         """
+        # Validate the model is fitted
+        check_is_fitted(self, ["_tree", "X", "y"])
         return self._predict_internal(X, check_input=check_input)
 
     def _post_fit(self) -> None:
         """Optional hook after the decision tree is fitted."""
         if self.verbose:
-            print("DecisionTreeTabPFNClassifier fit complete. Tree is ready.")
+            pass
 
 
 ###############################################################################
@@ -1398,7 +1320,7 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
         indices : np.ndarray
             Indices of X_full that fall into this leaf.
 
-        Returns
+        Returns:
         -------
         np.ndarray
             An array of shape (n_samples,) with predictions; only `indices` are updated.
@@ -1447,11 +1369,13 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
         check_input : bool, default=True
             Whether to validate the input arrays.
 
-        Returns
+        Returns:
         -------
         np.ndarray
             Continuous predictions of shape (n_samples,).
         """
+        # Validate the model is fitted
+        check_is_fitted(self, ["_tree", "X", "y"])
         return self._predict_internal(X, check_input=check_input)
 
     def predict_full(self, X: np.ndarray) -> np.ndarray:
@@ -1462,14 +1386,16 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
         X : np.ndarray
             Input features.
 
-        Returns
+        Returns:
         -------
         np.ndarray
             Continuous predictions of shape (n_samples,).
         """
+        # Validate the model is fitted
+        check_is_fitted(self, ["_tree", "X", "y"])
         return self._predict_internal(X, check_input=False)
 
     def _post_fit(self) -> None:
         """Optional hook after the regressor's tree is fitted."""
         if self.verbose:
-            print("DecisionTreeTabPFNRegressor fit complete. Tree is ready.")
+            pass
