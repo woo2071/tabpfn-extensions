@@ -25,7 +25,7 @@ import pytest
 FAST_TEST_MODE = (
     os.environ.get("FAST_TEST_MODE", "0") == "1"
 )  # Skip slow tests by default
-SMALL_TEST_SIZE = 20  # Number of samples to use in fast test mode
+SMALL_TEST_SIZE = 40  # Number of samples to use in fast test mode
 DEFAULT_TEST_SIZE = 100  # Number of samples to use in regular mode
 # Larger sizes for specific tests that require more samples
 MULTICLASS_TEST_SIZE = (

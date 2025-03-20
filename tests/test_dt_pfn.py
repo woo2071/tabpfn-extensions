@@ -46,6 +46,7 @@ class TestAdaptiveDecisionTreeClassifier(TestDecisionTreeClassifier):
             tabpfn=tabpfn_classifier,
             max_depth=3,  # Shallow tree for speed
             random_state=42,
+            adaptive_tree=True,
         )
 
 
@@ -57,7 +58,7 @@ class TestDecisionTreeRegressor(BaseRegressorTests):
         """Provide a TabPFN-based DecisionTreeRegressor as the estimator."""
         return DecisionTreeTabPFNRegressor(
             tabpfn=tabpfn_regressor,
-            max_depth=3,  # Shallow tree for speed
+            max_depth=2,  # Shallow tree for speed
             random_state=42,
         )
 
@@ -79,7 +80,7 @@ class TestAdaptiveDecisionTreeRegressor(TestDecisionTreeRegressor):
         """Provide a TabPFN-based DecisionTreeRegressor as the estimator."""
         return DecisionTreeTabPFNRegressor(
             tabpfn=tabpfn_regressor,
-            max_depth=3,  # Shallow tree for speed
+            max_depth=2,  # Shallow tree for speed
             random_state=42,
             adaptive_tree=True,
         )

@@ -5,13 +5,11 @@ from __future__ import annotations
 
 import random
 import warnings
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 import torch
 from numpy.typing import NDArray
-
-# scikit-learn imports
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -20,160 +18,195 @@ from sklearn.tree import (
     DecisionTreeClassifier,
     DecisionTreeRegressor,
 )
-from sklearn.utils.validation import (
-    check_X_y,
-    check_array,
-    check_is_fitted,
-    _check_sample_weight,
-)
-from sklearn.utils.multiclass import check_classification_targets
 
-
-###############################################################################
-#                           Minimal Mock TabPFN Classes                       #
-###############################################################################
-
-class _MinimalTabPFNClassifier:
-    """A stub classifier that mimics a TabPFNClassifier interface.
-
-    This lets us instantiate DecisionTreeTabPFNClassifier with no arguments,
-    so we can pass scikit-learn's check_estimator. Feel free to replace
-    with a real TabPFNClassifier in actual usage.
-    """
-
-    def __init__(self):
-        self.random_state = None
-        self.categorical_features_indices: Optional[List[int]] = None
-
-    def fit(self, X: np.ndarray, y: np.ndarray) -> _MinimalTabPFNClassifier:
-        # do nothing, just return self
-        return self
-
-    def predict_proba(self, X: np.ndarray) -> np.ndarray:
-        # Return uniform distribution over 2 classes by default
-        if X.shape[0] == 0:
-            return np.zeros((0, 2))
-        return np.ones((X.shape[0], 2), dtype=np.float64) / 2
-
-    def predict(self, X: np.ndarray) -> np.ndarray:
-        # Always return class 0
-        return np.zeros(X.shape[0], dtype=int)
-
-
-class _MinimalTabPFNRegressor:
-    """A stub regressor that mimics a TabPFNRegressor interface."""
-
-    def __init__(self):
-        self.random_state = None
-        self.categorical_features_indices: Optional[List[int]] = None
-
-    def fit(self, X: np.ndarray, y: np.ndarray) -> _MinimalTabPFNRegressor:
-        return self
-
-    def predict(self, X: np.ndarray) -> np.ndarray:
-        # Return zero predictions
-        return np.zeros(X.shape[0], dtype=np.float64)
-
-
-###############################################################################
-#                           Scoring Utilities                                 #
-###############################################################################
-
-def softmax(x: np.ndarray) -> np.ndarray:
-    """Numerically stable softmax for 2D arrays."""
-    # Typically x: (n_samples, n_classes)
-    x_max = np.max(x, axis=1, keepdims=True)
-    e = np.exp(x - x_max)
-    return e / np.sum(e, axis=1, keepdims=True)
+from tabpfn_extensions.utils import softmax
 
 
 class ScoringUtils:
-    """Utility class for scoring classification and regression models."""
+    """Utility class for scoring classification and regression models.
+
+    This class provides static methods for scoring classification and regression
+    models with various metrics. It is used by the decision tree models to
+    evaluate performance during adaptive tree pruning.
+    """
 
     @staticmethod
     def score_classification(
-            metric_name: str,
-            y_true: np.ndarray,
-            y_proba: np.ndarray,
+        metric_name: str,
+        y_true: NDArray[Any] | None = None,
+        y_proba: NDArray[np.float64] | None = None,
     ) -> float:
-        """Score classification results with a given metric name."""
+        """Score classification results with the given metric.
+
+        Parameters
+        ----------
+        metric_name : str
+            Name of the metric to use, e.g. "roc"
+        y_true : NDArray[Any], optional
+            True labels
+        y_proba : NDArray[float], optional
+            Predicted probabilities
+
+        Returns
+        -------
+        float
+            Score value (higher is better).
+        """
         if metric_name == "roc":
-            # A dummy or placeholder "ROC-like" measure for illustration
-            # Return 0.5 to indicate "random" baseline, or user can implement real AUC.
+            # Dummy ROC-like measure
             return 0.5
-        # Fallback
         return 0.0
 
     @staticmethod
     def score_regression(
-            metric_name: str,
-            y_true: np.ndarray,
-            y_pred: np.ndarray,
+        metric_name: str,
+        y_true: NDArray[np.float64],
+        y_pred: NDArray[np.float64],
     ) -> float:
-        """Score regression results with the given metric name."""
+        """Score regression results with the given metric.
+
+        Parameters
+        ----------
+        metric_name : str
+            Name of the metric to use, e.g. "rmse"
+        y_true : NDArray[float]
+            True values
+        y_pred : NDArray[float]
+            Predicted values
+
+        Returns
+        -------
+        float
+            Score value (lower is better for error metrics).
+        """
         if metric_name == "rmse":
             return np.sqrt(np.mean((y_true - y_pred) ** 2))
-        # Fallback large error
         return 9999.0
 
 
 ###############################################################################
-#                            Base TabPFN Decision Tree                        #
+#                             BASE DECISION TREE                              #
 ###############################################################################
 
 
 class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
-    """Abstract base class combining an sklearn Decision Tree with TabPFN at the leaves.
+    """Abstract base class combining a scikit-learn Decision Tree with TabPFN at the leaves.
 
-    Subclasses (classifier or regressor) override task-specific logic.
+    This class provides a hybrid approach by combining the standard decision tree
+    splitting algorithm from scikit-learn with TabPFN models at the leaves or
+    internal nodes. This allows for both interpretable tree-based partitioning
+    and high-performance TabPFN prediction.
+
+    Key features:
+    -------------
+    • Inherits from sklearn's BaseDecisionTree to leverage standard tree splitting algorithms
+    • Uses TabPFN (Classifier or Regressor) to fit leaf nodes (or all internal nodes)
+    • Provides adaptive pruning logic (optional) that dynamically determines optimal tree depth
+    • Supports both classification and regression through specialized subclasses
+
+    Subclasses:
+    -----------
+    • DecisionTreeTabPFNClassifier - for classification tasks
+    • DecisionTreeTabPFNRegressor - for regression tasks
+
+    Parameters
+    ----------
+    tabpfn : Any
+        A TabPFN instance (TabPFNClassifier or TabPFNRegressor) that will be used at tree nodes.
+    criterion : str
+        The function to measure the quality of a split (from sklearn).
+    splitter : str
+        The strategy used to choose the split at each node (e.g. "best" or "random").
+    max_depth : int, optional
+        The maximum depth of the tree (None means unlimited).
+    min_samples_split : int
+        The minimum number of samples required to split an internal node.
+    min_samples_leaf : int
+        The minimum number of samples required to be at a leaf node.
+    min_weight_fraction_leaf : float
+        The minimum weighted fraction of the sum total of weights required to be at a leaf node.
+    max_features : Union[int, float, str, None]
+        The number of features to consider when looking for the best split.
+    random_state : Union[int, np.random.RandomState, None]
+        Controls the randomness of the estimator.
+    max_leaf_nodes : Optional[int]
+        If not None, grow a tree with max_leaf_nodes in best-first fashion.
+    min_impurity_decrease : float
+        A node will be split if this split induces a decrease of the impurity >= this value.
+    class_weight : Optional[Union[Dict[int, float], str]]
+        Only used in classification. Dict of class -> weight or “balanced”.
+    ccp_alpha : float
+        Complexity parameter used for Minimal Cost-Complexity Pruning (non-negative).
+    monotonic_cst : Any
+        Optional monotonicity constraints (depending on sklearn version).
+    categorical_features : Optional[List[int]]
+        Indices of categorical features for TabPFN usage (if any).
+    verbose : Union[bool, int]
+        Verbosity level; higher values produce more output.
+    show_progress : bool
+        Whether to show progress bars for leaf/node fitting using TabPFN.
+    fit_nodes : bool
+        Whether to fit TabPFN at internal nodes (True) or only final leaves (False).
+    tree_seed : int
+        Used to set seeds for TabPFN fitting in each node.
+    adaptive_tree : bool
+        Whether to do adaptive node-by-node pruning using a hold-out strategy.
+    adaptive_tree_min_train_samples : int
+        Minimum number of training samples required to fit a TabPFN in a node.
+    adaptive_tree_max_train_samples : int
+        Maximum number of training samples above which a node might be pruned if not a final leaf.
+    adaptive_tree_min_valid_samples_fraction_of_train : float
+        Fraction controlling the minimum valid/test points to consider a node for re-fitting.
+    adaptive_tree_overwrite_metric : Optional[str]
+        If set, overrides the default metric for pruning. E.g., "roc" or "rmse".
+    adaptive_tree_test_size : float
+        Fraction of data to hold out for adaptive pruning if no separate valid set is provided.
+    average_logits : bool
+        Whether to average logits (True) or probabilities (False) when combining predictions.
+    adaptive_tree_skip_class_missing : bool
+        If True, skip re-fitting if the node’s training set does not contain all classes (classification only).
     """
 
-    # For classification: "multiclass"; for regression: "regression"
-    task_type: Optional[str] = None
+    # Task type set by subclasses: "multiclass" or "regression"
+    task_type: str | None = None
 
     def __init__(
-            self,
-            *,
-            # Tree hyperparams
-            criterion: str = "gini",
-            splitter: str = "best",
-            max_depth: Optional[int] = None,
-            min_samples_split: int = 2,
-            min_samples_leaf: int = 1,
-            min_weight_fraction_leaf: float = 0.0,
-            max_features: Union[int, float, str, None] = None,
-            random_state: Union[int, np.random.RandomState, None] = None,
-            max_leaf_nodes: Optional[int] = None,
-            min_impurity_decrease: float = 0.0,
-            class_weight: Optional[Union[dict, str]] = None,  # Only used in classification
-            ccp_alpha: float = 0.0,
-            monotonic_cst: Any = None,
-            # TabPFN logic
-            tabpfn: Any = None,  # This should be a TabPFNClassifier/TabPFNRegressor, or None
-            categorical_features: Optional[List[int]] = None,
-            verbose: Union[bool, int] = False,
-            show_progress: bool = False,
-            fit_nodes: bool = True,
-            tree_seed: int = 0,
-            adaptive_tree: bool = True,
-            adaptive_tree_min_train_samples: int = 50,
-            adaptive_tree_max_train_samples: int = 2000,
-            adaptive_tree_min_valid_samples_fraction_of_train: float = 0.2,
-            adaptive_tree_overwrite_metric: Optional[str] = None,
-            adaptive_tree_test_size: float = 0.2,
-            average_logits: bool = True,
-            adaptive_tree_skip_class_missing: bool = True,
+        self,
+        *,
+        # Decision Tree arguments
+        criterion: str = "gini",
+        splitter: str = "best",
+        max_depth: int | None = None,
+        min_samples_split: int = 1000,
+        min_samples_leaf: int = 1,
+        min_weight_fraction_leaf: float = 0.0,
+        max_features: int | float | str | None = None,
+        random_state: int | np.random.RandomState | None = None,
+        max_leaf_nodes: int | None = None,
+        min_impurity_decrease: float = 0.0,
+        class_weight: dict[int, float] | str | None = None,
+        ccp_alpha: float = 0.0,
+        monotonic_cst: Any = None,
+        # TabPFN argument
+        tabpfn: Any = None,  # TabPFNClassifier or TabPFNRegressor
+        categorical_features: list[int] | None = None,
+        verbose: bool | int = False,
+        show_progress: bool = False,
+        fit_nodes: bool = True,
+        tree_seed: int = 0,
+        adaptive_tree: bool = True,
+        adaptive_tree_min_train_samples: int = 50,
+        adaptive_tree_max_train_samples: int = 2000,
+        adaptive_tree_min_valid_samples_fraction_of_train: float = 0.2,
+        adaptive_tree_overwrite_metric: str | None = None,
+        adaptive_tree_test_size: float = 0.2,
+        average_logits: bool = True,
+        adaptive_tree_skip_class_missing: bool = True,
     ):
-        # If user didn't pass a TabPFN, create a minimal stub
-        # so we can pass check_estimator, etc.
-        # If you're using a real TabPFN, remove this fallback.
-        if tabpfn is None:
-            # Decide which type of stub to create based on task_type
-            if self.task_type == "regression":
-                tabpfn = _MinimalTabPFNRegressor()
-            else:
-                tabpfn = _MinimalTabPFNClassifier()
+        # Validate that tabpfn is not None and appropriate
+        self._validate_tabpfn_init(tabpfn)
 
+        # Collect recognized arguments
         self.tabpfn = tabpfn
         self.criterion = criterion
         self.splitter = splitter
@@ -205,18 +238,16 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         self.average_logits = average_logits
         self.adaptive_tree_skip_class_missing = adaptive_tree_skip_class_missing
 
-        # Internal placeholders
-        self._leaf_nodes: Optional[np.ndarray] = None
-        self._leaf_train_data: Dict[int, Dict[int, Tuple[np.ndarray, np.ndarray]]] = {}
+        # Initialize internal flags/structures that will be set during fit
         self._need_post_fit: bool = False
-        self.decision_tree: Optional[BaseDecisionTree] = None
+        self.decision_tree = None
 
-        # Potential monotonic constraint (depends on sklearn version)
-        optional_args = {}
+        # Handling possible differences in sklearn versions, specifically monotonic_cst
+        optional_args_filtered = {}
         if BaseDecisionTree.__init__.__code__.co_varnames.__contains__("monotonic_cst"):
-            optional_args["monotonic_cst"] = monotonic_cst
+            optional_args_filtered["monotonic_cst"] = monotonic_cst
 
-        # Initialize the parent BaseDecisionTree
+        # Initialize the underlying DecisionTree
         super().__init__(
             criterion=self.criterion,
             splitter=self.splitter,
@@ -229,500 +260,917 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
             max_leaf_nodes=self.max_leaf_nodes,
             min_impurity_decrease=self.min_impurity_decrease,
             ccp_alpha=self.ccp_alpha,
-            **optional_args,
+            **optional_args_filtered,
         )
 
-        # Remove tabpfn's random_state if present; we'll handle seeds ourselves
-        if hasattr(self.tabpfn, "random_state"):
+        # If the user gave a TabPFN, we do not want it to have a random_state forcibly set
+        # because we handle seeds ourselves at each node
+        if self.tabpfn is not None:
             self.tabpfn.random_state = None
 
-    def _more_tags(self) -> dict:
-        """Extra tags to satisfy scikit-learn check_estimator."""
-        # "allow_nan": we handle missing values by substituting 0.0
-        # "X_types": '2darray' means we expect a 2D array for X
-        # "requires_fit": True means predict can't be called before fit
-        # "multioutput": set to False if we don't handle multioutput natively
-        tags = super()._more_tags()
-        tags.update({
-            "allow_nan": True,
-            "X_types": ["2darray"],
-            "requires_fit": True,
-            "multioutput": False,
-        })
+    def _validate_tabpfn_init(self, tabpfn: Any) -> None:
+        """Ensure the `tabpfn` argument is not None during initialization.
+
+        Parameters
+        ----------
+        tabpfn : Any
+            The TabPFN instance to validate
+
+        Raises
+        ------
+        ValueError
+            If tabpfn is None
+        """
+        if tabpfn is None:
+            raise ValueError(
+                "tabpfn parameter cannot be None. Provide a TabPFNClassifier or TabPFNRegressor instance.",
+            )
+
+    def _validate_tabpfn_runtime(self) -> None:
+        """Validate the TabPFN instance at runtime before using it.
+
+        This ensures the TabPFN instance is still available when needed during
+        prediction or fitting operations.
+
+        Raises
+        ------
+        ValueError
+            If self.tabpfn is None at runtime
+        """
+        if self.tabpfn is None:
+            raise ValueError("TabPFN was None at runtime - cannot proceed.")
+
+    def _more_tags(self) -> dict[str, Any]:
+        """Additional sklearn tags (for older sklearn versions).
+
+        Returns
+        -------
+        Dict[str, Any]
+            A dictionary of tags recognized by scikit-learn.
+        """
+        return {"multilabel": True, "allow_nan": True}
+
+    def __sklearn_tags__(self) -> dict[str, Any]:
+        """Official sklearn method for returning estimator tags.
+
+        Returns
+        -------
+        Dict[str, Any]
+            A dictionary of tags recognized by scikit-learn.
+        """
+        tags = super().__sklearn_tags__()
+        tags["allow_nan"] = True
+        # Usually "estimator_type" gets set automatically, but ensure it here:
+        if self.task_type == "multiclass":
+            tags["estimator_type"] = "classifier"
+        else:
+            tags["estimator_type"] = "regressor"
         return tags
 
     def fit(
-            self,
-            X: np.ndarray,
-            y: np.ndarray,
-            sample_weight: Optional[np.ndarray] = None,
-            check_input: bool = True,
+        self,
+        X: NDArray[np.float64],
+        y: NDArray[Any],
+        sample_weight: NDArray[np.float64] | None = None,
+        check_input: bool = True,
     ) -> DecisionTreeTabPFNBase:
-        """Public fit method, ensures scikit-learn compatibility."""
-        # Standard input checks
-        if check_input:
-            # By default, we let scikit-learn attempt to ensure 2D
-            # force_all_finite=False so we can handle NaNs ourselves
-            X, y = check_X_y(X, y, force_all_finite=False, dtype=None)
-            sample_weight = _check_sample_weight(sample_weight, X, dtype=np.float64)
+        """Fit the DecisionTree + TabPFN model.
 
-        # If classification, do a quick target check
-        if self.task_type == "multiclass":
-            check_classification_targets(y)
+        This method trains the hybrid model by:
+        1. Building a decision tree structure
+        2. Fitting TabPFN models at the leaves (or at all nodes if fit_nodes=True)
+        3. Optionally performing adaptive pruning if adaptive_tree=True
 
-        # Remember the number of features
-        self.n_features_in_ = X.shape[1]
+        Parameters
+        ----------
+        X : NDArray of shape (n_samples, n_features)
+            The training input samples.
+        y : NDArray of shape (n_samples,) or (n_samples, n_outputs)
+            The target values (class labels for classification, real values for regression).
+        sample_weight : NDArray, optional
+            Sample weights. If None, then samples are equally weighted.
+        check_input : bool, default=True
+            Whether to validate the input data arrays.
 
-        return self._fit(
-            X,
-            y,
-            sample_weight=sample_weight,
-            check_input=False,
-        )
+        Returns
+        -------
+        self : DecisionTreeTabPFNBase
+            Fitted estimator.
+        """
+        return self._fit(X, y, sample_weight=sample_weight, check_input=check_input)
 
     def _fit(
-            self,
-            X: np.ndarray,
-            y: np.ndarray,
-            sample_weight: Optional[np.ndarray],
-            check_input: bool = False,
-            missing_values_in_feature_mask: Optional[np.ndarray] = None,
+        self,
+        X: NDArray[Any],
+        y: NDArray[Any],
+        sample_weight: NDArray[Any] | None = None,
+        check_input: bool = True,
+        missing_values_in_feature_mask: np.ndarray | None = None,  # Unused placeholder
     ) -> DecisionTreeTabPFNBase:
-        """Internal fit method, after input checks are done."""
-        # If we didn't set a manual tree_seed, pick a random one
-        if self.tree_seed == 0:
-            self.tree_seed = random.randint(1, 9999999)
+        """Internal method to fit the DecisionTree-TabPFN model on X, y.
 
-        # Replace NaNs in X
+        Parameters
+        ----------
+        X : NDArray
+            Training features of shape (n_samples, n_features).
+        y : NDArray
+            Target labels/values of shape (n_samples,).
+        sample_weight : NDArray, optional
+            Sample weights for each sample.
+        check_input : bool
+            Whether to check inputs.
+        missing_values_in_feature_mask : np.ndarray, optional
+            Unused placeholder for older code or possible expansions.
+
+        Returns
+        -------
+        self : DecisionTreeTabPFNBase
+            The fitted model.
+        """
+        # Initialize attributes (per scikit-learn conventions)
+        self.n_classes_ = 0
+        self.classes_ = []
+        self._leaf_nodes = []
+        self._leaf_train_data = {}
+        self._label_encoder = LabelEncoder()
+        self._need_post_fit = False
+
+        # Make sure tabpfn is valid
+        self._validate_tabpfn_runtime()
+
+        # Possibly randomize tree_seed if not set
+        if self.tree_seed == 0:
+            self.tree_seed = random.randint(1, 10000)
+
+        # Minimal input checks
+        if check_input:
+            # You could rely on sklearn's internal checks in super().fit,
+            # but minimal checks can be done here if needed
+            pass
+
+        # Convert torch tensor -> numpy if needed, handle NaNs
         X_preprocessed = self._preprocess_data_for_tree(X)
 
-        # Save references for potential reuse
-        self.X = X_preprocessed
-        self.y = y
-        self.sample_weight_ = sample_weight
+        if sample_weight is None:
+            sample_weight = np.ones((X_preprocessed.shape[0],), dtype=np.float64)
 
-        # Distinguish classification vs regression
+        # Setup classes_ or n_classes_ if needed
         if self.task_type == "multiclass":
-            self.classes_, counts = np.unique(y, return_counts=True)
+            # Classification
+            self.classes_ = np.unique(y)
             self.n_classes_ = len(self.classes_)
         else:
-            self.n_classes_ = 1
+            # Regression
+            self.n_classes_ = (
+                1  # Not used for numeric tasks, but keep it for consistency
+            )
 
-        # Possibly do a train/validation split for adaptive pruning
+        # Possibly label-encode y for classification if your TabPFN needs it
+        # (Here we just rely on uniqueness checks above.)
+        y_ = y.copy()
+
+        # If adaptive_tree is on, do a train/validation split
         if self.adaptive_tree:
-            # For classification, you might want to stratify
-            stratify = y if self.task_type == "multiclass" else None
+            stratify = y_ if (self.task_type == "multiclass") else None
 
-            if X_preprocessed.shape[0] < 10:
-                # Not enough data to split
+            # Basic checks for classification to see if splitting is feasible
+            if self.task_type == "multiclass":
+                unique_classes, counts = np.unique(y_, return_counts=True)
+                # Disable adaptive tree in extreme cases
+                if counts.min() == 1 or len(unique_classes) < 2:
+                    self.adaptive_tree = False
+                elif len(unique_classes) > int(len(y_) * self.adaptive_tree_test_size):
+                    self.adaptive_tree_test_size = min(
+                        0.5,
+                        len(unique_classes) / len(y_) * 1.5,
+                    )
+            if len(y_) < 10:
                 self.adaptive_tree = False
 
             if self.adaptive_tree:
-                (X_train, X_valid,
-                 y_train, y_valid,
-                 sw_train, sw_valid) = self._split_data_for_adaptive(
-                    X_preprocessed, y, sample_weight, stratify=stratify
+                (
+                    X_train,
+                    X_valid,
+                    X_preproc_train,
+                    X_preproc_valid,
+                    y_train,
+                    y_valid,
+                    sw_train,
+                    sw_valid,
+                ) = train_test_split(
+                    X,
+                    X_preprocessed,
+                    y_,
+                    sample_weight,
+                    test_size=self.adaptive_tree_test_size,
+                    random_state=self.random_state,
+                    stratify=stratify,
                 )
+
+                # Safety check – if split is empty, revert
+                if len(y_train) == 0 or len(y_valid) == 0:
+                    self.adaptive_tree = False
+                    X_train, X_preproc_train, y_train, sw_train = (
+                        X,
+                        X_preprocessed,
+                        y_,
+                        sample_weight,
+                    )
+                    X_valid = X_preproc_valid = y_valid = sw_valid = None
+
+                # If classification, also ensure train/valid has same classes
+                if (
+                    self.task_type == "multiclass"
+                    and self.adaptive_tree
+                    and (len(np.unique(y_train)) != len(np.unique(y_valid)))
+                ):
+                    self.adaptive_tree = False
             else:
-                X_train, X_valid, y_train, y_valid, sw_train, sw_valid = (
-                    X_preprocessed, None, y, None, sample_weight, None
+                # If we were disabled, keep all data as training
+                X_train, X_preproc_train, y_train, sw_train = (
+                    X,
+                    X_preprocessed,
+                    y_,
+                    sample_weight,
                 )
+                X_valid = X_preproc_valid = y_valid = sw_valid = None
         else:
-            X_train, X_valid, y_train, y_valid, sw_train, sw_valid = (
-                X_preprocessed, None, y, None, sample_weight, None
+            # Not adaptive, everything is train
+            X_train, X_preproc_train, y_train, sw_train = (
+                X,
+                X_preprocessed,
+                y_,
+                sample_weight,
             )
+            X_valid = X_preproc_valid = y_valid = sw_valid = None
 
-        # Build the underlying scikit-learn DecisionTree
-        self.decision_tree = self._init_decision_tree_impl()
-        self.decision_tree.fit(X_train, y_train, sample_weight=sw_train)
-        self._tree = self.decision_tree
+        # Build the sklearn decision tree
+        self.decision_tree = self._init_decision_tree()
+        self.decision_tree.fit(X_preproc_train, y_train, sample_weight=sw_train)
+        self._tree = self.decision_tree  # for sklearn compatibility
 
-        # Store some references for later usage
-        self.train_X_ = X_train
-        self.train_y_ = y_train
-        self.train_sw_ = sw_train
+        # Keep references for potential post-fitting (leaf-level fitting)
+        self.X = X
+        self.y = y_
+        self.train_X = X_train
+        self.train_X_preprocessed = X_preproc_train
+        self.train_y = y_train
+        self.train_sample_weight = sw_train
 
-        self.valid_X_ = X_valid
-        self.valid_y_ = y_valid
-        self.valid_sw_ = sw_valid
+        if self.adaptive_tree:
+            self.valid_X = X_valid
+            self.valid_X_preprocessed = X_preproc_valid
+            self.valid_y = y_valid
+            self.valid_sample_weight = sw_valid
 
-        # We'll lazily do the TabPFN leaf-fitting on the first call to predict
-        # so we can possibly adapt to the valid set. Mark it:
+        # We will do a leaf-fitting step on demand (lazy) in predict
         self._need_post_fit = True
+
+        # If verbose, optionally do it right away:
+        if self.verbose:
+            self._post_fit()
 
         return self
 
-    def _split_data_for_adaptive(
-            self,
-            X: np.ndarray,
-            y: np.ndarray,
-            sample_weight: Optional[np.ndarray],
-            stratify: Optional[np.ndarray] = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Helper to split data for adaptive-tree pruning."""
-        # In classification, user might want to ensure each class appears in train/test
-        X_train, X_valid, y_train, y_valid, sw_train, sw_valid = train_test_split(
-            X,
-            y,
-            sample_weight,
-            test_size=self.adaptive_tree_test_size,
-            random_state=self.random_state,
-            stratify=stratify,
-        )
+    def _init_decision_tree(self) -> BaseDecisionTree:
+        """Initialize the underlying scikit-learn Decision Tree.
 
-        # If either split is empty, revert to no splitting
-        if len(y_train) == 0 or len(y_valid) == 0:
-            self.adaptive_tree = False
-            return X, None, y, None, sample_weight, None
+        Overridden by child classes for classifier vs regressor.
 
-        # If classification, ensure each set still has consistent classes
-        if self.task_type == "multiclass":
-            train_classes = np.unique(y_train)
-            valid_classes = np.unique(y_valid)
-            if len(train_classes) < 2 or len(valid_classes) < 1:
-                # Not enough classes for adaptive
-                self.adaptive_tree = False
-                return X, None, y, None, sample_weight, None
+        Returns
+        -------
+        BaseDecisionTree
+            An instance of a scikit-learn DecisionTreeClassifier or DecisionTreeRegressor.
+        """
+        raise NotImplementedError("Must be implemented in subclass.")
 
-        return X_train, X_valid, y_train, y_valid, sw_train, sw_valid
-
-    def _init_decision_tree_impl(self) -> BaseDecisionTree:
-        """Overridden in subclasses to create DecisionTreeClassifier or DecisionTreeRegressor."""
-        raise NotImplementedError()
+    def _post_fit(self) -> None:
+        """Hook after the decision tree is fitted. Can be used for final prints/logs."""
+        if self.verbose:
+            print("DecisionTree + TabPFN fit completed (tree structure built).")
 
     def _preprocess_data_for_tree(self, X: np.ndarray) -> np.ndarray:
-        """Replace NaN with 0.0, as a simplistic missing-value handling."""
+        """Handle missing data prior to feeding into the decision tree.
+
+        Replaces NaNs with 0.0, consistent with simple old-code approach.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Input features, possibly containing NaNs.
+
+        Returns
+        -------
+        np.ndarray
+            A copy of X with NaNs replaced by 0.0.
+        """
         if torch.is_tensor(X):
             X = X.cpu().numpy()
-        X = np.array(X, dtype=np.float64, copy=True)
+        X = np.array(X, dtype=np.float64)
         np.nan_to_num(X, copy=False, nan=0.0)
         return X
 
-    def predict(self, X: np.ndarray, check_input: bool = True) -> np.ndarray:
-        """Dummy predict method in base class, overridden in subclasses."""
-        raise NotImplementedError()
+    def _apply_tree(self, X: np.ndarray) -> np.ndarray:
+        """Apply the fitted tree to X, returning a matrix of leaf membership.
+
+        Returns
+        -------
+        np.ndarray
+            A dense matrix of shape (n_samples, n_nodes, n_estimators),
+            though we typically only have 1 estimator.
+        """
+        decision_path = self.get_tree().decision_path(X)
+        return np.expand_dims(decision_path.todense(), axis=2)
+
+    def _apply_tree_train(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Apply the tree for training data, returning leaf membership plus (X, y) unchanged.
+
+        Returns
+        -------
+        leaf_matrix : np.ndarray
+            Shape (n_samples, n_nodes, n_estimators)
+        X_array : np.ndarray
+            Same as X input
+        y_array : np.ndarray
+            Same as y input
+        """
+        return self._apply_tree(X), X, y
 
     def get_tree(self) -> BaseDecisionTree:
-        """Return the underlying fitted sklearn decision tree."""
-        check_is_fitted(self, "_tree")
+        """Return the underlying fitted sklearn decision tree.
+
+        Returns
+        -------
+        DecisionTreeClassifier or DecisionTreeRegressor
+            The fitted decision tree.
+
+        Raises
+        ------
+        AttributeError
+            If the model has not been fitted yet.
+        """
+        if not hasattr(self, "_tree"):
+            raise AttributeError(
+                "Tree not initialized. Call 'fit' before using this estimator.",
+            )
         return self._tree
 
     @property
     def tree_(self):
-        """Expose the fitted sklearn tree object."""
+        """Expose the fitted tree for sklearn compatibility.
+
+        Returns
+        -------
+        sklearn.tree._tree.Tree
+            Underlying scikit-learn tree object.
+        """
         return self.get_tree().tree_
 
-    def _apply_tree(self, X: np.ndarray) -> np.ndarray:
-        """Apply the fitted decision tree to X, returning (n_samples, n_nodes, n_estimators)."""
-        check_is_fitted(self, "_tree")
-        dp = self._tree.decision_path(X)
-        return np.expand_dims(dp.todense(), axis=2)
+    def fit_leaves(
+        self,
+        train_X: np.ndarray,
+        train_y: np.ndarray,
+    ) -> None:
+        """Fit a TabPFN model in each leaf node (or each node, if self.fit_nodes=True).
 
-    def _predict_internal(
-            self,
-            X: np.ndarray,
-            y: Optional[np.ndarray],
-            is_final_prediction: bool,
-    ) -> np.ndarray:
-        """Core logic that handles leaf-fitting with TabPFN, adaptive pruning, etc.
+        This populates an internal dictionary of training data for each leaf
+        so that TabPFN can make predictions at these leaves.
 
-        If `is_final_prediction=True`, we do the final predictions. If not, we
-        might be evaluating on a validation set for pruning.
+        Parameters
+        ----------
+        train_X : np.ndarray
+            Training features for all samples.
+        train_y : np.ndarray
+            Training labels/targets for all samples.
         """
-        # Possibly do the TabPFN leaf-fitting if needed
-        if self._need_post_fit and is_final_prediction:
-            self._need_post_fit = False
+        self._leaf_train_data = {}
+        leaf_node_matrix, _, _ = self._apply_tree_train(train_X, train_y)
+        self._leaf_nodes = leaf_node_matrix
 
-            # 1) If adaptive_tree is true, fit leaves on train + test them on valid
-            if self.adaptive_tree and self.valid_X_ is not None and self.valid_y_ is not None:
-                self._fit_leaves(self.train_X_, self.train_y_)
-                # Evaluate node-level improvements on valid set
-                self._predict_internal(self.valid_X_, self.valid_y_, is_final_prediction=False)
+        n_samples, n_nodes, n_estims = leaf_node_matrix.shape
 
-            # 2) Then, fit leaves on the entire dataset
-            self._fit_leaves(self.X, self.y)
+        for estimator_id in range(n_estims):
+            self._leaf_train_data[estimator_id] = {}
+            for leaf_id in range(n_nodes):
+                indices = np.argwhere(
+                    leaf_node_matrix[:, leaf_id, estimator_id],
+                ).ravel()
+                X_leaf_samples = np.take(train_X, indices, axis=0)
+                y_leaf_samples = np.take(train_y, indices, axis=0).ravel()
 
-        # Now produce predictions, optionally with pruning logic
-        X_leaf_nodes = self._apply_tree(X)
-        n_samples, n_nodes, n_estims = X_leaf_nodes.shape
-        # We'll keep track of predictions in a nested dict: y_prob[est_id][node_id].
-        y_prob: Dict[int, Dict[int, np.ndarray]] = {}
-        # Similarly track a "metric" (score) for each node if we are pruning:
-        y_metric: Dict[int, Dict[int, float]] = {}
-        do_pruning = (y is not None and self.adaptive_tree and not is_final_prediction)
-        if do_pruning:
-            self._node_prediction_type: Dict[int, Dict[int, str]] = {}
-
-        for est_id in range(n_estims):
-            y_prob[est_id] = {}
-            y_metric[est_id] = {}
-            if do_pruning:
-                self._node_prediction_type[est_id] = {}
-
-            # We might show progress bar if show_progress=True
-            node_range = range(n_nodes)
-
-            for leaf_id in node_range:
-                self._pruning_init_node_predictions(
-                    leaf_id, est_id, y_prob, y_metric, n_nodes, n_samples
+                self._leaf_train_data[estimator_id][leaf_id] = (
+                    X_leaf_samples,
+                    y_leaf_samples,
                 )
 
-                # Indices of X that belong to this node
-                test_idx = np.argwhere(X_leaf_nodes[:, leaf_id, est_id]).ravel()
+    def _predict_internal(
+        self,
+        X: np.ndarray,
+        y: np.ndarray | None = None,
+        check_input: bool = True,
+    ) -> np.ndarray:
+        """Internal method used to produce probabilities or regression predictions,
+        with optional adaptive pruning logic.
 
-                # If no test samples here, skip
-                if len(test_idx) == 0:
-                    if do_pruning:
-                        self._node_prediction_type[est_id][leaf_id] = "previous"
+        If y is given and we have adaptive_tree=True, node-level pruning is applied.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Features to predict.
+        y : np.ndarray, optional
+            Target values, only required if we are in adaptive pruning mode
+            and need to compare node performance.
+        check_input : bool, default=True
+            Whether to validate input arrays.
+
+        Returns
+        -------
+        np.ndarray
+            The final predictions (probabilities for classification, or continuous values for regression).
+        """
+        # If we haven't yet done the final leaf fit, do it here
+        if self._need_post_fit:
+            self._need_post_fit = False
+            if self.adaptive_tree:
+                # Fit leaves on train data, check performance on valid data if available
+                self.fit_leaves(self.train_X, self.train_y)
+                if (
+                    hasattr(self, "valid_X")
+                    and self.valid_X is not None
+                    and self.valid_y is not None
+                ):
+                    # Force a pass to evaluate node performance
+                    # so we can prune or decide node updates
+                    self._predict_internal(
+                        self.valid_X,
+                        self.valid_y,
+                        check_input=False,
+                    )
+            # Now fit leaves again using the entire dataset (train + valid, effectively)
+            self.fit_leaves(self.X, self.y)
+
+        # Assign TabPFN’s categorical features if needed
+        if self.tabpfn is not None:
+            self.tabpfn.categorical_features_indices = self.categorical_features
+
+        # Find leaf membership in X
+        X_preprocessed = self._preprocess_data_for_tree(X)
+        X_leaf_nodes = self._apply_tree(X_preprocessed)
+        n_samples, n_nodes, n_estims = X_leaf_nodes.shape
+
+        # Track intermediate predictions
+        y_prob: dict[int, dict[int, np.ndarray]] = {}
+        y_metric: dict[int, dict[int, float]] = {}
+
+        # If pruning, track how each node is updated
+        do_pruning = (y is not None) and self.adaptive_tree
+        if do_pruning:
+            self._node_prediction_type: dict[int, dict[int, str]] = {}
+
+        for est_id in range(n_estims):
+            if do_pruning:
+                self._node_prediction_type[est_id] = {}
+            y_prob[est_id] = {}
+            y_metric[est_id] = {}
+            if self.show_progress:
+                import tqdm.auto
+
+                node_iter = tqdm.auto.tqdm(range(n_nodes), desc=f"Estimator {est_id}")
+            else:
+                node_iter = range(n_nodes)
+
+            for leaf_id in node_iter:
+                self._pruning_init_node_predictions(
+                    leaf_id,
+                    est_id,
+                    y_prob,
+                    y_metric,
+                    n_nodes,
+                    n_samples,
+                )
+                if est_id > 0 and leaf_id == 0:
+                    # Skip repeated re-initialization if multiple trees
                     continue
 
-                # Get training data for this node
+                # Gather test-sample indices that belong to this leaf
+                test_sample_indices = np.argwhere(
+                    X_leaf_nodes[:, leaf_id, est_id],
+                ).ravel()
+
+                # Gather training samples that belong to this leaf
                 X_train_leaf, y_train_leaf = self._leaf_train_data[est_id][leaf_id]
 
-                if len(X_train_leaf) == 0:
+                # If no training or test samples in this node, skip
+                if (X_train_leaf.shape[0] == 0) or (len(test_sample_indices) == 0):
                     if do_pruning:
                         self._node_prediction_type[est_id][leaf_id] = "previous"
                     continue
 
-                # Check if final leaf (no membership in subsequent nodes)
-                is_leaf = (X_leaf_nodes[test_idx, leaf_id + 1:, est_id].sum() == 0.0)
+                # Determine if this is a final leaf
+                # If the sum of membership in subsequent nodes is zero, it’s final
+                is_leaf = (
+                    X_leaf_nodes[test_sample_indices, leaf_id + 1 :, est_id].sum()
+                    == 0.0
+                )
 
-                # If not a leaf and we don't fit internal nodes, skip
-                if (not is_leaf) and (not self.fit_nodes):
+                # If it's not a leaf and we are not fitting internal nodes, skip
+                # (unless leaf_id==0 and we do a top-level check for adaptive_tree)
+                if (
+                    (not is_leaf)
+                    and (not self.fit_nodes)
+                    and not (leaf_id == 0 and self.adaptive_tree)
+                ):
                     if do_pruning:
                         self._node_prediction_type[est_id][leaf_id] = "previous"
                     continue
 
-                # Additional adaptive checks:
-                if do_pruning and leaf_id != 0:
-                    # If classification with missing classes, skip
-                    if (self.task_type == "multiclass"
-                            and len(np.unique(y_train_leaf)) < self.n_classes_
-                            and self.adaptive_tree_skip_class_missing):
-                        self._node_prediction_type[est_id][leaf_id] = "previous"
+                # Additional adaptive checks
+                if self.adaptive_tree and leaf_id != 0:
+                    # Possibly skip if node was previously pruned
+                    if (y is None) and (
+                        self._node_prediction_type[est_id][leaf_id] == "previous"
+                    ):
                         continue
-                    # If too few or too many training points
-                    n_leaf_train = X_train_leaf.shape[0]
-                    if (n_leaf_train < self.adaptive_tree_min_train_samples
-                            or n_leaf_train > self.adaptive_tree_max_train_samples and not is_leaf):
+                    # Skip if classification is missing a class
+                    if (
+                        self.task_type == "multiclass"
+                        and len(np.unique(y_train_leaf)) < self.n_classes_
+                        and self.adaptive_tree_skip_class_missing
+                    ):
                         self._node_prediction_type[est_id][leaf_id] = "previous"
                         continue
 
-                # Actually predict from TabPFN
+                    # Skip if too few or too many training points
+                    if (
+                        (X_train_leaf.shape[0] < self.adaptive_tree_min_train_samples)
+                        or (
+                            len(test_sample_indices)
+                            < self.adaptive_tree_min_valid_samples_fraction_of_train
+                            * self.adaptive_tree_min_train_samples
+                        )
+                        or (
+                            X_train_leaf.shape[0] > self.adaptive_tree_max_train_samples
+                            and not is_leaf
+                        )
+                    ):
+                        if do_pruning:
+                            self._node_prediction_type[est_id][leaf_id] = "previous"
+                        continue
+
+                # Perform leaf-level TabPFN prediction
                 leaf_prediction = self._predict_leaf(
                     X_train_leaf,
                     y_train_leaf,
                     leaf_id,
-                    X,
-                    test_idx,
-                )
-                # Build "replacement" vs "averaging" predictions
-                y_prob_averaging, y_prob_replacement = self._pruning_get_prediction_type_results(
-                    y_prob[est_id][leaf_id],
-                    leaf_prediction,
-                    test_idx
+                    X_preprocessed,
+                    test_sample_indices,
                 )
 
-                # Decide which approach if pruning
-                if do_pruning:
-                    # Compare old vs new with some metric
-                    self._pruning_set_node_prediction_type(
-                        y, y_prob_averaging, y_prob_replacement,
-                        y_metric, est_id, leaf_id
+                # Evaluate “averaging” and “replacement” for pruning
+                y_prob_averaging, y_prob_replacement = (
+                    self._pruning_get_prediction_type_results(
+                        y_prob,
+                        leaf_prediction,
+                        test_sample_indices,
+                        est_id,
+                        leaf_id,
                     )
+                )
+
+                # Decide best approach if in adaptive mode
+                if self.adaptive_tree:
+                    if y is not None:
+                        self._pruning_set_node_prediction_type(
+                            y,
+                            y_prob_averaging,
+                            y_prob_replacement,
+                            y_metric,
+                            est_id,
+                            leaf_id,
+                        )
                     self._pruning_set_predictions(
-                        y_prob, y_prob_averaging, y_prob_replacement,
-                        est_id, leaf_id
+                        y_prob,
+                        y_prob_averaging,
+                        y_prob_replacement,
+                        est_id,
+                        leaf_id,
                     )
-                    # Save metric
-                    y_metric[est_id][leaf_id] = self._score(
-                        y, y_prob[est_id][leaf_id]
-                    )
+                    if y is not None:
+                        y_metric[est_id][leaf_id] = self._score(
+                            y,
+                            y_prob[est_id][leaf_id],
+                        )
                 else:
-                    # If not pruning, do direct replacement
+                    # If not adaptive, we simply do replacement
                     y_prob[est_id][leaf_id] = y_prob_replacement
 
         # Final predictions come from the last estimator’s last node
         return y_prob[n_estims - 1][n_nodes - 1]
 
     def _pruning_init_node_predictions(
-            self,
-            leaf_id: int,
-            estimator_id: int,
-            y_prob: Dict[int, Dict[int, np.ndarray]],
-            y_metric: Dict[int, Dict[int, float]],
-            n_nodes: int,
-            n_samples: int,
+        self,
+        leaf_id: int,
+        estimator_id: int,
+        y_prob: dict[int, dict[int, np.ndarray]],
+        y_metric: dict[int, dict[int, float]],
+        n_nodes: int,
+        n_samples: int,
     ) -> None:
-        """Initialize the predictions for node (leaf_id, estimator_id)."""
-        if estimator_id not in y_prob:
-            y_prob[estimator_id] = {}
-            y_metric[estimator_id] = {}
+        """Initialize node predictions for the pruning logic.
 
-        if leaf_id == 0 and estimator_id == 0:
-            # Start from uniform or zero
-            y_prob[estimator_id][leaf_id] = self._init_eval_array(n_samples, to_zero=True)
-            y_metric[estimator_id][leaf_id] = 0.0
+        Parameters
+        ----------
+        leaf_id : int
+            Index of the leaf/node being processed.
+        estimator_id : int
+            Index of the current estimator (if multiple).
+        y_prob : dict
+            Nested dictionary of predictions.
+        y_metric : dict
+            Nested dictionary of scores/metrics.
+        n_nodes : int
+            Total number of nodes in the tree.
+        n_samples : int
+            Number of samples in X.
+        """
+        if estimator_id == 0 and leaf_id == 0:
+            y_prob[0][0] = self._init_eval_probability_array(n_samples, to_zero=True)
+            y_metric[0][0] = 0.0
         elif leaf_id == 0 and estimator_id > 0:
-            # In multiple-estimator scenario, copy from the last node of previous estimator
+            # If first leaf of new estimator, carry from last node of previous estimator
             y_prob[estimator_id][leaf_id] = y_prob[estimator_id - 1][n_nodes - 1]
             y_metric[estimator_id][leaf_id] = y_metric[estimator_id - 1][n_nodes - 1]
         else:
-            # Copy from previous node of the same estimator
+            # Use last leaf of the same estimator
             y_prob[estimator_id][leaf_id] = y_prob[estimator_id][leaf_id - 1]
             y_metric[estimator_id][leaf_id] = y_metric[estimator_id][leaf_id - 1]
 
     def _pruning_get_prediction_type_results(
-            self,
-            current_prediction: np.ndarray,
-            leaf_prediction: np.ndarray,
-            test_idx: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """Compute 'averaging' vs 'replacement' predictions at the node."""
-        # Replacement
-        y_prob_replacement = current_prediction.copy()
-        y_prob_replacement[test_idx] = leaf_prediction[test_idx]
+        self,
+        y_eval_prob: dict[int, dict[int, np.ndarray]],
+        leaf_prediction: np.ndarray,
+        test_sample_indices: np.ndarray,
+        estimator_id: int,
+        leaf_id: int,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Produce the “averaging” and “replacement” predictions for pruning decisions.
 
-        # Averaging
-        y_prob_averaging = current_prediction.copy()
-        if self.task_type == "multiclass":
-            # For averaging we combine old + new
-            if self.average_logits:
-                # Log-sum-exp style
-                y_prob_averaging[test_idx] = np.log(y_prob_averaging[test_idx] + 1e-8)
-                leaf_pred_log = np.log(leaf_prediction[test_idx] + 1e-8)
-                y_prob_averaging[test_idx] += leaf_pred_log
-                y_prob_averaging[test_idx] = softmax(y_prob_averaging[test_idx])
-            else:
-                y_prob_averaging[test_idx] += leaf_prediction[test_idx]
-                row_sums = y_prob_averaging.sum(axis=1, keepdims=True)
-                row_sums[row_sums == 0] = 1.0
-                y_prob_averaging /= row_sums
-        else:
-            # Regression -> direct average
-            y_prob_averaging[test_idx] += leaf_prediction[test_idx]
-            y_prob_averaging[test_idx] /= 2.0
+        Parameters
+        ----------
+        y_eval_prob : dict
+            Nested dictionary of predictions.
+        leaf_prediction : np.ndarray
+            Predictions from the newly fitted leaf (for relevant samples).
+        test_sample_indices : np.ndarray
+            Indices of the test samples that fall into this leaf.
+        estimator_id : int
+            Index of the current estimator.
+        leaf_id : int
+            Index of the current leaf/node.
 
-        # For replacement in classification, re-normalize
+        Returns
+        -------
+        y_prob_averaging : np.ndarray
+            Updated predictions using an “averaging” rule.
+        y_prob_replacement : np.ndarray
+            Updated predictions using a “replacement” rule.
+        """
+        y_prob_current = y_eval_prob[estimator_id][leaf_id]
+        y_prob_replacement = np.copy(y_prob_current)
+        # "replacement" sets the new leaf prediction directly
+        y_prob_replacement[test_sample_indices] = leaf_prediction[test_sample_indices]
+
         if self.task_type == "multiclass":
+            # Normalize
             row_sums = y_prob_replacement.sum(axis=1, keepdims=True)
             row_sums[row_sums == 0] = 1.0
             y_prob_replacement /= row_sums
 
+        # "averaging" -> combine old predictions with new
+        y_prob_averaging = np.copy(y_prob_current)
+
+        if self.task_type == "multiclass":
+            if self.average_logits:
+                # Convert old + new to log, sum them, then softmax
+                y_prob_averaging[test_sample_indices] = np.log(
+                    y_prob_averaging[test_sample_indices] + 1e-6,
+                )
+                leaf_pred_log = np.log(leaf_prediction[test_sample_indices] + 1e-6)
+                y_prob_averaging[test_sample_indices] += leaf_pred_log
+                y_prob_averaging[test_sample_indices] = softmax(
+                    y_prob_averaging[test_sample_indices],
+                )
+            else:
+                # Average probabilities directly
+                y_prob_averaging[test_sample_indices] += leaf_prediction[
+                    test_sample_indices
+                ]
+                row_sums = y_prob_averaging.sum(axis=1, keepdims=True)
+                row_sums[row_sums == 0] = 1.0
+                y_prob_averaging /= row_sums
+        else:
+            # Regression -> simply average
+            y_prob_averaging[test_sample_indices] += leaf_prediction[
+                test_sample_indices
+            ]
+            y_prob_averaging[test_sample_indices] /= 2.0
+
         return y_prob_averaging, y_prob_replacement
 
     def _pruning_set_node_prediction_type(
-            self,
-            y_true: np.ndarray,
-            y_prob_averaging: np.ndarray,
-            y_prob_replacement: np.ndarray,
-            y_metric: Dict[int, Dict[int, float]],
-            estimator_id: int,
-            leaf_id: int,
+        self,
+        y_true: np.ndarray,
+        y_prob_averaging: np.ndarray,
+        y_prob_replacement: np.ndarray,
+        y_metric: dict[int, dict[int, float]],
+        estimator_id: int,
+        leaf_id: int,
     ) -> None:
-        """Select which approach yields a better score: averaging, replacement, or previous."""
-        if estimator_id not in self._node_prediction_type:
-            self._node_prediction_type[estimator_id] = {}
+        """Decide which approach is better: “averaging” vs “replacement” vs “previous,”
+        using the node’s previous metric vs new metrics.
 
-        # Compare
+        Parameters
+        ----------
+        y_true : np.ndarray
+            Ground-truth labels/targets for pruning comparison.
+        y_prob_averaging : np.ndarray
+            Predictions if we use averaging.
+        y_prob_replacement : np.ndarray
+            Predictions if we use replacement.
+        y_metric : dict
+            Nested dictionary of scores/metrics for each node.
+        estimator_id : int
+            Index of the current estimator.
+        leaf_id : int
+            Index of the current leaf/node.
+        """
         averaging_score = self._score(y_true, y_prob_averaging)
         replacement_score = self._score(y_true, y_prob_replacement)
-        prev_score = y_metric[estimator_id][leaf_id]  # old metric
+        prev_score = y_metric[estimator_id][leaf_id - 1] if (leaf_id > 0) else 0.0
 
-        if max(averaging_score, replacement_score) > prev_score:
+        if (leaf_id == 0) or (max(averaging_score, replacement_score) > prev_score):
+            # Pick whichever is better
             if replacement_score > averaging_score:
-                self._node_prediction_type[estimator_id][leaf_id] = "replacement"
+                prediction_type = "replacement"
             else:
-                self._node_prediction_type[estimator_id][leaf_id] = "averaging"
+                prediction_type = "averaging"
         else:
-            self._node_prediction_type[estimator_id][leaf_id] = "previous"
+            prediction_type = "previous"
+
+        self._node_prediction_type[estimator_id][leaf_id] = prediction_type
 
     def _pruning_set_predictions(
-            self,
-            y_prob: Dict[int, Dict[int, np.ndarray]],
-            y_prob_averaging: np.ndarray,
-            y_prob_replacement: np.ndarray,
-            estimator_id: int,
-            leaf_id: int,
+        self,
+        y_prob: dict[int, dict[int, np.ndarray]],
+        y_prob_averaging: np.ndarray,
+        y_prob_replacement: np.ndarray,
+        estimator_id: int,
+        leaf_id: int,
     ) -> None:
-        """Finalize predictions for the node after we decide on approach."""
+        """Based on the chosen node_prediction_type, finalize the predictions.
+
+        Parameters
+        ----------
+        y_prob : dict
+            Nested dictionary of predictions.
+        y_prob_averaging : np.ndarray
+            Predictions if we use averaging.
+        y_prob_replacement : np.ndarray
+            Predictions if we use replacement.
+        estimator_id : int
+            Index of the current estimator.
+        leaf_id : int
+            Index of the current leaf/node.
+        """
         node_type = self._node_prediction_type[estimator_id][leaf_id]
         if node_type == "averaging":
             y_prob[estimator_id][leaf_id] = y_prob_averaging
         elif node_type == "replacement":
             y_prob[estimator_id][leaf_id] = y_prob_replacement
         else:
-            # "previous" => keep old predictions
-            pass
+            # “previous”
+            y_prob[estimator_id][leaf_id] = y_prob[estimator_id][leaf_id - 1]
 
-    def _init_eval_array(self, n_samples: int, to_zero: bool) -> np.ndarray:
-        """Initialize an array of predictions for all n_samples."""
+    def _init_eval_probability_array(
+        self,
+        n_samples: int,
+        to_zero: bool = False,
+    ) -> np.ndarray:
+        """Initialize an array of predictions for the entire dataset.
+
+        For classification, this is (n_samples, n_classes).
+        For regression, this is (n_samples,).
+
+        Parameters
+        ----------
+        n_samples : int
+            Number of samples to predict.
+        to_zero : bool, default=False
+            If True, fill with zeros. Otherwise use uniform for classification,
+            or zeros for regression.
+
+        Returns
+        -------
+        np.ndarray
+            An appropriately sized array of initial predictions.
+        """
         if self.task_type == "multiclass":
             if to_zero:
                 return np.zeros((n_samples, self.n_classes_), dtype=np.float64)
-            else:
-                # Uniform
-                return np.ones((n_samples, self.n_classes_), dtype=np.float64) / max(self.n_classes_, 1)
+            return (
+                np.ones((n_samples, self.n_classes_), dtype=np.float64)
+                / self.n_classes_
+            )
         else:
             # Regression
             return np.zeros((n_samples,), dtype=np.float64)
 
-    def _fit_leaves(self, X: np.ndarray, y: np.ndarray) -> None:
-        """Fit TabPFN model in each leaf node (or each node) and store training data."""
-        leaf_node_matrix = self._apply_tree(X)
-        n_samples, n_nodes, n_estims = leaf_node_matrix.shape
-        self._leaf_train_data.clear()
-
-        for est_id in range(n_estims):
-            self._leaf_train_data[est_id] = {}
-            for leaf_id in range(n_nodes):
-                idx = np.argwhere(leaf_node_matrix[:, leaf_id, est_id]).ravel()
-                X_leaf = X[idx]
-                y_leaf = y[idx]
-                self._leaf_train_data[est_id][leaf_id] = (X_leaf, y_leaf)
-
-    def _predict_leaf(
-            self,
-            X_train_leaf: np.ndarray,
-            y_train_leaf: np.ndarray,
-            leaf_id: int,
-            X_full: np.ndarray,
-            test_idx: np.ndarray,
-    ) -> np.ndarray:
-        """Leaf-level TabPFN prediction, overridden by classifier/regressor."""
-        raise NotImplementedError()
-
     def _score(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
-        """Compute a performance score given ground truth + predictions."""
-        metric = self._get_opt_metric()
+        """Compute a performance score given ground truth and predictions.
+
+        Parameters
+        ----------
+        y_true : np.ndarray
+            Ground truth labels or values.
+        y_pred : np.ndarray
+            Predictions (probabilities for classification, continuous for regression).
+
+        Returns
+        -------
+        float
+            The performance score (higher is better for classification,
+            or depends on the specific metric).
+        """
+        metric = self._get_optimize_metric()
         if self.task_type == "multiclass":
             return ScoringUtils.score_classification(metric, y_true, y_pred)
         else:
             return ScoringUtils.score_regression(metric, y_true, y_pred)
 
-    def _get_opt_metric(self) -> str:
-        """Return the metric name to optimize (roc for classification, rmse for regression)."""
+    def _get_optimize_metric(self) -> str:
+        """Return which metric name to use for scoring.
+
+        Returns
+        -------
+        str
+            The metric name, e.g. "roc" for classification or "rmse" for regression.
+        """
         if self.adaptive_tree_overwrite_metric is not None:
             return self.adaptive_tree_overwrite_metric
         if self.task_type == "multiclass":
             return "roc"
         return "rmse"
 
+    def _predict_leaf(
+        self,
+        X_train_leaf: np.ndarray,
+        y_train_leaf: np.ndarray,
+        leaf_id: int,
+        X_full: np.ndarray,
+        indices: np.ndarray,
+    ) -> np.ndarray:
+        """Each subclass implements how to call TabPFN for classification or regression.
+
+        Parameters
+        ----------
+        X_train_leaf : np.ndarray
+            Training features for the samples in this leaf/node.
+        y_train_leaf : np.ndarray
+            Training targets for the samples in this leaf/node.
+        leaf_id : int
+            Leaf/node index (for seeding or debugging).
+        X_full : np.ndarray
+            The entire set of features we are predicting on.
+        indices : np.ndarray
+            The indices in X_full that belong to this leaf.
+
+        Returns
+        -------
+        np.ndarray
+            Predictions for all n_samples, but only indices are filled meaningfully.
+        """
+        raise NotImplementedError("Must be implemented in subclass.")
+
 
 ###############################################################################
-#                             Classifier                                      #
+#                          CLASSIFIER SUBCLASS                                #
 ###############################################################################
 
 
 class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
-    """A Decision Tree + TabPFN hybrid for classification."""
+    """Decision tree that uses TabPFNClassifier at the leaves."""
 
-    task_type = "multiclass"
+    task_type: str = "multiclass"
 
-    def _init_decision_tree_impl(self) -> DecisionTreeClassifier:
+    def _init_decision_tree(self) -> DecisionTreeClassifier:
+        """Create a scikit-learn DecisionTreeClassifier with stored parameters."""
         return DecisionTreeClassifier(
             criterion=self.criterion,
-            splitter=self.splitter,
             max_depth=self.max_depth,
             min_samples_split=self.min_samples_split,
             min_samples_leaf=self.min_samples_leaf,
@@ -733,90 +1181,188 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
             min_impurity_decrease=self.min_impurity_decrease,
             class_weight=self.class_weight,
             ccp_alpha=self.ccp_alpha,
+            splitter=self.splitter,
         )
 
+    def _predict_leaf(
+        self,
+        X_train_leaf: np.ndarray,
+        y_train_leaf: np.ndarray,
+        leaf_id: int,
+        X_full: np.ndarray,
+        indices: np.ndarray,
+    ) -> np.ndarray:
+        """Fit a TabPFNClassifier on the leaf’s train data and predict_proba for the relevant samples.
+
+        Parameters
+        ----------
+        X_train_leaf : np.ndarray
+            Training features for the samples in this leaf/node.
+        y_train_leaf : np.ndarray
+            Training targets for the samples in this leaf/node.
+        leaf_id : int
+            Leaf/node index.
+        X_full : np.ndarray
+            Full feature matrix to predict on.
+        indices : np.ndarray
+            Indices of X_full that belong to this leaf.
+
+        Returns
+        -------
+        np.ndarray
+            A (n_samples, n_classes) array of probabilities, with only `indices` updated for this leaf.
+        """
+        y_eval_prob = self._init_eval_probability_array(X_full.shape[0], to_zero=True)
+        classes_in_leaf = np.unique(y_train_leaf).astype(int)
+
+        # If only one class, fill probability 1.0 for that class
+        if len(classes_in_leaf) == 1:
+            y_eval_prob[indices, classes_in_leaf[0]] = 1.0
+            return y_eval_prob
+
+        # Otherwise, fit TabPFN
+        leaf_seed = leaf_id + self.tree_seed
+        try:
+            self.tabpfn.random_state = leaf_seed
+            self.tabpfn.fit(X_train_leaf, y_train_leaf)
+            proba = self.tabpfn.predict_proba(X_full[indices])
+            for i, c in enumerate(classes_in_leaf):
+                y_eval_prob[indices, c] = proba[:, i]
+        except ValueError as e:
+            if (
+                not e.args
+                or e.args[0]
+                != "All features are constant and would have been removed! Unable to predict using TabPFN."
+            ):
+                raise e
+            warnings.warn(
+                "One node has constant features for TabPFN. Using class-ratio fallback.",
+                stacklevel=2,
+            )
+            _, counts = np.unique(y_train_leaf, return_counts=True)
+            ratio = counts / counts.sum()
+            for i, c in enumerate(classes_in_leaf):
+                y_eval_prob[indices, c] = ratio[i]
+
+        return y_eval_prob
+
     def predict(self, X: np.ndarray, check_input: bool = True) -> np.ndarray:
-        """Predict class labels for X."""
-        check_is_fitted(self, "_tree")
+        """Predict class labels for X.
 
-        if check_input:
-            X = check_array(X, force_all_finite=False, dtype=None)
-        # Ensure shape
-        if X.shape[1] != self.n_features_in_:
-            raise ValueError(f"X.shape[1] = {X.shape[1]} != {self.n_features_in_}, "
-                             "the number of features during training.")
+        Parameters
+        ----------
+        X : np.ndarray
+            Input features.
+        check_input : bool, default=True
+            Whether to validate input arrays.
 
-        proba = self.predict_proba(X, check_input=False)
+        Returns
+        -------
+        np.ndarray
+            Predicted class labels.
+        """
+        proba = self.predict_proba(X, check_input=check_input)
         return np.argmax(proba, axis=1)
 
     def predict_proba(self, X: np.ndarray, check_input: bool = True) -> np.ndarray:
-        """Predict class probabilities."""
-        check_is_fitted(self, "_tree")
+        """Predict class probabilities for X using the TabPFN leaves.
 
-        if check_input:
-            X = check_array(X, force_all_finite=False, dtype=None)
-        if X.shape[1] != self.n_features_in_:
-            raise ValueError(f"X.shape[1] = {X.shape[1]} != {self.n_features_in_}.")
+        Parameters
+        ----------
+        X : np.ndarray
+            Input features.
+        check_input : bool, default=True
+            Whether to validate input arrays.
 
-        preds = self._predict_internal(X, y=None, is_final_prediction=True)
-        # For safety, ensure shape (n_samples, n_classes_)
-        if preds.shape[1] != self.n_classes_:
-            raise ValueError("Internal shape mismatch in classification predict_proba.")
-        return preds
+        Returns
+        -------
+        np.ndarray
+            Predicted probabilities of shape (n_samples, n_classes).
+        """
+        return self._predict_internal(X, check_input=check_input)
 
-    def _predict_leaf(
-            self,
-            X_train_leaf: np.ndarray,
-            y_train_leaf: np.ndarray,
-            leaf_id: int,
-            X_full: np.ndarray,
-            test_idx: np.ndarray,
-    ) -> np.ndarray:
-        """Fit a TabPFNClassifier on the leaf’s data, then predict_proba for X_full[test_idx]."""
-        n_samples = X_full.shape[0]
-        # We'll store predictions for entire X, but only fill test_idx
-        out = np.zeros((n_samples, self.n_classes_), dtype=np.float64)
-
-        unique_classes = np.unique(y_train_leaf).astype(int)
-        if len(unique_classes) == 1:
-            # If just one class, fill that prob = 1
-            out[test_idx, unique_classes[0]] = 1.0
-            return out
-
-        leaf_seed = leaf_id + self.tree_seed
-        if hasattr(self.tabpfn, "random_state"):
-            self.tabpfn.random_state = leaf_seed
-        try:
-            self.tabpfn.fit(X_train_leaf, y_train_leaf)
-            proba = self.tabpfn.predict_proba(X_full[test_idx])
-            # Map them back to correct column
-            for i, c in enumerate(unique_classes):
-                out[test_idx, c] = proba[:, i]
-        except (ValueError, RuntimeError) as e:
-            # Fallback to empirical distribution
-            warnings.warn(f"TabPFN fit/predict error in leaf {leaf_id}: {e}. Using fallback.")
-            _, counts = np.unique(y_train_leaf, return_counts=True)
-            ratio = counts / counts.sum()
-            for i, c in enumerate(unique_classes):
-                out[test_idx, c] = ratio[i]
-
-        return out
+    def _post_fit(self) -> None:
+        """Optional hook after the decision tree is fitted."""
+        if self.verbose:
+            print("DecisionTreeTabPFNClassifier fit complete. Tree is ready.")
 
 
 ###############################################################################
-#                             Regressor                                       #
+#                           REGRESSOR SUBCLASS                                #
 ###############################################################################
 
 
 class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
-    """A Decision Tree + TabPFN hybrid for regression."""
+    """Decision tree that uses TabPFNRegressor at the leaves."""
 
-    task_type = "regression"
+    task_type: str = "regression"
 
-    def _init_decision_tree_impl(self) -> DecisionTreeRegressor:
+    def __init__(
+        self,
+        *,
+        criterion="squared_error",
+        splitter="best",
+        max_depth=None,
+        min_samples_split=1000,
+        min_samples_leaf=1,
+        min_weight_fraction_leaf=0.0,
+        max_features=None,
+        random_state=None,
+        max_leaf_nodes=None,
+        min_impurity_decrease=0.0,
+        ccp_alpha=0.0,
+        monotonic_cst=None,
+        tabpfn=None,
+        categorical_features=None,
+        verbose=False,
+        show_progress=False,
+        fit_nodes=True,
+        tree_seed=0,
+        adaptive_tree=True,
+        adaptive_tree_min_train_samples=50,
+        adaptive_tree_max_train_samples=2000,
+        adaptive_tree_min_valid_samples_fraction_of_train=0.2,
+        adaptive_tree_overwrite_metric=None,
+        adaptive_tree_test_size=0.2,
+        average_logits=True,
+        adaptive_tree_skip_class_missing=True,
+    ):
+        # Call parent constructor
+        super().__init__(
+            tabpfn=tabpfn,
+            criterion=criterion,
+            splitter=splitter,
+            max_depth=max_depth,
+            min_samples_split=min_samples_split,
+            min_samples_leaf=min_samples_leaf,
+            min_weight_fraction_leaf=min_weight_fraction_leaf,
+            max_features=max_features,
+            random_state=random_state,
+            max_leaf_nodes=max_leaf_nodes,
+            min_impurity_decrease=min_impurity_decrease,
+            ccp_alpha=ccp_alpha,
+            monotonic_cst=monotonic_cst,
+            categorical_features=categorical_features,
+            verbose=verbose,
+            show_progress=show_progress,
+            fit_nodes=fit_nodes,
+            tree_seed=tree_seed,
+            adaptive_tree=adaptive_tree,
+            adaptive_tree_min_train_samples=adaptive_tree_min_train_samples,
+            adaptive_tree_max_train_samples=adaptive_tree_max_train_samples,
+            adaptive_tree_min_valid_samples_fraction_of_train=(
+                adaptive_tree_min_valid_samples_fraction_of_train
+            ),
+            adaptive_tree_overwrite_metric=adaptive_tree_overwrite_metric,
+            adaptive_tree_test_size=adaptive_tree_test_size,
+            average_logits=average_logits,
+            adaptive_tree_skip_class_missing=adaptive_tree_skip_class_missing,
+        )
+
+    def _init_decision_tree(self) -> DecisionTreeRegressor:
+        """Create a scikit-learn DecisionTreeRegressor with stored parameters."""
         return DecisionTreeRegressor(
             criterion=self.criterion,
-            splitter=self.splitter,
             max_depth=self.max_depth,
             min_samples_split=self.min_samples_split,
             min_samples_leaf=self.min_samples_leaf,
@@ -826,54 +1372,104 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
             max_leaf_nodes=self.max_leaf_nodes,
             min_impurity_decrease=self.min_impurity_decrease,
             ccp_alpha=self.ccp_alpha,
+            splitter=self.splitter,
         )
 
-    def predict(self, X: np.ndarray, check_input: bool = True) -> np.ndarray:
-        check_is_fitted(self, "_tree")
-
-        if check_input:
-            X = check_array(X, force_all_finite=False, dtype=None)
-        if X.shape[1] != self.n_features_in_:
-            raise ValueError(f"X.shape[1] = {X.shape[1]} != {self.n_features_in_}.")
-
-        preds = self._predict_internal(X, y=None, is_final_prediction=True)
-        # For regression, the final shape should be (n_samples,)
-        return preds.ravel()
-
     def _predict_leaf(
-            self,
-            X_train_leaf: np.ndarray,
-            y_train_leaf: np.ndarray,
-            leaf_id: int,
-            X_full: np.ndarray,
-            test_idx: np.ndarray,
+        self,
+        X_train_leaf: np.ndarray,
+        y_train_leaf: np.ndarray,
+        leaf_id: int,
+        X_full: np.ndarray,
+        indices: np.ndarray,
     ) -> np.ndarray:
-        """Fit a TabPFNRegressor on the leaf’s data, then predict for X_full[test_idx]."""
-        n_samples = X_full.shape[0]
-        out = np.zeros(n_samples, dtype=np.float64)
+        """Fit a TabPFNRegressor on the node’s train data, then predict for the relevant samples.
 
-        # If empty or single sample
-        if len(X_train_leaf) == 0:
-            return out  # all zeros
-        if len(X_train_leaf) == 1:
-            out[test_idx] = y_train_leaf[0]
-            return out
+        Parameters
+        ----------
+        X_train_leaf : np.ndarray
+            Training features for the samples in this leaf/node.
+        y_train_leaf : np.ndarray
+            Training targets for the samples in this leaf/node.
+        leaf_id : int
+            Leaf/node index.
+        X_full : np.ndarray
+            Full feature matrix to predict on.
+        indices : np.ndarray
+            Indices of X_full that fall into this leaf.
 
-        # If all y are the same
+        Returns
+        -------
+        np.ndarray
+            An array of shape (n_samples,) with predictions; only `indices` are updated.
+        """
+        y_eval = np.zeros(X_full.shape[0], dtype=float)
+
+        # If no training data or just 1 sample, fall back to 0 or single value
+        if len(X_train_leaf) < 1:
+            warnings.warn(
+                f"Leaf {leaf_id} has zero training samples. Returning 0.0 predictions.",
+                stacklevel=2,
+            )
+            return y_eval
+        elif len(X_train_leaf) == 1:
+            y_eval[indices] = y_train_leaf[0]
+            return y_eval
+
+        # If all y are identical, return that constant
         if np.all(y_train_leaf == y_train_leaf[0]):
-            out[test_idx] = y_train_leaf[0]
-            return out
+            y_eval[indices] = y_train_leaf[0]
+            return y_eval
 
+        # Fit TabPFNRegressor
         leaf_seed = leaf_id + self.tree_seed
-        if hasattr(self.tabpfn, "random_state"):
-            self.tabpfn.random_state = leaf_seed
-
         try:
+            self.tabpfn.random_state = leaf_seed
             self.tabpfn.fit(X_train_leaf, y_train_leaf)
-            preds = self.tabpfn.predict(X_full[test_idx])
-            out[test_idx] = preds
+            preds = self.tabpfn.predict(X_full[indices])
+            y_eval[indices] = preds
         except (ValueError, RuntimeError, NotImplementedError, AssertionError) as e:
-            warnings.warn(f"TabPFN fit/predict error in leaf {leaf_id}: {e}. Using mean fallback.")
-            out[test_idx] = np.mean(y_train_leaf)
+            warnings.warn(
+                f"TabPFN fit/predict failed at leaf {leaf_id}: {e}. Using mean fallback.",
+                stacklevel=2,
+            )
+            y_eval[indices] = np.mean(y_train_leaf)
 
-        return out
+        return y_eval
+
+    def predict(self, X: np.ndarray, check_input: bool = True) -> np.ndarray:
+        """Predict regression values using the TabPFN leaves.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Input features.
+        check_input : bool, default=True
+            Whether to validate the input arrays.
+
+        Returns
+        -------
+        np.ndarray
+            Continuous predictions of shape (n_samples,).
+        """
+        return self._predict_internal(X, check_input=check_input)
+
+    def predict_full(self, X: np.ndarray) -> np.ndarray:
+        """Convenience method to predict with no input checks (optional).
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Input features.
+
+        Returns
+        -------
+        np.ndarray
+            Continuous predictions of shape (n_samples,).
+        """
+        return self._predict_internal(X, check_input=False)
+
+    def _post_fit(self) -> None:
+        """Optional hook after the regressor's tree is fitted."""
+        if self.verbose:
+            print("DecisionTreeTabPFNRegressor fit complete. Tree is ready.")
