@@ -92,8 +92,15 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
         from sklearn.utils.validation import check_X_y
 
         # Will raise ValueError if X is empty or invalid
-        X, y = check_X_y(X, y, ensure_2d=True, allow_nd=False, dtype=None, multi_output=False,
-                         force_all_finite=False)  # allow_nan is handled internally
+        X, y = check_X_y(
+            X,
+            y,
+            ensure_2d=True,
+            allow_nd=False,
+            dtype=None,
+            multi_output=False,
+            force_all_finite=False,
+        )  # allow_nan is handled internally
 
         if categorical_feature_indices is not None:
             self.categorical_feature_indices = categorical_feature_indices
@@ -260,9 +267,15 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
 
         # Will raise ValueError if X is empty or invalid
         # For regressor, ensure y is numeric
-        X, y = check_X_y(X, y, ensure_2d=True, allow_nd=False,
-                         dtype=np.float64,  # Force all data to be float64
-                         multi_output=False, force_all_finite=False)
+        X, y = check_X_y(
+            X,
+            y,
+            ensure_2d=True,
+            allow_nd=False,
+            dtype=np.float64,  # Force all data to be float64
+            multi_output=False,
+            force_all_finite=False,
+        )
 
         if categorical_feature_indices is not None:
             self.categorical_feature_indices = categorical_feature_indices
