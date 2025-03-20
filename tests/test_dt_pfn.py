@@ -26,13 +26,6 @@ class TestDecisionTreeClassifier(BaseClassifierTests):
             random_state=42,
         )
 
-    # Skip pandas and text feature tests as they're not fully supported by DecisionTreeTabPFN
-    @pytest.mark.skip(
-        reason="DecisionTreeTabPFN doesn't fully support pandas DataFrames",
-    )
-    def test_with_pandas(self, estimator, pandas_classification_data):
-        pass
-
     @pytest.mark.skip(reason="DecisionTreeTabPFN doesn't fully support text features")
     def test_with_text_features(self, estimator, dataset_generator):
         pass
@@ -67,13 +60,6 @@ class TestDecisionTreeRegressor(BaseRegressorTests):
             max_depth=2,  # Shallow tree for speed
             random_state=42,
         )
-
-    # Skip pandas and text feature tests as they're not fully supported by DecisionTreeTabPFN
-    @pytest.mark.skip(
-        reason="DecisionTreeTabPFN doesn't fully support pandas DataFrames",
-    )
-    def test_with_pandas(self, estimator, pandas_regression_data):
-        pass
 
     @pytest.mark.skip(reason="DecisionTreeTabPFN doesn't fully support text features")
     def test_with_text_features(self, estimator, dataset_generator):

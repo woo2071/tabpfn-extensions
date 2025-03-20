@@ -475,21 +475,37 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
     def _preprocess_data_for_tree(self, X: np.ndarray) -> np.ndarray:
         """Handle missing data prior to feeding into the decision tree.
 
-        Replaces NaNs with 0.0, consistent with simple old-code approach.
+        Replaces NaNs with a default value, handles pandas DataFrames and other input types.
+        Uses scikit-learn's validation functions for compatibility.
 
         Parameters
         ----------
-        X : np.ndarray
+        X : array-like
             Input features, possibly containing NaNs.
 
         Returns:
         -------
         np.ndarray
-            A copy of X with NaNs replaced by 0.0.
+            A copy of X with NaNs replaced by default value.
         """
+        # Use check_array from sklearn_compat to handle different input types
+        from tabpfn_extensions.misc.sklearn_compat import check_array
+
+        # Handle torch tensor
         if torch.is_tensor(X):
             X = X.cpu().numpy()
-        X = np.array(X, dtype=np.float64)
+
+        # Convert to array and handle input validation
+        # Don't extract DataFrame values - let check_array handle it
+        X = check_array(
+            X,
+            dtype=np.float64,
+            ensure_all_finite=False,  # We'll handle NaNs ourselves
+            ensure_2d=True,
+            copy=True,  # Make a copy so we don't modify the original
+        )
+
+        # Replace NaN with our specific value (-1000.0)
         X = np.nan_to_num(X, nan=-1000.0)
         return X
 
@@ -1145,7 +1161,16 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
         try:
             self.tabpfn.random_state = leaf_seed
             self.tabpfn.fit(X_train_leaf, y_train_leaf)
-            proba = self.tabpfn.predict_proba(X_full[indices])
+
+            # Handle pandas DataFrame or numpy array
+            if hasattr(X_full, "iloc"):
+                # Use .iloc for pandas
+                X_subset = X_full.iloc[indices]
+            else:
+                # Use direct indexing for numpy
+                X_subset = X_full[indices]
+
+            proba = self.tabpfn.predict_proba(X_subset)
             for i, c in enumerate(classes_in_leaf):
                 y_eval_prob[indices, c] = proba[:, i]
         except ValueError as e:
@@ -1340,7 +1365,16 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
         try:
             self.tabpfn.random_state = leaf_seed
             self.tabpfn.fit(X_train_leaf, y_train_leaf)
-            preds = self.tabpfn.predict(X_full[indices])
+
+            # Handle pandas DataFrame or numpy array
+            if hasattr(X_full, "iloc"):
+                # Use .iloc for pandas
+                X_subset = X_full.iloc[indices]
+            else:
+                # Use direct indexing for numpy
+                X_subset = X_full[indices]
+
+            preds = self.tabpfn.predict(X_subset)
             y_eval[indices] = preds
         except (ValueError, RuntimeError, NotImplementedError, AssertionError) as e:
             warnings.warn(

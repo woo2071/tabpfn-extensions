@@ -28,13 +28,6 @@ class TestRandomForestClassifier(BaseClassifierTests):
             max_predict_time=10,  # Limit prediction time
         )
 
-    # Skip pandas and text feature tests as they're not fully supported by RandomForestTabPFN
-    @pytest.mark.skip(
-        reason="RandomForestTabPFN doesn't fully support pandas DataFrames",
-    )
-    def test_with_pandas(self, estimator, pandas_classification_data):
-        pass
-
     @pytest.mark.skip(reason="RandomForestTabPFN doesn't fully support text features")
     def test_with_text_features(self, estimator, dataset_generator):
         pass
@@ -60,13 +53,6 @@ class TestRandomForestRegressor(BaseRegressorTests):
             random_state=42,
             max_predict_time=10,  # Limit prediction time
         )
-
-    # Skip pandas and text feature tests as they're not fully supported by RandomForestTabPFN
-    @pytest.mark.skip(
-        reason="RandomForestTabPFN doesn't fully support pandas DataFrames",
-    )
-    def test_with_pandas(self, estimator, pandas_regression_data):
-        pass
 
     @pytest.mark.skip(reason="RandomForestTabPFN doesn't fully support text features")
     def test_with_text_features(self, estimator, dataset_generator):
