@@ -153,9 +153,6 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         average_logits: bool = True,
         adaptive_tree_skip_class_missing: bool = True,
     ):
-        # Validate that tabpfn is not None and appropriate
-        self._validate_tabpfn_init(tabpfn)
-
         # Collect recognized arguments
         self.tabpfn = tabpfn
         self.criterion = criterion
@@ -217,20 +214,6 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         # because we handle seeds ourselves at each node
         if self.tabpfn is not None:
             self.tabpfn.random_state = None
-
-    def _validate_tabpfn_init(self, tabpfn: Any) -> None:
-        """Ensure the `tabpfn` argument is not None during initialization.
-
-        Args:
-            tabpfn: The TabPFN instance to validate
-
-        Raises:
-            ValueError: If tabpfn is None
-        """
-        if tabpfn is None:
-            raise ValueError(
-                "tabpfn parameter cannot be None. Provide a TabPFNClassifier or TabPFNRegressor instance.",
-            )
 
     def _validate_tabpfn_runtime(self) -> None:
         """Validate the TabPFN instance at runtime before using it.
