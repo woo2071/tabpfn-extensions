@@ -25,26 +25,8 @@ Detailed documentation for each extension is available in the respective module 
 ## ⚙️ Installation
 
 ```bash
-# Basic installation with core dependencies
-pip install tabpfn-extensions
-
-# Clone and install the repository (alternative method)
-pip install "tabpfn-extensions[post_hoc_ensembles,interpretability,hpo] @ git+https://github.com/PriorLabs/tabpfn-extensions.git"
-# or choose below method if you need to have source code
-# git clone https://github.com/PriorLabs/tabpfn-extensions
-# pip install -e "tabpfn-extensions[post_hoc_ensembles,interpretability,hpo]"
-
-# Install specific extension modules
-pip install "tabpfn-extensions[interpretability,hpo]"
-
-# Install all extensions
-pip install "tabpfn-extensions[all]"
-
-# Development installation (minimal)
-pip install -e ".[dev]"
-
-# Development installation (all extensions - slower)
-pip install -e ".[dev,all]"
+# Clone and install the repository
+pip install "tabpfn-extensions[all] @ git+https://github.com/PriorLabs/tabpfn-extensions.git"
 ```
 
 ### 🔄 Backend Options
