@@ -13,6 +13,8 @@ from sklearn.utils import check_random_state
 from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.validation import check_is_fitted
 
+from tabpfn_extensions.misc.sklearn_compat import validate_data
+
 from .pfn_phe import (
     AutoPostHocEnsemblePredictor,
     TaskType,
@@ -89,19 +91,12 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
         return tags
 
     def fit(self, X, y, categorical_feature_indices: list[int] | None = None):
-        # Validate input data
-        from sklearn.utils.validation import check_X_y
-
-        # Will raise ValueError if X is empty or invalid
-        X, y = check_X_y(
+        X, y = validate_data(
+            self,
             X,
             y,
-            ensure_2d=True,
-            allow_nd=False,
-            dtype=None,
-            multi_output=False,
-            force_all_finite=False,
-        )  # allow_nan is handled internally
+            ensure_all_finite=False,
+        )
 
         if categorical_feature_indices is not None:
             self.categorical_feature_indices = categorical_feature_indices
@@ -180,6 +175,11 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
 
     def predict(self, X):
         check_is_fitted(self)
+        X = validate_data(
+            self,
+            X,
+            ensure_all_finite=False,
+        )
         if hasattr(self, "single_class_") and self.single_class_:
             # For single class, always predict that class
             return np.full(X.shape[0], self.single_class_value_)
@@ -187,6 +187,11 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
 
     def predict_proba(self, X):
         check_is_fitted(self)
+        X = validate_data(
+            self,
+            X,
+            ensure_all_finite=False,
+        )
         if hasattr(self, "single_class_") and self.single_class_:
             # For single class, return probabilities of 1.0
             return np.ones((X.shape[0], 1))
@@ -265,18 +270,14 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
 
     def fit(self, X, y, categorical_feature_indices: list[int] | None = None):
         # Validate input data
-        from sklearn.utils.validation import check_X_y
 
         # Will raise ValueError if X is empty or invalid
         # For regressor, ensure y is numeric
-        X, y = check_X_y(
+        X, y = validate_data(
+            self,
             X,
             y,
-            ensure_2d=True,
-            allow_nd=False,
-            dtype=np.float64,  # Force all data to be float64
-            multi_output=False,
-            force_all_finite=False,
+            ensure_all_finite=False,
         )
 
         if categorical_feature_indices is not None:
@@ -324,10 +325,12 @@ class AutoTabPFNRegressor(RegressorMixin, BaseEstimator):
 
     def predict(self, X):
         check_is_fitted(self)
+        X = validate_data(
+            self,
+            X,
+            ensure_all_finite=False,
+        )
         return self.predictor_.predict(X)
-
-    def _more_tags(self):
-        return {"allow_nan": True}
 
 
 if __name__ == "__main__":
