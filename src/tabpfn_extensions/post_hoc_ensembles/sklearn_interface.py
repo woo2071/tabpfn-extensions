@@ -35,7 +35,7 @@ class AutoTabPFNClassifier(ClassifierMixin, BaseEstimator):
         ges_scoring_string : str, default="roc"
             The scoring string to use for the greedy ensemble search.
             Allowed values are: {"accuracy", "roc" / "auroc", "f1", "log_loss"}.
-        device : {"cpu", "cuda"}, default="cuda"
+        device : {"cpu", "cuda"}, default="auto"
             The device to use for training and prediction.
         random_state : int, RandomState instance or None, default=None
             Controls both the randomness base models and the post hoc ensembling method.
