@@ -136,7 +136,6 @@ class BaseClassifierTests:
         assert hasattr(estimator, "get_params")
         assert hasattr(estimator, "set_params")
 
-    @pytest.mark.slow
     @pytest.mark.client_compatible
     @pytest.mark.local_compatible
     def test_with_various_datasets(self, estimator, dataset_generator):
@@ -305,7 +304,6 @@ class BaseRegressorTests:
         assert hasattr(estimator, "get_params")
         assert hasattr(estimator, "set_params")
 
-    @pytest.mark.slow
     @pytest.mark.client_compatible
     @pytest.mark.local_compatible
     def test_with_various_datasets(self, estimator, dataset_generator):

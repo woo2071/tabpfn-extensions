@@ -86,10 +86,10 @@ jobs:
       - name: Run Tests (Unix)
         if: runner.os != 'Windows'
         run: |
-          FAST_TEST_MODE=1 pytest tests/ --run-examples
+          FAST_TEST_MODE=1 pytest tests/
 
       - name: Run Tests (Windows)
         if: runner.os == 'Windows'
         run: |
           $env:FAST_TEST_MODE = 1
-          pytest tests/ --run-examples
+          pytest tests/

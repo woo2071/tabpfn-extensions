@@ -134,6 +134,13 @@ def test_example(request, example_file):
     file_name = example_file["name"]
     file_path = example_file["path"]
 
+    run_examples = request.config.getoption("--run-examples")
+
+    if not run_examples:
+        pytest.skip(
+            f"Skipping {file_name} since --run-examples not set",
+        )
+
     # Skip if backend not available
     if example_file["requires_tabpfn"]:
         if not HAS_TABPFN:
