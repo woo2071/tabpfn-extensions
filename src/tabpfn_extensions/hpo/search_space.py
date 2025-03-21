@@ -169,7 +169,7 @@ def get_param_grid_hyperopt(task_type: str) -> dict:
         # Custom HPs
         "model_type": hp.choice(
             "model_type",
-            ["single"],  # TODO: Reenable "dt_pfn" when properly tested
+            ["single", "dt_pfn"],
         ),
         "n_ensemble_repeats": hp.choice("n_ensemble_repeats", [4]),
         "max_depth": hp.choice("max_depth", [2, 3, 4, 5]),  # For Decision Tree TabPFN

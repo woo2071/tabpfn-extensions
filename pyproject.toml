@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tabpfn-extensions"
-version = "0.0.5"
+version = "0.1.0"
 dependencies = [
     "seaborn>=0.12.2",
     "torch>=2.1,<3",
