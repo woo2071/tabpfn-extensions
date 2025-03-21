@@ -10,15 +10,17 @@
 
 <img src="tabpfn_summary.webp" width="650" alt="TabPFN Summary">
 
-## 📋 Overview
+## 🛠️ Available Extensions
 
-TabPFN Extensions is a collection of utilities and extensions for [TabPFN](https://github.com/priorlabs/tabpfn), a foundation model for tabular data. These extensions enhance TabPFN's capabilities with:
+- **post_hoc_ensembles**: Improve performance with model combination
+- **interpretability**: Explain TabPFN predictions with SHAP values and feature selection
+- **many_class**: Handle classification with more classes than TabPFN's default limit
+- **classifier_as_regressor**: Use TabPFN's classifier for regression tasks
+- **hpo**: Automatic hyperparameter tuning for TabPFN
+- **rf_pfn**: Combine TabPFN with decision trees and random forests
+- **unsupervised**: Data generation and outlier detection
 
-- 🧪 **Post-hoc ensembles**: Combine multiple TabPFN models for better performance
-- 🔍 **Interpretability**: Understand model decisions with SHAP and feature selection
-- 🎯 **Hyperparameter optimization**: Automatically tune TabPFN for best results
-- 🔄 **Adaptation tools**: Convert classifiers to regressors and handle multi-class problems
-- 🌳 **Tree-based ensembles**: Combine TabPFN with decision trees and random forests
+Detailed documentation for each extension is available in the respective module directories.
 
 ## ⚙️ Installation
 
@@ -61,23 +63,6 @@ TabPFN Extensions works with two TabPFN implementations:
 
 Choose the backend that fits your needs - most extensions work with either option!
 
-## 🚀 Quick Start
-
-```python
-from tabpfn_extensions.many_class import ManyClassClassifier
-from tabpfn import TabPFNClassifier  # or from tabpfn_client import TabPFNClassifier
-
-# Create a base TabPFN classifier
-base_clf = TabPFNClassifier()
-
-# Wrap it to handle more than 10 classes
-many_class_clf = ManyClassClassifier(estimator=base_clf, alphabet_size=10)
-
-# Fit and predict as usual
-many_class_clf.fit(X_train, y_train)
-y_pred = many_class_clf.predict(X_test)
-```
-
 ## 🧑‍💻 For Contributors
 
 Interested in adding your own extension? We welcome contributions!
@@ -96,18 +81,6 @@ FAST_TEST_MODE=1 pytest tests/test_your_extension.py -v
 
 See our [Contribution Guide](CONTRIBUTING.md) for more details.
 
-## 🛠️ Available Extensions
-
-- **post_hoc_ensembles**: Improve performance with model combination
-- **interpretability**: Explain TabPFN predictions with SHAP values and feature selection
-- **many_class**: Handle classification with more classes than TabPFN's default limit
-- **classifier_as_regressor**: Use TabPFN's classifier for regression tasks
-- **hpo**: Automatic hyperparameter tuning for TabPFN
-- **rf_pfn**: Combine TabPFN with decision trees and random forests
-- **unsupervised**: Data generation and outlier detection
-
-Detailed documentation for each extension is available in the respective module directories.
-
 ## 📦 Repository Structure
 
 Each extension lives in its own subpackage:
@@ -123,17 +96,6 @@ tabpfn-extensions/
     └── your_package/          # Tests
 ```
 
-## 🤝 Contributing
-
-We welcome all contributions! See our [Contributing Guide](CONTRIBUTING.md) for details.
-
-Quick start:
-
-1. Fork the repository
-2. Create your package under `src/`
-3. Ensure compatibility with both TabPFN implementations
-4. Add examples and tests
-5. Submit a PR
 
 ## 📝 License
 
