@@ -11,6 +11,7 @@ import time
 import numpy as np
 import torch
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.utils.multiclass import unique_labels
 
 from tabpfn_extensions.misc.sklearn_compat import validate_data
 
@@ -118,6 +119,10 @@ class RandomForestTabPFNBase:
             y,
             ensure_all_finite=False,
         )
+
+        if self.task_type == "multiclass":
+            self.classes_ = unique_labels(y)
+            self.n_classes_ = len(self.classes_)
 
         # Special case for depth 0 - just use TabPFN directly
         if self.max_depth == 0:
@@ -340,19 +345,20 @@ class RandomForestTabPFNClassifier(RandomForestTabPFNBase, RandomForestClassifie
         self.adaptive_tree_skip_class_missing = adaptive_tree_skip_class_missing
         self.n_estimators = n_estimators
 
-    def __sklearn_js_tags__(self):
-        """Return tags for sklearn compatibility."""
-        return {"allow_nan": True}
+    def _more_tags(self):
+        return {
+            "allow_nan": True,
+        }
 
-    def _get_tags(self):
-        """Return tags from parent and for this estimator."""
-        # Use get_tags and update_tags from sklearn_compat
-        from tabpfn_extensions.misc.sklearn_compat import get_tags, update_tags
-
-        tags = get_tags(super())
-
-        # Update tags with consistent interface across sklearn versions
-        return update_tags(tags, {"allow_nan": True, "estimator_type": "classifier"})
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "regressor"
+        if self.task_type == "multiclass":
+            tags.estimator_type = "classifier"
+        else:
+            tags.estimator_type = "regressor"
+        return tags
 
     def init_base_estimator(self):
         """Initialize a base decision tree estimator.

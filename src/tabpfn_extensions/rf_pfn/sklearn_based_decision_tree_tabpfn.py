@@ -22,6 +22,7 @@ from sklearn.tree import (
     DecisionTreeClassifier,
     DecisionTreeRegressor,
 )
+from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.validation import (
     _check_sample_weight,
     check_is_fitted,
@@ -297,8 +298,6 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
             The fitted model.
         """
         # Initialize attributes (per scikit-learn conventions)
-        self.n_classes_ = 0
-        self.classes_ = []
         self._leaf_nodes = []
         self._leaf_train_data = {}
         self._label_encoder = LabelEncoder()
@@ -319,6 +318,11 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
             y,
             ensure_all_finite=False,  # scikit-learn sets self.n_features_in_ automatically
         )
+
+        if self.task_type == "multiclass":
+            self.classes_ = unique_labels(y)
+            self.n_classes_ = len(self.classes_)
+
         # Convert torch tensor -> numpy if needed, handle NaNs
         X_preprocessed = self._preprocess_data_for_tree(X)
 
