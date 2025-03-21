@@ -45,6 +45,10 @@ TabPFN Extensions works with two TabPFN implementations:
 
 Choose the backend that fits your needs - most extensions work with either option!
 
+## 📝 License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
 ## 🧑‍💻 For Contributors
 
 Interested in adding your own extension? We welcome contributions!
@@ -63,6 +67,8 @@ FAST_TEST_MODE=1 pytest tests/test_your_extension.py -v
 
 See our [Contribution Guide](CONTRIBUTING.md) for more details.
 
+[![Contributors](https://contrib.rocks/image?repo=priorlabs/tabpfn-extensions)](https://github.com/priorlabs/tabpfn-extensions/graphs/contributors)
+
 ## 📦 Repository Structure
 
 Each extension lives in its own subpackage:
@@ -77,11 +83,6 @@ tabpfn-extensions/
 └── tests/
     └── your_package/          # Tests
 ```
-
-
-## 📝 License
-
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ---
 
