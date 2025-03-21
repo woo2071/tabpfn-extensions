@@ -12,6 +12,8 @@ import numpy as np
 import torch
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
+from tabpfn_extensions.misc.sklearn_compat import validate_data
+
 from .sklearn_based_decision_tree_tabpfn import (
     DecisionTreeTabPFNClassifier,
     DecisionTreeTabPFNRegressor,
@@ -110,11 +112,12 @@ class RandomForestTabPFNBase:
         self.X = X
         self.n_estimators = self.get_n_estimators(X)
 
-        # Convert tensors to numpy if needed
-        if torch.is_tensor(X):
-            X = X.numpy()
-        if torch.is_tensor(y):
-            y = y.numpy()
+        X, y = validate_data(
+            self,
+            X,
+            y,
+            ensure_all_finite=False,
+        )
 
         # Special case for depth 0 - just use TabPFN directly
         if self.max_depth == 0:
@@ -668,9 +671,11 @@ class RandomForestTabPFNRegressor(RandomForestTabPFNBase, RandomForestRegressor)
                 "Call 'fit' with appropriate arguments before using this estimator.",
             )
 
-        # Convert input if needed
-        if torch.is_tensor(X):
-            X = X.numpy()
+        X = validate_data(
+            self,
+            X,
+            ensure_all_finite=False,
+        )
 
         # Special case for depth 0 - TabPFN can handle missing values directly
         if self.max_depth == 0:

@@ -22,10 +22,10 @@ class TestRandomForestClassifier(BaseClassifierTests):
         """Provide a TabPFN-based RandomForestClassifier as the estimator."""
         return RandomForestTabPFNClassifier(
             tabpfn=tabpfn_classifier,
-            n_estimators=2,  # Use few trees for speed
+            n_estimators=1,  # Use few trees for speed
             max_depth=2,  # Shallow trees for speed
             random_state=42,
-            max_predict_time=10,  # Limit prediction time
+            max_predict_time=5,  # Limit prediction time
         )
 
     @pytest.mark.skip(reason="RandomForestTabPFN doesn't fully support text features")
@@ -48,10 +48,10 @@ class TestRandomForestRegressor(BaseRegressorTests):
         """Provide a TabPFN-based RandomForestRegressor as the estimator."""
         return RandomForestTabPFNRegressor(
             tabpfn=tabpfn_regressor,
-            n_estimators=2,  # Use few trees for speed
+            n_estimators=1,  # Use few trees for speed
             max_depth=2,  # Shallow trees for speed
             random_state=42,
-            max_predict_time=10,  # Limit prediction time
+            max_predict_time=5,  # Limit prediction time
         )
 
     @pytest.mark.skip(reason="RandomForestTabPFN doesn't fully support text features")

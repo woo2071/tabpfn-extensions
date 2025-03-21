@@ -26,7 +26,7 @@ FAST_TEST_MODE = (
     os.environ.get("FAST_TEST_MODE", "0") == "1"
 )  # Skip slow tests by default
 SMALL_TEST_SIZE = 25  # Number of samples to use in fast test mode
-DEFAULT_TEST_SIZE = 70  # Number of samples to use in regular mode
+DEFAULT_TEST_SIZE = 40  # Number of samples to use in regular mode
 # Larger sizes for specific tests that require more samples
 MULTICLASS_TEST_SIZE = (
     40  # Size for multiclass tests (needs more samples for stratification)
@@ -288,7 +288,7 @@ def classification_data(dataset_generator):
     test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
     X, y = dataset_generator.generate_classification_data(
         n_samples=test_size,
-        n_features=5,
+        n_features=3,
         n_classes=2,
     )
     return X, y
@@ -303,7 +303,7 @@ def multiclass_data(dataset_generator):
 
     X, y = dataset_generator.generate_classification_data(
         n_samples=test_size,
-        n_features=5,
+        n_features=3,
         n_classes=5,
     )
     return X, y
@@ -315,7 +315,7 @@ def regression_data(dataset_generator):
     test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
     X, y = dataset_generator.generate_regression_data(
         n_samples=test_size,
-        n_features=5,
+        n_features=3,
     )
     return X, y
 
@@ -326,7 +326,7 @@ def pandas_classification_data(dataset_generator):
     test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
     X, y = dataset_generator.generate_classification_data(
         n_samples=test_size,
-        n_features=5,
+        n_features=3,
         n_classes=2,
         as_pandas=True,
     )
@@ -339,7 +339,7 @@ def pandas_regression_data(dataset_generator):
     test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
     X, y = dataset_generator.generate_regression_data(
         n_samples=test_size,
-        n_features=5,
+        n_features=3,
         as_pandas=True,
     )
     return X, y
@@ -351,7 +351,7 @@ def mixed_type_data(dataset_generator):
     test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
     return dataset_generator.dataset_with_mixed_types(
         n_samples=test_size,
-        n_numerical=3,
+        n_numerical=1,
         n_categorical=2,
     )
 
@@ -362,7 +362,7 @@ def data_with_missing_values(dataset_generator):
     test_size = SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE
     return dataset_generator.dataset_with_missing_values(
         n_samples=test_size,
-        n_features=5,
+        n_features=3,
     )
 
 

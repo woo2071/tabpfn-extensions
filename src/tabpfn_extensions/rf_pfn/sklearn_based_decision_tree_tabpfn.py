@@ -22,8 +22,12 @@ from sklearn.tree import (
     DecisionTreeClassifier,
     DecisionTreeRegressor,
 )
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import (
+    _check_sample_weight,
+    check_is_fitted,
+)
 
+from tabpfn_extensions.misc.sklearn_compat import validate_data
 from tabpfn_extensions.scoring.scoring_utils import (
     score_classification,
     score_regression,
@@ -325,12 +329,13 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
         if self.tree_seed == 0:
             self.tree_seed = random.randint(1, 10000)
 
-        # Minimal input checks
-        if check_input:
-            # You could rely on sklearn's internal checks in super().fit,
-            # but minimal checks can be done here if needed
-            pass
-
+        sample_weight = _check_sample_weight(sample_weight, X, dtype=np.float64)
+        X, y = validate_data(
+            self,
+            X,
+            y,
+            ensure_all_finite=False,  # scikit-learn sets self.n_features_in_ automatically
+        )
         # Convert torch tensor -> numpy if needed, handle NaNs
         X_preprocessed = self._preprocess_data_for_tree(X)
 
@@ -1202,6 +1207,11 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
             np.ndarray: Predicted class labels.
         """
         # Validate the model is fitted
+        X = validate_data(
+            self,
+            X,
+            ensure_all_finite=False,
+        )
         check_is_fitted(self, ["_tree", "X", "y"])
         proba = self.predict_proba(X, check_input=check_input)
         return np.argmax(proba, axis=1)
@@ -1217,6 +1227,11 @@ class DecisionTreeTabPFNClassifier(DecisionTreeTabPFNBase, ClassifierMixin):
             np.ndarray: Predicted probabilities of shape (n_samples, n_classes).
         """
         # Validate the model is fitted
+        X = validate_data(
+            self,
+            X,
+            ensure_all_finite=False,
+        )
         check_is_fitted(self, ["_tree", "X", "y"])
         return self._predict_internal(X, check_input=check_input)
 
@@ -1401,6 +1416,11 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
             Continuous predictions of shape (n_samples,).
         """
         # Validate the model is fitted
+        X = validate_data(
+            self,
+            X,
+            ensure_all_finite=False,
+        )
         check_is_fitted(self, ["_tree", "X", "y"])
         return self._predict_internal(X, check_input=check_input)
 
@@ -1418,6 +1438,11 @@ class DecisionTreeTabPFNRegressor(DecisionTreeTabPFNBase, RegressorMixin):
             Continuous predictions of shape (n_samples,).
         """
         # Validate the model is fitted
+        X = validate_data(
+            self,
+            X,
+            ensure_all_finite=False,
+        )
         check_is_fitted(self, ["_tree", "X", "y"])
         return self._predict_internal(X, check_input=False)
 

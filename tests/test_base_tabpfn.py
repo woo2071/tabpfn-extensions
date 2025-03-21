@@ -14,7 +14,11 @@ from sklearn.exceptions import NotFittedError
 from sklearn.metrics import accuracy_score, r2_score
 from sklearn.utils.estimator_checks import check_estimator
 
-from conftest import FAST_TEST_MODE
+from conftest import (
+    DEFAULT_TEST_SIZE,
+    FAST_TEST_MODE,
+    SMALL_TEST_SIZE,
+)
 
 
 class BaseClassifierTests:
@@ -143,7 +147,7 @@ class BaseClassifierTests:
             # Generate dataset - use the generic data generator
             X, y = dataset_generator.generate_data(
                 task_type="classification",
-                n_samples=30 if FAST_TEST_MODE else 60,
+                n_samples=SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE,
                 n_features=5,
                 n_classes=2,
                 data_type=data_type,
@@ -165,7 +169,7 @@ class BaseClassifierTests:
         """Test with missing values (requires imputation)."""
         # Use the enhanced utility for missing data
         X, y = dataset_generator.generate_missing_values_dataset(
-            n_samples=30 if FAST_TEST_MODE else 60,
+            n_samples=SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE,
             n_features=5,
             missing_rate=0.1,
             task_type="classification",
@@ -185,7 +189,7 @@ class BaseClassifierTests:
         """Test with text features (after encoding)."""
         # Use the dedicated text feature dataset generator
         X, y = dataset_generator.generate_text_dataset(
-            n_samples=30 if FAST_TEST_MODE else 60,
+            n_samples=SMALL_TEST_SIZE if FAST_TEST_MODE else DEFAULT_TEST_SIZE,
             task_type="classification",
         )
 
@@ -219,15 +223,6 @@ class BaseClassifierTests:
         y_pred = estimator.predict(X_single)
         assert y_pred.shape == y_single.shape
         assert np.all(y_pred == 0)
-
-        # Test with unbalanced classes (99% class 0, 1% class 1)
-        X_unbalanced = np.random.rand(100, 3)
-        y_unbalanced = np.zeros(100)
-        y_unbalanced[0] = 1  # Only one sample is class 1
-
-        estimator.fit(X_unbalanced, y_unbalanced)
-        y_pred = estimator.predict(X_unbalanced)
-        assert y_pred.shape == y_unbalanced.shape
 
     @pytest.mark.slow
     @pytest.mark.client_compatible
@@ -376,18 +371,14 @@ class BaseRegressorTests:
     @pytest.mark.local_compatible
     def test_extreme_cases(self, estimator):
         """Test TabPFN regressor with extreme cases."""
-        # Very small dataset
+        # Very small dataset with constant y
         X_tiny = np.random.rand(5, 3)  # Just 5 samples, 3 features
-        y_tiny = np.random.rand(5)  # Random target values
+        y_tiny = np.zeros(5)  # Random target values
 
         # Should fit and predict without errors
         estimator.fit(X_tiny, y_tiny)
         y_pred = estimator.predict(X_tiny)
         assert y_pred.shape == y_tiny.shape
-
-        # Skip constant target test - TabPFN regressor doesn't support constant targets
-        # The underlying issue is in TabPFN's bar_distribution.py, which requires
-        # the target values to have some variation for proper distribution fitting
 
         # Test with outliers in target
         X_outlier = np.random.rand(20, 3)

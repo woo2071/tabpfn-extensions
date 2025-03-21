@@ -27,12 +27,11 @@ class TestAutoTabPFNClassifier(BaseClassifierTests):
         max_time = 1 if FAST_TEST_MODE else 5  # Very limited time for fast testing
 
         # Minimize the model portfolio for faster testing
-        phe_init_args = {}
-        if FAST_TEST_MODE:
-            phe_init_args = {
-                "n_repeats": 2,  # Minimum repeats
-                "max_models": 2,  # Use only one model
-            }
+        phe_init_args = {
+            "n_repeats": 2,
+            "n_folds": 2,
+            "max_models": 2,
+        }
 
         return AutoTabPFNClassifier(
             max_time=max_time,
@@ -64,12 +63,12 @@ class TestAutoTabPFNRegressor(BaseRegressorTests):
         max_time = 1 if FAST_TEST_MODE else 5  # Very limited time for fast testing
 
         # Minimize the model portfolio for faster testing
-        phe_init_args = {}
-        if FAST_TEST_MODE:
-            phe_init_args = {
-                "n_repeats": 2,  # Minimum repeats
-                "max_models": 2,  # Use only one model
-            }
+
+        phe_init_args = {
+            "n_repeats": 2,
+            "n_folds": 2,
+            "max_models": 2,
+        }
 
         return AutoTabPFNRegressor(
             max_time=max_time,
