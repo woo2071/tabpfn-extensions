@@ -5,12 +5,13 @@ from __future__ import annotations
 
 import logging
 import math
-import numpy as np
 from abc import abstractmethod
 from collections import Counter
+from typing import TYPE_CHECKING, Literal
+
+import numpy as np
 from sklearn.ensemble import VotingClassifier, VotingRegressor
 from sklearn.utils import check_random_state
-from typing import TYPE_CHECKING, Literal
 
 from .abstract_validation_utils import (
     AbstractValidationUtils,
@@ -191,7 +192,11 @@ class GreedyWeightedEnsemble(AbstractValidationUtils):
         # Prune base models before GES
         data_for_pruning = []
         data_for_selection = {}
-        assert len(self._estimators) == len(oof_proba) == len(self._model_family_per_estimator), "All iterators must have the same length!"
+        assert (
+            len(self._estimators)
+            == len(oof_proba)
+            == len(self._model_family_per_estimator)
+        ), "All iterators must have the same length!"
         for (bm_name, bm_model), bm_oof_proba, bm_family in zip(
             self._estimators,
             oof_proba,
@@ -235,7 +240,9 @@ class GreedyWeightedEnsemble(AbstractValidationUtils):
 
         final_weights = []
         base_models = []
-        assert len(self._estimators) == len(weights), "All iterators must have the same length!"
+        assert len(self._estimators) == len(
+            weights,
+        ), "All iterators must have the same length!"
         for bm, weight in zip(self._estimators, weights):
             if weight != 0:
                 final_weights.append(weight)
@@ -411,9 +418,7 @@ def _prune_to_silo_top_n(
             [base_model for af in too_large_silos for base_model in af_to_model[af]],
             key=lambda x: x[0],  # sort by validation score/loss
             reverse=maximize_metric,  # determines if higher or lower is better
-        )[
-            -1
-        ]  # select the worst model (first element)
+        )[-1]  # select the worst model (first element)
         af_to_model[worst_model[-1]].remove(worst_model)
 
     if sum(len(base_models) for base_models in af_to_model.values()) > n:

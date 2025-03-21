@@ -1,11 +1,17 @@
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
 
 try:
-    __version__ = version("your_package")
+    __version__ = version("tabpfn-extensions")
 except PackageNotFoundError:
     __version__ = "0.1.0.dev0"
 
-from .utils import is_tabpfn
-from .utils import TabPFNRegressor, TabPFNClassifier
+# Create alias for test_utils
+from . import test_utils
 
-from . import utils_todo
+# Import utilities and wrapped TabPFN classes
+from .utils import get_tabpfn_models, is_tabpfn
+
+# Get the TabPFN models with our wrappers applied
+TabPFNClassifier, TabPFNRegressor = get_tabpfn_models()
+
+__all__ = ["test_utils", "TabPFNClassifier", "TabPFNRegressor", "is_tabpfn"]

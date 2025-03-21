@@ -1,29 +1,30 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
+from __future__ import annotations
 
 import copy
+import warnings
+from functools import partial
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import torch
-from functools import partial
-import warnings
 
-from ..benchmarking import Experiment
+from tabpfn_extensions.benchmarking import Experiment
 
 DEFAULT_HEIGHT = 6
 
 
 class EmbeddingUnsupervisedExperiment(Experiment):
-    """
-    This class is used to run experiments on synthetic toy functions.
-    """
+    """This class is used to run experiments on synthetic toy functions."""
 
     name = "EmbeddingUnsupervisedExperiment"
 
     def _plot(self, ax, **kwargs):
-        from sklearn.manifold import TSNE
         from sklearn.decomposition import PCA
+        from sklearn.manifold import TSNE
         from sklearn.preprocessing import StandardScaler
 
         # Instantialte tsne, specify cosine metric
@@ -34,7 +35,7 @@ class EmbeddingUnsupervisedExperiment(Experiment):
 
         # Fit and transform
         embeddings2d = scaler.fit_transform(
-            lower_dim.fit_transform(scaler.fit_transform(self.emb))
+            lower_dim.fit_transform(scaler.fit_transform(self.emb)),
         )
         # Scatter points, set alpha low to make points translucent
         ax[0].scatter(embeddings2d[:, 0], embeddings2d[:, 1], c=1 + self.y_test.numpy())
@@ -46,7 +47,7 @@ class EmbeddingUnsupervisedExperiment(Experiment):
 
         # Fit and transform
         embeddings2d = scaler.fit_transform(
-            lower_dim.fit_transform(scaler.fit_transform(self.X_test))
+            lower_dim.fit_transform(scaler.fit_transform(self.X_test)),
         )
         # Scatter points, set alpha low to make points translucent
         ax[1].scatter(embeddings2d[:, 0], embeddings2d[:, 1], c=1 + self.y_test.numpy())
@@ -72,21 +73,23 @@ class EmbeddingUnsupervisedExperiment(Experiment):
         from sklearn.model_selection import train_test_split
 
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            self.X, self.y, test_size=0.5, random_state=42
+            self.X,
+            self.y,
+            test_size=0.5,
+            random_state=42,
         )
 
         tabpfn.fit(self.X_train, self.y_train)
         self.emb = tabpfn.get_embeddings(
-            self.X_test, per_column=kwargs.get("per_column", False)
+            self.X_test,
+            per_column=kwargs.get("per_column", False),
         )
 
         self.plot()
 
 
 class GenerateSyntheticDataExperiment(Experiment):
-    """
-    This class is used to run experiments on generating synthetic data.
-    """
+    """This class is used to run experiments on generating synthetic data."""
 
     name = "GenerateSyntheticDataExperiment"
 
@@ -98,9 +101,7 @@ class GenerateSyntheticDataExperiment(Experiment):
         g.add_legend()
 
     def run(self, tabpfn, **kwargs):
-        """
-
-        :param tabpfn:
+        """:param tabpfn:
         :param kwargs:
             indices: list of indices from X features to use
         :return:
@@ -129,18 +130,21 @@ class GenerateSyntheticDataExperiment(Experiment):
             tabpfn.set_categorical_features(categorical_features)
             tabpfn.fit(self.X)
 
-            self.synthetic_X = tabpfn.generate_synthetic_data(n_samples=n_samples, t=temp)
+            self.synthetic_X = tabpfn.generate_synthetic_data(
+                n_samples=n_samples,
+                t=temp,
+            )
 
             data_real = pd.DataFrame(
                 {
                     **dict(
                         zip(
                             self.feature_names,
-                            [self.X[:, i] for i in range(0, self.X.shape[1])],
-                        )
+                            [self.X[:, i] for i in range(self.X.shape[1])],
+                        ),
                     ),
                     "real_or_synthetic": "Actual samples",
-                }
+                },
             )
             data_synthetic = pd.DataFrame(
                 {
@@ -149,22 +153,24 @@ class GenerateSyntheticDataExperiment(Experiment):
                             self.feature_names,
                             [
                                 self.synthetic_X[:, i]
-                                for i in range(0, self.synthetic_X.shape[1])
+                                for i in range(self.synthetic_X.shape[1])
                             ],
-                        )
+                        ),
                     ),
                     "real_or_synthetic": "Generated samples",
-                }
+                },
             )
             self.data_real = data_real
             self.data_synthetic = data_synthetic
             if self.data_real.shape[0] < self.data_synthetic.shape[0]:
                 self.data_real = self.data_real.sample(
-                    n=self.data_synthetic.shape[0], replace=True
+                    n=self.data_synthetic.shape[0],
+                    replace=True,
                 )
             elif self.data_synthetic.shape[0] < self.data_real.shape[0]:
                 self.data_synthetic = self.data_synthetic.sample(
-                    n=self.data_real.shape[0], replace=True
+                    n=self.data_real.shape[0],
+                    replace=True,
                 )
             self.data = pd.concat([self.data_real, self.data_synthetic])
 
@@ -172,9 +178,7 @@ class GenerateSyntheticDataExperiment(Experiment):
 
 
 class OutlierDetectionUnsupervisedExperiment(Experiment):
-    """
-    This class is used to run experiments for outlier detection.
-    """
+    """This class is used to run experiments for outlier detection."""
 
     name = "OutlierDetectionUnsupervisedExperiment"
 
@@ -188,12 +192,14 @@ class OutlierDetectionUnsupervisedExperiment(Experiment):
     def plot_two(self, **kwargs):
         outlier_thresh_p = kwargs.get("outlier_thresh_p", 0.98)
         outlier_thresh = np.quantile(
-            self.data["p"][self.data["p"] > 0], outlier_thresh_p
+            self.data["p"][self.data["p"] > 0],
+            outlier_thresh_p,
         )
 
         outlier_thresh_p_1 = kwargs.get("outlier_thresh_p_1", 0.9)
         outlier_thresh_1 = np.quantile(
-            self.data["p"][self.data["p"] > 0], outlier_thresh_p_1
+            self.data["p"][self.data["p"] > 0],
+            outlier_thresh_p_1,
         )
 
         def outlier_f(x, thresh_0, thresh_1):
@@ -201,12 +207,12 @@ class OutlierDetectionUnsupervisedExperiment(Experiment):
                 return np.nan
             if x > thresh_0:
                 return f"Low ({round(100 * (1 - outlier_thresh_p), 2)} Percentile)"
-            elif x > thresh_1:
+            if x > thresh_1:
                 return f"Medium ({round(100 * (1 - outlier_thresh_p_1), 2)} Percentile)"
-            return f"High"
+            return "High"
 
         self.data["outlier"] = self.data["p"].map(
-            partial(outlier_f, thresh_0=outlier_thresh, thresh_1=outlier_thresh_1)
+            partial(outlier_f, thresh_0=outlier_thresh, thresh_1=outlier_thresh_1),
         )
         # Oversample the data with outlier = True
         oversample_low = self.data[
@@ -220,7 +226,7 @@ class OutlierDetectionUnsupervisedExperiment(Experiment):
                 self.data[self.data["outlier"].map(lambda x: "High" in x)],
                 oversample_low,
                 oversample_med,
-            ]
+            ],
         )
         g = sns.JointGrid(
             data=data_,
@@ -264,7 +270,7 @@ class OutlierDetectionUnsupervisedExperiment(Experiment):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
 
-            X, y = copy.deepcopy(kwargs.get("X")), copy.deepcopy(kwargs.get("y"))
+            X, _y = copy.deepcopy(kwargs.get("X")), copy.deepcopy(kwargs.get("y"))
             attribute_names = kwargs.get("attribute_names")
 
             indices = kwargs.get("indices", list(range(X.shape[1])))
@@ -289,10 +295,19 @@ class OutlierDetectionUnsupervisedExperiment(Experiment):
 
             self.data = pd.DataFrame(
                 torch.cat(
-                    [self.p[:, np.newaxis], p_rank[:, np.newaxis], self.X], dim=1
+                    [self.p[:, np.newaxis], p_rank[:, np.newaxis], self.X],
+                    dim=1,
                 ).numpy(),
-                columns=["p"] + ["p_rank"] + self.feature_names,
+                columns=["p", "p_rank", *self.feature_names],
             )
 
             if kwargs.get("should_plot", True):
-                self.plot_two()
+                try:
+                    # We don't need to import the module directly here
+                    # since plot_two() will do the import
+                    self.plot_two()
+                except ImportError:
+                    # Skip plotting if matplotlib is not available
+                    pass
+
+            return {"outlier_scores": self.p.numpy()}

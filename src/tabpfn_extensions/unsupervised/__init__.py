@@ -1,6 +1,4 @@
-"""
-Unsupervised learning module for tabpfn_extensions package.
-"""
+"""Unsupervised learning module for tabpfn_extensions package."""
 
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
@@ -8,4 +6,4 @@ Unsupervised learning module for tabpfn_extensions package.
 from . import experiments
 from .unsupervised import TabPFNUnsupervisedModel
 
-__all__ = ["TabPFNUnsupervisedModel"]
+__all__ = ["TabPFNUnsupervisedModel", "experiments"]

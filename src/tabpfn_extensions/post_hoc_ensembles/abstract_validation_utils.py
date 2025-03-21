@@ -4,21 +4,23 @@
 from __future__ import annotations
 
 import logging
-import numpy as np
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import deepcopy
-from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
-from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit
 from typing import Literal
 
-from .save_splitting import get_cv_split_for_data
-from ..scoring.scoring_utils import (
+import numpy as np
+from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
+from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit
+
+from tabpfn_extensions.scoring.scoring_utils import (
     CLF_LABEL_METRICS,
     score_classification,
     score_regression,
 )
+
+from .save_splitting import get_cv_split_for_data
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -69,7 +71,8 @@ class AbstractValidationUtils(ABC, BaseEstimator):
         self._start_time: int = 0
         self.classes_: np.ndarray | None = None
         self._repeats_seed = [
-            int(self._rng.randint(0, int(np.iinfo(np.int32).max))) for _ in range(self.n_repeats)
+            int(self._rng.randint(0, int(np.iinfo(np.int32).max)))
+            for _ in range(self.n_repeats)
         ]
         self._estimators = estimators.copy()  # internal copy for early stopping.
         self.validation_method = validation_method
@@ -121,7 +124,7 @@ class AbstractValidationUtils(ABC, BaseEstimator):
     ) -> None:
         fold_X_train, fold_X_test = X[train_index], X[test_index]
         fold_y_train, fold_y_test = y[train_index], y[test_index]
-        # base_model = copy.deepcopy(base_model) # FIXME: think about adding this for safety but will likely slow down (due to having to load model again)
+        # Note: Using the base_model directly without deepcopy for performance reasons
 
         # Default base models case
         base_model.fit(fold_X_train, fold_y_train)
@@ -178,7 +181,7 @@ class AbstractValidationUtils(ABC, BaseEstimator):
         self,
         X,
         y,
-    ) -> tuple[int, int, int, BaseEstimator, list[int], list[int], bool, bool,]:
+    ) -> tuple[int, int, int, BaseEstimator, list[int], list[int], bool, bool]:
         n_models = len(self.estimators)
         holdout_validation = self._is_holdout
         _folds = self.n_folds if not holdout_validation else 1
@@ -219,12 +222,27 @@ class AbstractValidationUtils(ABC, BaseEstimator):
                     )
 
     def time_limit_reached(self) -> bool:
+        """Check if the time limit for execution has been reached.
+
+        Returns:
+            bool: True if the time limit has been reached, False otherwise or if no time limit was set
+        """
         if self.time_limit is None:
             return False
         return (time.time() - self._start_time) > self.time_limit
 
     def not_enough_time(self, current_repeat: int) -> bool:
-        """Simple heuristic to stop cross-validation early if not enough time is left for another repeat."""
+        """Simple heuristic to stop cross-validation early if not enough time is left for another repeat.
+
+        Args:
+            current_repeat: The current repeat index
+
+        Returns:
+            bool: True if there likely isn't enough time for another repeat, False otherwise
+
+        Note:
+            This is a heuristic based on average time per repeat so far and may not be exact.
+        """
         if self.time_limit is None:
             return False
 
@@ -234,6 +252,11 @@ class AbstractValidationUtils(ABC, BaseEstimator):
         return (time_spent_so_far + avg_time_per_repeat) > self.time_limit
 
     def set_time_limit(self) -> None:
+        """Initialize the timer for time-limited execution.
+
+        Sets the start time for time limit tracking and logs the time limit info.
+        This method should be called at the beginning of validation.
+        """
         if self.time_limit is not None:
             self._start_time = time.time()
             logger.info(
@@ -485,17 +508,7 @@ class AbstractValidationUtils(ABC, BaseEstimator):
                 for oof in oof_proba_list
             ):
                 for i, oof in enumerate(oof_proba_list):
-                    print("==================== ", i)  # STUPID DEBUG PRINT
-                    print(
-                        oof[
-                            ~np.isclose(
-                                oof[~np.isnan(oof).any(axis=1)].sum(axis=1),
-                                ran_repeats,
-                            )
-                        ],
-                    )
-                    print(ran_repeats)
-                print()
+                    pass
                 raise ValueError(
                     "OOF predictions are not consistent over repeats! Something went wrong.",
                 )

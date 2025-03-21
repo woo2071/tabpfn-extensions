@@ -5,25 +5,57 @@ from __future__ import annotations
 
 import copy
 import random
-from sklearn.ensemble import StackingClassifier, BaggingClassifier, VotingClassifier
 
-from . import configs
+from sklearn.ensemble import BaggingClassifier, StackingClassifier, VotingClassifier
+
 from tabpfn_extensions.rf_pfn import (
     RandomForestTabPFNClassifier,
     RandomForestTabPFNRegressor,
 )
+from tabpfn_extensions.utils import TabPFNClassifier, TabPFNRegressor, product_dict
+
+from . import configs
 from .weighted_ensemble import WeightedAverageEnsemble
+
+
+def get_single_tabpfn(config, **kwargs):
+    """Create a single TabPFN model based on the provided configuration.
+
+    Parameters:
+        config: Configuration object with parameters for the TabPFN model
+        **kwargs: Additional keyword arguments to pass to the TabPFN constructor
+
+    Returns:
+        A TabPFN model (classifier or regressor) configured according to the parameters
+    """
+    if config.task_type == "multiclass":
+        return TabPFNClassifier(
+            model_path=config.paths_config.get_path()
+            if hasattr(config.paths_config, "get_path")
+            else "default",
+            n_estimators=config.n_estimators,
+            **kwargs,
+        )
+    elif config.task_type == "regression":
+        return TabPFNRegressor(
+            model_path=config.paths_config.get_path()
+            if hasattr(config.paths_config, "get_path")
+            else "default",
+            n_estimators=config.n_estimators,
+            **kwargs,
+        )
+    else:
+        raise ValueError(f"Unknown task type: {config.task_type}")
 
 
 class TabPFNEnsemble(VotingClassifier):
     def set_categorical_features(self, categorical_features):
-        for model_name, model in self.estimators:
+        for _model_name, model in self.estimators:
             model.set_categorical_features(categorical_features)
 
 
 def get_tabpfn_outer_ensemble(config: configs.TabPFNConfig, **kwargs):
-    """
-    This will create a model very similar to our standard TabPFN estimators,
+    """This will create a model very similar to our standard TabPFN estimators,
     but it uses multiple model weights to generate predictions.
     Thus the `configs.TabPFNModelPathsConfig` can contain multiple paths which are all used.
 
@@ -40,7 +72,7 @@ def get_tabpfn_outer_ensemble(config: configs.TabPFNConfig, **kwargs):
         pass  # assert config.model_type_config.multiclass_decoder == "shuffle"
 
     relevant_config_product = list(
-        utils.product_dict(
+        product_dict(
             {
                 "paths_config": [
                     configs.TabPFNModelPathsConfig([p])
@@ -49,12 +81,13 @@ def get_tabpfn_outer_ensemble(config: configs.TabPFNConfig, **kwargs):
                 "preprocess_transforms": [
                     (pp_transform,) for pp_transform in config.preprocess_transforms
                 ],
-            }
-        )
+            },
+        ),
     )
     # shuffle with fixed seed
     relevant_config_product = sorted(
-        relevant_config_product, key=lambda x: hash(str(x))
+        relevant_config_product,
+        key=lambda x: hash(str(x)),
     )
 
     # if we have more ensemble configurations than models, we can have multiple configurations per model
@@ -62,29 +95,66 @@ def get_tabpfn_outer_ensemble(config: configs.TabPFNConfig, **kwargs):
 
     single_tabpfns = []
     for ensemble_member_index, sub_config in zip(
-        range(config.n_estimators), relevant_config_product
+        range(config.n_estimators),
+        relevant_config_product,
     ):
         member_config = copy.deepcopy(config)
         for k, v in sub_config.items():
             setattr(member_config, k, v)
         member_config.model_type = "single"
         member_config.n_estimators = n_estimators_per_model
-        print(member_config)
-        tabpfn = get_single_tabpfn(member_config, **kwargs)
+
+        # Create TabPFN model directly instead of calling get_single_tabpfn
+        if member_config.task_type == "multiclass":
+            tabpfn = TabPFNClassifier(
+                model_path=member_config.paths_config.get_path()
+                if hasattr(member_config.paths_config, "get_path")
+                else "default",
+                n_estimators=member_config.n_estimators,
+                **kwargs,
+            )
+        elif member_config.task_type == "regression":
+            tabpfn = TabPFNRegressor(
+                model_path=member_config.paths_config.get_path()
+                if hasattr(member_config.paths_config, "get_path")
+                else "default",
+                n_estimators=member_config.n_estimators,
+                **kwargs,
+            )
+        else:
+            raise ValueError(f"Unknown task type: {member_config.task_type}")
+
         tabpfn.seed = ensemble_member_index + 120412 + random.randint(0, 100_000)
         single_tabpfns.append(tabpfn)
 
-    ensemble_tabpfn = TabPFNEnsemble(
+    return TabPFNEnsemble(
         estimators=[(f"model_{i}", clf) for i, clf in enumerate(single_tabpfns)],
         voting="soft",
         n_jobs=1,
     )
-    print("oour tabpfn ensemble is: ", ensemble_tabpfn)
-    return ensemble_tabpfn
 
 
 def get_tabpfn_rf(config, random_state=0, **kwargs):
-    tabpfn = get_single_tabpfn(config, **kwargs)
+    # Create TabPFN model directly instead of calling get_single_tabpfn
+    if config.task_type == "multiclass":
+        tabpfn = TabPFNClassifier(
+            model_path=config.paths_config.get_path()
+            if hasattr(config.paths_config, "get_path")
+            else "default",
+            n_estimators=config.n_estimators,
+            **kwargs,
+        )
+    elif config.task_type == "regression":
+        tabpfn = TabPFNRegressor(
+            model_path=config.paths_config.get_path()
+            if hasattr(config.paths_config, "get_path")
+            else "default",
+            n_estimators=config.n_estimators,
+            **kwargs,
+        )
+    else:
+        raise ValueError(f"Unknown task type: {config.task_type}")
+
     show_progress = tabpfn.show_progress
     tabpfn.show_progress = False
     if config.task_type == "multiclass":
@@ -110,7 +180,7 @@ def get_tabpfn_rf(config, random_state=0, **kwargs):
             rf_average_logits=config.model_type_config.rf_average_logits,
             max_predict_time=config.model_type_config.max_predict_time,
         )
-    elif config.task_type == "regression":
+    if config.task_type == "regression":
         return RandomForestTabPFNRegressor(
             tabpfn=tabpfn,
             min_samples_leaf=config.model_type_config.min_samples_leaf,
@@ -131,8 +201,7 @@ def get_tabpfn_rf(config, random_state=0, **kwargs):
             rf_average_logits=config.model_type_config.rf_average_logits,
             max_predict_time=config.model_type_config.max_predict_time,
         )
-    else:
-        raise ValueError(f"Unknown task type for RF PFN {config.task_type}")
+    raise ValueError(f"Unknown task type for RF PFN {config.task_type}")
 
 
 class TabPFNWeightedAverageEnsemble(WeightedAverageEnsemble):
@@ -188,11 +257,6 @@ class TabPFNStackingClassifier(StackingClassifier):
 
     # TODO: Adapt scoring function, needs to overwrite the scoring function of the
     #  _BaseStacking or in BaseTabPFNClassifier
-    # def score(self, X, y=None):
-    #    if self.optimize_metric == "roc":
-    #        from sklearn.metrics import roc_auc_score
-
-    #        return roc_auc_score(X, y)
 
 
 class TabPFNBaggingClassifier(BaggingClassifier):
@@ -211,7 +275,8 @@ class TabPFNBaggingClassifier(BaggingClassifier):
     ):
         self.estimator.seed = None  # Make sure that TabPFN is not seeded
         max_samples = min(
-            X.shape[0], max_samples
+            X.shape[0],
+            max_samples,
         )  # Breaks in sklearn if max_samples is larger than X.shape[0]
         super()._fit(
             X,
@@ -230,7 +295,26 @@ class TabPFNBaggingClassifier(BaggingClassifier):
 
 
 def get_bagging_ensemble(config, **kwargs):
-    tabpfn = get_single_tabpfn(config, **kwargs)
+    # Create TabPFN model directly instead of calling get_single_tabpfn
+    if config.task_type == "multiclass":
+        tabpfn = TabPFNClassifier(
+            model_path=config.paths_config.get_path()
+            if hasattr(config.paths_config, "get_path")
+            else "default",
+            n_estimators=config.n_estimators,
+            **kwargs,
+        )
+    elif config.task_type == "regression":
+        tabpfn = TabPFNRegressor(
+            model_path=config.paths_config.get_path()
+            if hasattr(config.paths_config, "get_path")
+            else "default",
+            n_estimators=config.n_estimators,
+            **kwargs,
+        )
+    else:
+        raise ValueError(f"Unknown task type: {config.task_type}")
+
     tabpfn.show_progress = False
     tabpfn.seed = None
     return TabPFNBaggingClassifier(
@@ -254,14 +338,34 @@ def get_stacking_ensemble(config, **kwargs):
         config_ = copy.deepcopy(config)
         for k, v in stacking_config.items():  # Overwrite configs with stacking settings
             setattr(config_, k, v)
-        tabpfn = get_single_tabpfn(config_, **kwargs)
+
+        # Create TabPFN model directly instead of calling get_single_tabpfn
+        if config_.task_type == "multiclass":
+            tabpfn = TabPFNClassifier(
+                model_path=config_.paths_config.get_path()
+                if hasattr(config_.paths_config, "get_path")
+                else "default",
+                n_estimators=config_.n_estimators,
+                **kwargs,
+            )
+        elif config_.task_type == "regression":
+            tabpfn = TabPFNRegressor(
+                model_path=config_.paths_config.get_path()
+                if hasattr(config_.paths_config, "get_path")
+                else "default",
+                n_estimators=config_.n_estimators,
+                **kwargs,
+            )
+        else:
+            raise ValueError(f"Unknown task type: {config_.task_type}")
+
         tabpfn.show_progress = False
         tabpfn.seed = seed
         estimators.append(
             (
                 str(stacking_config),
                 tabpfn,
-            )
+            ),
         )
 
     if config.model_type_config.append_other_model_types:
@@ -282,14 +386,34 @@ def get_weighted_average_ensemble(config, **kwargs):
         config_ = copy.deepcopy(config)
         for k, v in stacking_config.items():  # Overwrite configs with stacking settings
             setattr(config_, k, v)
-        tabpfn = get_single_tabpfn(config_, **kwargs)
+
+        # Create TabPFN model directly instead of calling get_single_tabpfn
+        if config_.task_type == "multiclass":
+            tabpfn = TabPFNClassifier(
+                model_path=config_.paths_config.get_path()
+                if hasattr(config_.paths_config, "get_path")
+                else "default",
+                n_estimators=config_.n_estimators,
+                **kwargs,
+            )
+        elif config_.task_type == "regression":
+            tabpfn = TabPFNRegressor(
+                model_path=config_.paths_config.get_path()
+                if hasattr(config_.paths_config, "get_path")
+                else "default",
+                n_estimators=config_.n_estimators,
+                **kwargs,
+            )
+        else:
+            raise ValueError(f"Unknown task type: {config_.task_type}")
+
         tabpfn.show_progress = False
         tabpfn.seed = seed
         estimators.append(
             (
                 str(stacking_config),
                 tabpfn,
-            )
+            ),
         )
 
     return TabPFNWeightedAverageEnsemble(

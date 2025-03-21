@@ -1,11 +1,13 @@
 #  Copyright (c) Prior Labs GmbH 2025.
 #  Licensed under the Apache License, Version 2.0
 
+"""WARNING: This example may run slowly on CPU-only systems.
+For better performance, we recommend running with GPU acceleration.
+This example performs hyperparameter optimization, which requires training
+multiple TabPFN models with different configurations.
+"""
+
 import numpy as np
-from tabpfn_extensions.hpo import (
-    TunedTabPFNRegressor,
-    TunedTabPFNClassifier,
-)
 from sklearn.datasets import load_breast_cancer, load_diabetes, load_iris
 from sklearn.metrics import (
     accuracy_score,
@@ -16,10 +18,18 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 
+from tabpfn_extensions.hpo import (
+    TunedTabPFNClassifier,
+    TunedTabPFNRegressor,
+)
+
 # Binary
 X, y = load_breast_cancer(return_X_y=True)
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.33, random_state=42
+    X,
+    y,
+    test_size=0.33,
+    random_state=42,
 )
 clf = TunedTabPFNClassifier()
 clf.fit(X_train, y_train)

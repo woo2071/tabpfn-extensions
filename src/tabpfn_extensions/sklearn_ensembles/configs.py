@@ -3,15 +3,18 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from sklearn.base import ClassifierMixin
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
+
 from sklearn.linear_model import LogisticRegression
-from typing import Optional, Union, Tuple, Any, Dict, List, Literal
+
+if TYPE_CHECKING:
+    from sklearn.base import ClassifierMixin
 
 
 @dataclass
 class StackingConfig:
-    params_stacked: Tuple[Dict[str, Any], ...]
+    params_stacked: tuple[dict[str, Any], ...]
     cv: int
     append_other_model_types: bool
 
@@ -20,7 +23,7 @@ class StackingConfig:
 
 @dataclass
 class WeightedAverageConfig:
-    params_stacked: Tuple[Dict[str, Any], ...]
+    params_stacked: tuple[dict[str, Any], ...]
     cv: int
     n_max: int = 3
 

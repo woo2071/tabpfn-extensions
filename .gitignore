@@ -137,3 +137,12 @@ sftp_freiburg.json
 .DS_Store
 .DS_Store?
 **/.DS_Store
+
+# Model files
+*.ckpt
+/src/tabpfn_extensions/hpo/hpo_models/
+
+# Temporary files
+*.py.new
+commit_messages.txt
+CLAUDE.md
