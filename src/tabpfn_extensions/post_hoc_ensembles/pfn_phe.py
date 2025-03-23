@@ -13,9 +13,9 @@ import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
-from sklearn.utils import check_array, check_X_y
 
 from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
+from tabpfn_extensions.misc.sklearn_compat import check_array, check_X_y
 from tabpfn_extensions.rf_pfn import (
     RandomForestTabPFNClassifier,
     RandomForestTabPFNRegressor,
@@ -250,7 +250,7 @@ class AutoPostHocEnsemblePredictor(BaseEstimator):
         X, y = check_X_y(
             X,
             y,
-            force_all_finite="allow-nan",
+            ensure_all_finite="allow-nan",
             dtype=object,
             accept_sparse=False,
         )
@@ -281,7 +281,7 @@ class AutoPostHocEnsemblePredictor(BaseEstimator):
         X, y = check_X_y(
             X,
             y,
-            force_all_finite="allow-nan",
+            ensure_all_finite="allow-nan",
             dtype="numeric",
             accept_sparse=False,
         )
@@ -396,10 +396,10 @@ class AutoPostHocEnsemblePredictor(BaseEstimator):
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Predicts the target values for the given data."""
-        X = check_array(X, force_all_finite="allow-nan", dtype=object)
+        X = check_array(X, ensure_all_finite="allow-nan", dtype=object)
         X = check_array(
             self._cat_encoder.transform(X),
-            force_all_finite="allow-nan",
+            ensure_all_finite="allow-nan",
             dtype="numeric",
         )
         if self.task_type == "regression":
@@ -409,10 +409,10 @@ class AutoPostHocEnsemblePredictor(BaseEstimator):
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """Predicts the target values for the given data."""
-        X = check_array(X, force_all_finite="allow-nan", dtype=object)
+        X = check_array(X, ensure_all_finite="allow-nan", dtype=object)
         X = check_array(
             self._cat_encoder.transform(X),
-            force_all_finite="allow-nan",
+            ensure_all_finite="allow-nan",
             dtype="numeric",
         )
         return self._ens_model.predict_proba(X)

@@ -45,14 +45,14 @@ from typing import Any, Callable
 import numpy as np
 import torch
 from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
-from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin, check_array
+from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 from sklearn.utils import check_random_state
-from sklearn.utils.validation import check_X_y
 
 from tabpfn_extensions.hpo.search_space import get_param_grid_hyperopt
+from tabpfn_extensions.misc.sklearn_compat import check_array, check_X_y
 
 # Import TabPFN models from extensions (which handles backend compatibility)
 try:
@@ -441,7 +441,7 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
         X, y = check_X_y(
             X,
             y,
-            force_all_finite="allow-nan",
+            ensure_all_finite="allow-nan",
             dtype=object,
             accept_sparse=False,
         )
@@ -488,10 +488,10 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
         # Check if X is a TestData object and extract raw data if needed
         X_data = X.data if hasattr(X, "data") else X
 
-        X_data = check_array(X_data, force_all_finite="allow-nan", dtype=object)
+        X_data = check_array(X_data, ensure_all_finite="allow-nan", dtype=object)
         X_data = check_array(
             self._cat_encoder.transform(X_data),
-            force_all_finite="allow-nan",
+            ensure_all_finite="allow-nan",
             dtype="numeric",
         )
         return self._label_encoder.inverse_transform(self.best_model_.predict(X_data))
@@ -510,10 +510,10 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
         # Check if X is a TestData object and extract raw data if needed
         X_data = X.data if hasattr(X, "data") else X
 
-        X_data = check_array(X_data, force_all_finite="allow-nan", dtype=object)
+        X_data = check_array(X_data, ensure_all_finite="allow-nan", dtype=object)
         X_data = check_array(
             self._cat_encoder.transform(X_data),
-            force_all_finite="allow-nan",
+            ensure_all_finite="allow-nan",
             dtype="numeric",
         )
         return self.best_model_.predict_proba(X_data)
@@ -551,7 +551,7 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
         X, y = check_X_y(
             X,
             y,
-            force_all_finite="allow-nan",
+            ensure_all_finite="allow-nan",
             dtype=object,
             accept_sparse=False,
         )
@@ -592,10 +592,10 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
         # Check if X is a TestData object and extract raw data if needed
         X_data = X.data if hasattr(X, "data") else X
 
-        X_data = check_array(X_data, force_all_finite="allow-nan", dtype=object)
+        X_data = check_array(X_data, ensure_all_finite="allow-nan", dtype=object)
         X_data = check_array(
             self._cat_encoder.transform(X_data),
-            force_all_finite="allow-nan",
+            ensure_all_finite="allow-nan",
             dtype="numeric",
         )
         return self.best_model_.predict(X_data)
