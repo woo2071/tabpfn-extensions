@@ -19,6 +19,7 @@
 - **hpo**: Automatic hyperparameter tuning for TabPFN
 - **rf_pfn**: Combine TabPFN with decision trees and random forests
 - **unsupervised**: Data generation and outlier detection
+- **embedding**: Get TabPFNs internal dense sample embeddings
 
 Detailed documentation for each extension is available in the respective module directories.
 
