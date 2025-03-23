@@ -76,7 +76,7 @@ all = [
     "shap>=0.41.0",
     "shapiq>=0.4.0",
     "seaborn>=0.12.2",
-    
+
     "kditransform>=0.2.0",
     "llvmlite>=0.30.0",
     "hyperopt>=0.2.7",
@@ -90,21 +90,10 @@ dev = [
     # Test
     "pytest>=8.0.0",
     "pytest-xdist>=3.6.0",
-    # Docs
-    "mkdocs>=1.5.0",
-    "mkdocs-material>=9.0.0",
-    "mkdocs-autorefs>=0.5.0",
-    "mkdocs-gen-files>=0.5.0",
-    "mkdocs-literate-nav>=0.6.0",
-    "mkdocs-glightbox>=0.3.0",
-    "mkdocstrings[python]>=0.23.0",
-    "markdown-exec[ansi]>=1.0.0",
-    "mike>=2.0.0",
-    "black>=24.0.0", # This allows mkdocstrings to format signatures in the docs
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "tests_fixed"]  # Where the tests are located
+testpaths = ["tests"]  # Where the tests are located
 minversion = "8.0"
 empty_parameter_set_mark = "xfail"  # Prevents user error of an empty `parametrize` of a test
 log_cli = false
