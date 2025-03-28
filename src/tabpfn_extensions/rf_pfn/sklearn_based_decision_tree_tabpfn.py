@@ -716,11 +716,18 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
 
                 # Additional adaptive checks
                 if self.adaptive_tree and leaf_id != 0:
-                    # Possibly skip if node was previously pruned
-                    if (y is None) and (
-                        self._node_prediction_type[est_id][leaf_id] == "previous"
-                    ):
+                    should_skip_previously_pruned = False
+                    if y is None:
+                        # Safely check if the key exists before accessing
+                        node_type = self._node_prediction_type.get(est_id, {}).get(
+                            leaf_id,
+                        )
+                        if node_type == "previous":
+                            should_skip_previously_pruned = True
+
+                    if should_skip_previously_pruned:
                         continue
+
                     # Skip if classification is missing a class
                     if (
                         self.task_type == "multiclass"
