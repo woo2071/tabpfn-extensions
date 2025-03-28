@@ -728,11 +728,6 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
                     if should_skip_previously_pruned:
                         continue
 
-                    # Possibly skip if node was previously pruned
-                    if (y is None) and (
-                        self._node_prediction_type[est_id][leaf_id] == "previous"
-                    ):
-                        continue
                     # Skip if classification is missing a class
                     if (
                         self.task_type == "multiclass"
