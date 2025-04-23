@@ -283,11 +283,13 @@ class TunedTabPFNBase(BaseEstimator):
                     return {"loss": float("inf"), "status": STATUS_OK}
 
             try:
+                # Extract decision tree specific parameters
+                # and remove them from model_params so that
+                # instances of TabPFNClassifier or
+                # TabPFNRegressor can be initialized properly
+                max_depth = model_params.pop("max_depth", 3)
                 # Create and fit model based on model type
                 if model_type == "dt_pfn":
-                    # Extract decision tree specific parameters
-                    max_depth = model_params.pop("max_depth", 3)
-
                     if task_type in ["binary", "multiclass"]:
                         # Use TabPFNClassifier as the base model for DT
                         base_model = TabPFNClassifier(**model_params)
