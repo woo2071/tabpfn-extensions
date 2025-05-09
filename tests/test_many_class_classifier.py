@@ -93,9 +93,9 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
         This test is specific and doesn't use the main 'estimator' fixture to
         re-initialize ManyClassClassifier inside the loop with specific verbose settings.
         """
-        print("\nTesting ManyClassClassifier with a large number of classes:")
+        logging.info("Testing ManyClassClassifier with a large number of classes:")
         for num_classes in [2, 4, 7, 19]:  # Reduced range for test speed
-            print(f"  Testing with num_classes = {num_classes}")
+            logging.info(f"  Testing with num_classes = {num_classes}")
             X, y = get_classification_data(
                 num_classes=num_classes,
                 num_features=10,
