@@ -7,15 +7,12 @@ from a common base test suite.
 
 from __future__ import annotations
 
-import pytest
 import numpy as np
-import warnings
-from sklearn.datasets import make_classification
-from sklearn.model_selection import train_test_split
+import pytest
 from sklearn.metrics import accuracy_score
-from sklearn.utils.estimator_checks import check_estimator  # For direct call if needed
-from sklearn.exceptions import NotFittedError
+from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
+
 # Assuming tabpfn_extensions.many_class is in the python path
 from tabpfn_extensions.many_class import ManyClassClassifier
 from test_base_tabpfn import BaseClassifierTests
@@ -32,8 +29,7 @@ def get_classifcation_data(num_classes: int, num_features: int, num_samples: int
 
 
 class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifierTests
-    """
-    Test suite for the ManyClassClassifier, including specific tests for its
+    """Test suite for the ManyClassClassifier, including specific tests for its
     many-class handling capabilities and inheriting general classifier tests.
     """
 
@@ -48,8 +44,7 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
         )
 
     def test_internal_fit_predict_many_classes(self, estimator):
-        """
-        Test fit and predict specifically with more classes than alphabet_size,
+        """Test fit and predict specifically with more classes than alphabet_size,
         focusing on the mapping logic of ManyClassClassifier.
         This uses the 'estimator' fixture which is ManyClassClassifier.
         """
@@ -72,8 +67,8 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
         assert estimator.code_book_ is not None
         assert estimator.code_book_.shape[1] == n_classes
         assert estimator.estimators_ is None  # Fit happens during predict_proba when mapping
-        assert 'coverage_min' in estimator.codebook_statistics_
-        assert estimator.codebook_statistics_['coverage_min'] > 0
+        assert "coverage_min" in estimator.codebook_statistics_
+        assert estimator.codebook_statistics_["coverage_min"] > 0
 
         assert predictions.shape == (X_test.shape[0],)
         assert probabilities.shape == (X_test.shape[0], n_classes)
@@ -81,8 +76,7 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
         assert accuracy_score(y_test, predictions) >= 0.0  # Basic check
 
     def test_failing_scenario_many_classes_replication(self, estimator):
-        """
-        Replicates and tests the scenario with a very large number of classes.
+        """Replicates and tests the scenario with a very large number of classes.
         This test is specific and doesn't use the main 'estimator' fixture to
         re-initialize ManyClassClassifier inside the loop with specific verbose settings.
         """
@@ -101,8 +95,8 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
                 assert estimator._get_alphabet_size() < num_classes
                 assert estimator.code_book_ is not None
                 assert estimator.code_book_.shape[1] == num_classes
-                assert 'coverage_min' in estimator.codebook_statistics_
-                assert estimator.codebook_statistics_['coverage_min'] > 0, \
+                assert "coverage_min" in estimator.codebook_statistics_
+                assert estimator.codebook_statistics_["coverage_min"] > 0, \
                 f"Coverage min is 0 for {num_classes} classes!"
             else:
                 assert estimator._get_alphabet_size() >= num_classes
@@ -110,7 +104,7 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
             _ = estimator.predict(X)  # Triggers predict_proba
             _ = estimator.predict_proba(X)
 
-            assert hasattr(estimator, 'n_features_in_')
+            assert hasattr(estimator, "n_features_in_")
             assert estimator.n_features_in_ == X.shape[1]
         print("Large number of classes test completed.")
 

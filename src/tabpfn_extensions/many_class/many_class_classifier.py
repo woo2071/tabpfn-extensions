@@ -70,25 +70,26 @@ Example usage:
 
 from __future__ import annotations
 
+import itertools
 import math
 import warnings
-import itertools
-
-import tqdm # For pairwise combinations
+from typing import ClassVar
 
 import numpy as np
-from scipy.special import softmax # For log-proba aggregation option
+import tqdm  # For pairwise combinations
+from scipy.special import softmax  # For log-proba aggregation option
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.utils import check_random_state
 
 # Imports as specified by the user
-from sklearn.utils.multiclass import unique_labels, check_classification_targets
-from sklearn.utils import check_random_state
+from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.validation import (
     # _check_sample_weight, # Import if sample_weight functionality is added
     check_is_fitted,
     # _check_feature_names_in is used if X is validated by wrapper directly
     # but we aim to use the custom validate_data
 )
+
 # Custom validate_data import
 from tabpfn_extensions.misc.sklearn_compat import validate_data
 
@@ -153,19 +154,19 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         n_features_in_ (int): Number of features seen during `fit`.
         feature_names_in_ (np.ndarray | None): Names of features seen during `fit`.
     """
-    _required_parameters = ["estimator"]
+    _required_parameters: ClassVar[list[str]] = ["estimator"]
 
     def __init__(
         self,
-        estimator,
+        estimator: BaseEstimator,
         *,
-        alphabet_size=None,
-        n_estimators=None,
-        n_estimators_redundancy=4,
-        random_state=None,
-        log_proba_aggregation=True,
-        epsilon=1e-9,
-        verbose=0,
+        alphabet_size: int | None = None,
+        n_estimators: int | None = None,
+        n_estimators_redundancy: int = 4,
+        random_state: int | None = None,
+        log_proba_aggregation: bool = True,
+        epsilon: float = 1e-9,
+        verbose: int = 0,
     ):
         self.estimator = estimator
         self.random_state = random_state
@@ -190,7 +191,7 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
                 warnings.warn(
                     "Could not infer alphabet_size from estimator.max_num_classes_. "
                     "Ensure alphabet_size is correctly set if this is not TabPFN.",
-                    UserWarning
+                    UserWarning, stacklevel=2
                 )
             # Default to a common small number if not TabPFN and not set,
             # though this might not be optimal.
@@ -249,26 +250,24 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
             )
 
         stats = {
-            'coverage_min': int(np.min(coverage_count)),
-            'coverage_max': int(np.max(coverage_count)),
-            'coverage_mean': float(np.mean(coverage_count)),
-            'coverage_std': float(np.std(coverage_count)),
-            'n_estimators': n_estimators,
-            'n_classes': n_classes,
-            'alphabet_size': alphabet_size,
+            "coverage_min": int(np.min(coverage_count)),
+            "coverage_max": int(np.max(coverage_count)),
+            "coverage_mean": float(np.mean(coverage_count)),
+            "coverage_std": float(np.std(coverage_count)),
+            "n_estimators": n_estimators,
+            "n_classes": n_classes,
+            "alphabet_size": alphabet_size,
         }
         if n_classes > 1:
             min_dist = n_estimators
             for j1, j2 in itertools.combinations(range(n_classes), 2):
                 dist = np.sum(codebook[:, j1] != codebook[:, j2])
                 min_dist = min(min_dist, dist)
-            stats['min_pairwise_hamming_dist'] = int(min_dist)
+            stats["min_pairwise_hamming_dist"] = int(min_dist)
 
         if self.verbose > 0:
-            print("--- Codebook Generation Stats ---")
             for key, value in stats.items():
-                print(f"  {key.replace('_', ' ').capitalize()}: {value:.2f}" if isinstance(value, float) else f"  {key.replace('_', ' ').capitalize()}: {value}")
-            print("-------------------------------")
+                pass
         return codebook, stats
 
     def fit(self, X, y, **fit_params) -> ManyClassClassifier:
@@ -285,15 +284,15 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
             ensure_all_finite=False,  # scikit-learn sets self.n_features_in_ automatically
         )
         # After validate_data, set feature_names_in_ if X is a DataFrame
-        if hasattr(X, 'columns'):
+        if hasattr(X, "columns"):
             self.feature_names_in_ = list(X.columns)
 
         random_state_instance = check_random_state(self.random_state)
         self.classes_ = unique_labels(y) # Use unique_labels as imported
         n_classes = len(self.classes_)
 
-        if n_classes == 0:
-            raise ValueError("Cannot fit with no classes present.")
+        if n_classes <= 1:
+             raise ValueError("Cannot fit with only one class present.")
 
         alphabet_size = self._get_alphabet_size()
         self.no_mapping_needed_ = (n_classes <= alphabet_size)
@@ -306,18 +305,18 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
 
         if self.no_mapping_needed_:
             if self.verbose > 0:
-                print("No codebook mapping needed. Fitting base estimator directly.")
+                pass
             cloned_estimator = clone(self.estimator)
             # Base estimator fits on X_validated (already processed by custom validate_data)
             cloned_estimator.fit(X, y, **fit_params)
             self.estimators_ = [cloned_estimator]
             # Ensure n_features_in_ matches the fitted estimator if it has the attribute
-            if hasattr(cloned_estimator, 'n_features_in_'):
+            if hasattr(cloned_estimator, "n_features_in_"):
                 self.n_features_in_ = cloned_estimator.n_features_in_
 
         else: # Mapping is needed
             if self.verbose > 0:
-                print(f"Mapping needed (n_classes={n_classes} > alphabet_size={alphabet_size}). Generating codebook.")
+                pass
             n_est = self._get_n_estimators(n_classes, alphabet_size)
             self.code_book_, self.codebook_stats_ = self._generate_codebook(
                 n_classes, n_est, alphabet_size, random_state_instance
@@ -327,7 +326,7 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
             y_indices = np.array([self.classes_index_[val] for val in y])
             self.Y_train_per_estimator = self.code_book_[:, y_indices]
 
-            return self
+        return self
 
     def predict_proba(self, X) -> np.ndarray:
         """Predict class probabilities for X. Sub-estimators are fitted here if mapping is used."""
@@ -353,7 +352,7 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
              raise RuntimeError("Fit method did not properly initialize for mapping. Call fit first.")
 
         Y_pred_probas_list = [
-            _fit_and_predict_proba( 
+            _fit_and_predict_proba(
                 self.estimator,
                 self.X_train, # This is X_validated from fit
                 self.Y_train_per_estimator[i, :],
@@ -363,7 +362,8 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         Y_pred_probas_arr = np.array(Y_pred_probas_list, dtype=np.float64)
 
         _n_estimators, n_samples, current_alphabet_size = Y_pred_probas_arr.shape
-        if n_samples == 0: return np.zeros((0, len(self.classes_)))
+        if n_samples == 0:
+            return np.zeros((0, len(self.classes_)))
 
         n_orig_classes = len(self.classes_)
         rest_class_code = self._get_alphabet_size() - 1
@@ -387,7 +387,7 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
                     if code_assigned != rest_class_code:
                         raw_probabilities[:, j_orig_class_idx] += Y_pred_probas_arr[i, :, code_assigned]
                         counts[j_orig_class_idx] += 1
-            
+
             valid_counts_mask = counts > 0
             final_probabilities = np.zeros_like(raw_probabilities)
             if np.any(valid_counts_mask):
@@ -395,8 +395,8 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
                      raw_probabilities[:, valid_counts_mask] / counts[valid_counts_mask]
                  )
             if not np.all(valid_counts_mask) and self.verbose > 0:
-                 warnings.warn("Some classes had zero specific code assignments during aggregation.", RuntimeWarning)
-            
+                 warnings.warn("Some classes had zero specific code assignments during aggregation.", RuntimeWarning, stacklevel=2)
+
             prob_sum = np.sum(final_probabilities, axis=1, keepdims=True)
             safe_sum = np.where(prob_sum == 0, 1.0, prob_sum)
             final_probabilities /= safe_sum
@@ -410,7 +410,7 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         check_is_fitted(self, ["classes_", "n_features_in_"])
         # X will be validated by predict_proba or base_estimator.predict
 
-        if self.no_mapping_needed_ or (hasattr(self, 'estimators_') and self.estimators_ is not None and len(self.estimators_) == 1):
+        if self.no_mapping_needed_ or (hasattr(self, "estimators_") and self.estimators_ is not None and len(self.estimators_) == 1):
             if not self.estimators_:
                  raise RuntimeError("Estimator not fitted. Call fit first.")
             # Base estimator's predict validates X
@@ -425,22 +425,16 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         """Attempts to set categorical features on the base estimator."""
         self.categorical_features = categorical_features
         if hasattr(self.estimator, "set_categorical_features"):
-            try:
-                self.estimator.set_categorical_features(categorical_features)
-            except Exception as e:
-                warnings.warn(f"Could not set categorical features: {e}", UserWarning)
+            self.estimator.set_categorical_features(categorical_features)
         elif hasattr(self.estimator, "categorical_features"):
-            try:
-                self.estimator.categorical_features = categorical_features
-            except Exception as e:
-                warnings.warn(f"Could not set categorical_features attr: {e}", UserWarning)
+            self.estimator.categorical_features = categorical_features
         elif self.verbose > 0:
-             warnings.warn("Base estimator has no known categorical feature support.", UserWarning)
+             warnings.warn("Base estimator has no known categorical feature support.", UserWarning, stacklevel=2)
 
     def _more_tags(self):
         """Declare compatibility tags for the ManyClassClassifier wrapper."""
         return {
-            'allow_nan': True
+            "allow_nan": True
         }
 
     @property
