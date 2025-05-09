@@ -153,6 +153,18 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
                                         Shape (n_estimators, n_samples).
         n_features_in_ (int): Number of features seen during `fit`.
         feature_names_in_ (np.ndarray | None): Names of features seen during `fit`.
+
+    Examples:
+        >>> from sklearn.datasets import load_iris
+        >>> from tabpfn import TabPFNClassifier
+        >>> from tabpfn_extensions.many_class import ManyClassClassifier
+        >>> from sklearn.model_selection import train_test_split
+        >>> X, y = load_iris(return_X_y=True)
+        >>> X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
+        >>> base_clf = TabPFNClassifier()
+        >>> many_clf = ManyClassClassifier(base_clf, alphabet_size=base_clf.max_num_classes_)
+        >>> many_clf.fit(X_train, y_train)
+        >>> y_pred = many_clf.predict(X_test)
     """
 
     _required_parameters: ClassVar[list[str]] = ["estimator"]
