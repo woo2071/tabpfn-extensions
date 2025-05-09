@@ -19,7 +19,7 @@ from test_base_tabpfn import BaseClassifierTests
 
 
 # Helper function (as provided in the initial problem description)
-def get_classifcation_data(num_classes: int, num_features: int, num_samples: int):
+def get_classification_data(num_classes: int, num_features: int, num_samples: int):
     assert (
         num_samples >= num_classes
     ), "Number of samples must be at least the number of classes."
