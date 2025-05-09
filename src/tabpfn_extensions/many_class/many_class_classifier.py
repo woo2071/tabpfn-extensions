@@ -291,9 +291,6 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         self.classes_ = unique_labels(y) # Use unique_labels as imported
         n_classes = len(self.classes_)
 
-        if n_classes <= 1:
-             raise ValueError("Cannot fit with only one class present.")
-
         alphabet_size = self._get_alphabet_size()
         self.no_mapping_needed_ = (n_classes <= alphabet_size)
         self.codebook_stats_ = {}
@@ -303,9 +300,20 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         self.X_train = None
         self.Y_train_per_estimator = None
 
-        if self.no_mapping_needed_:
+        if n_classes == 0:
+            raise ValueError("Cannot fit with no classes present.")
+        if n_classes == 1:
+            # Gracefully handle single-class case: fit estimator, set trivial codebook
             if self.verbose > 0:
                 pass
+            cloned_estimator = clone(self.estimator)
+            cloned_estimator.fit(X, y, **fit_params)
+            self.estimators_ = [cloned_estimator]
+            self.code_book_ = np.zeros((1, 1), dtype=int)
+            self.codebook_stats_ = {"n_classes": 1, "n_estimators": 1, "alphabet_size": 1}
+            return self
+
+        if self.no_mapping_needed_:
             cloned_estimator = clone(self.estimator)
             # Base estimator fits on X_validated (already processed by custom validate_data)
             cloned_estimator.fit(X, y, **fit_params)
