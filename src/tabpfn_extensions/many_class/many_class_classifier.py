@@ -3,6 +3,8 @@
 
 """ManyClassClassifier: TabPFN extension for handling classification with many classes.
 
+Development Notebook: https://colab.research.google.com/drive/1HWF5IF0IN21G8FZdLVwBbLBkCMu94yBA?usp=sharing
+
 This module provides a classifier that overcomes TabPFN's limitation on the number of
 classes (typically 10) by using a meta-classifier approach based on output coding.
 It works by breaking down multi-class problems into multiple sub-problems, each
