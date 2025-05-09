@@ -20,9 +20,16 @@ from test_base_tabpfn import BaseClassifierTests
 
 # Helper function (as provided in the initial problem description)
 def get_classifcation_data(num_classes: int, num_features: int, num_samples: int):
-    assert num_samples >= num_classes, "Number of samples must be at least the number of classes."
+    assert (
+        num_samples >= num_classes
+    ), "Number of samples must be at least the number of classes."
     X = np.random.randn(num_samples, num_features)
-    y = np.concatenate([np.arange(num_classes), np.random.randint(0, num_classes, size=num_samples - num_classes)])
+    y = np.concatenate(
+        [
+            np.arange(num_classes),
+            np.random.randint(0, num_classes, size=num_samples - num_classes),
+        ]
+    )
     y = np.random.permutation(y)
     assert np.unique(y).size == num_classes
     return X, y
@@ -34,13 +41,15 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
     """
 
     @pytest.fixture
-    def estimator(self, tabpfn_classifier):  # This fixture is required by BaseClassifierTests
+    def estimator(
+        self, tabpfn_classifier
+    ):  # This fixture is required by BaseClassifierTests
         """Provides a ManyClassClassifier instance with a TabPFN base."""
         return ManyClassClassifier(
             estimator=DecisionTreeClassifier(random_state=42),
             alphabet_size=2,
             n_estimators_redundancy=2,
-            random_state=42
+            random_state=42,
         )
 
     def test_internal_fit_predict_many_classes(self, estimator):
@@ -53,20 +62,24 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
         n_samples = n_classes * 5
 
         X, y = get_classifcation_data(
-            num_classes=n_classes,
-            num_features=n_features,
-            num_samples=n_samples
+            num_classes=n_classes, num_features=n_features, num_samples=n_samples
         )
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.3, random_state=42, stratify=y
+        )
 
         estimator.fit(X_train, y_train)  # estimator is ManyClassClassifier
         predictions = estimator.predict(X_test)
         probabilities = estimator.predict_proba(X_test)
 
-        assert not estimator.no_mapping_needed_, "Mapping should have been used for 15 classes."
+        assert (
+            not estimator.no_mapping_needed_
+        ), "Mapping should have been used for 15 classes."
         assert estimator.code_book_ is not None
         assert estimator.code_book_.shape[1] == n_classes
-        assert estimator.estimators_ is None  # Fit happens during predict_proba when mapping
+        assert (
+            estimator.estimators_ is None
+        )  # Fit happens during predict_proba when mapping
         assert "coverage_min" in estimator.codebook_statistics_
         assert estimator.codebook_statistics_["coverage_min"] > 0
 
@@ -81,7 +94,7 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
         re-initialize ManyClassClassifier inside the loop with specific verbose settings.
         """
         print("\nTesting ManyClassClassifier with a large number of classes:")
-        for num_classes in [2,4,7, 19]:  # Reduced range for test speed
+        for num_classes in [2, 4, 7, 19]:  # Reduced range for test speed
             print(f"  Testing with num_classes = {num_classes}")
             X, y = get_classifcation_data(
                 num_classes=num_classes,
@@ -96,8 +109,9 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
                 assert estimator.code_book_ is not None
                 assert estimator.code_book_.shape[1] == num_classes
                 assert "coverage_min" in estimator.codebook_statistics_
-                assert estimator.codebook_statistics_["coverage_min"] > 0, \
-                f"Coverage min is 0 for {num_classes} classes!"
+                assert (
+                    estimator.codebook_statistics_["coverage_min"] > 0
+                ), f"Coverage min is 0 for {num_classes} classes!"
             else:
                 assert estimator._get_alphabet_size() >= num_classes
 
