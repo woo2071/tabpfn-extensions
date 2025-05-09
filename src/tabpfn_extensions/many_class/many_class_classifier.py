@@ -79,7 +79,6 @@ from typing import Any, ClassVar
 
 import numpy as np
 import tqdm  # For pairwise combinations
-from scipy.special import softmax  # For log-proba aggregation option
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.utils import check_random_state
 
@@ -135,10 +134,6 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
             `n_estimators`. Defaults to 4.
         random_state (int, RandomState instance or None): Controls randomization
             for codebook generation.
-        log_proba_aggregation (bool): If True, use log-probability summation for
-            aggregation (default), else uses averaging.
-        epsilon (float): Small value for log stability if `log_proba_aggregation`
-            is True. Defaults to 1e-9.
         verbose (int): Controls verbosity. If > 0, prints codebook stats.
             Defaults to 0.
 
@@ -179,8 +174,6 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         n_estimators: int | None = None,
         n_estimators_redundancy: int = 4,
         random_state: int | None = None,
-        log_proba_aggregation: bool = True,
-        epsilon: float = 1e-9,
         verbose: int = 0,
     ):
         self.estimator = estimator
@@ -188,8 +181,6 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         self.alphabet_size = alphabet_size
         self.n_estimators = n_estimators
         self.n_estimators_redundancy = n_estimators_redundancy
-        self.log_proba_aggregation = log_proba_aggregation
-        self.epsilon = epsilon
         self.verbose = verbose
 
     def _get_alphabet_size(self) -> int:
@@ -414,45 +405,34 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         n_orig_classes = len(self.classes_)
         rest_class_code = self._get_alphabet_size() - 1
 
-        if self.log_proba_aggregation:
-            log_proba_sum = np.zeros((n_samples, n_orig_classes))
-            Y_pred_probas_arr = np.clip(Y_pred_probas_arr, self.epsilon, 1.0)
-            for i in range(_n_estimators):
-                for j_orig_class_idx in range(n_orig_classes):
-                    code_for_class = self.code_book_[i, j_orig_class_idx]
-                    if code_for_class != rest_class_code:
-                        proba_val = Y_pred_probas_arr[i, :, code_for_class]
-                        log_proba_sum[:, j_orig_class_idx] += np.log(proba_val)
-            final_probabilities = softmax(log_proba_sum, axis=1)
-        else:  # Averaging aggregation
-            raw_probabilities = np.zeros((n_samples, n_orig_classes))
-            counts = np.zeros(n_orig_classes, dtype=float)
-            for i in range(_n_estimators):
-                for j_orig_class_idx in range(n_orig_classes):
-                    code_assigned = self.code_book_[i, j_orig_class_idx]
-                    if code_assigned != rest_class_code:
-                        raw_probabilities[:, j_orig_class_idx] += Y_pred_probas_arr[
-                            i, :, code_assigned
-                        ]
-                        counts[j_orig_class_idx] += 1
+        raw_probabilities = np.zeros((n_samples, n_orig_classes))
+        counts = np.zeros(n_orig_classes, dtype=float)
+        for i in range(_n_estimators):
+            for j_orig_class_idx in range(n_orig_classes):
+                code_assigned = self.code_book_[i, j_orig_class_idx]
+                if code_assigned != rest_class_code:
+                    raw_probabilities[:, j_orig_class_idx] += Y_pred_probas_arr[
+                        i, :, code_assigned
+                    ]
+                    counts[j_orig_class_idx] += 1
 
-            valid_counts_mask = counts > 0
-            final_probabilities = np.zeros_like(raw_probabilities)
-            if np.any(valid_counts_mask):
-                final_probabilities[:, valid_counts_mask] = (
-                    raw_probabilities[:, valid_counts_mask] / counts[valid_counts_mask]
-                )
-            if not np.all(valid_counts_mask) and self.verbose > 0:
-                warnings.warn(
-                    "Some classes had zero specific code assignments during aggregation.",
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
+        valid_counts_mask = counts > 0
+        final_probabilities = np.zeros_like(raw_probabilities)
+        if np.any(valid_counts_mask):
+            final_probabilities[:, valid_counts_mask] = (
+                raw_probabilities[:, valid_counts_mask] / counts[valid_counts_mask]
+            )
+        if not np.all(valid_counts_mask) and self.verbose > 0:
+            warnings.warn(
+                "Some classes had zero specific code assignments during aggregation.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
-            prob_sum = np.sum(final_probabilities, axis=1, keepdims=True)
-            safe_sum = np.where(prob_sum == 0, 1.0, prob_sum)
-            final_probabilities /= safe_sum
-            final_probabilities[prob_sum.squeeze() == 0] = 1.0 / n_orig_classes
+        prob_sum = np.sum(final_probabilities, axis=1, keepdims=True)
+        safe_sum = np.where(prob_sum == 0, 1.0, prob_sum)
+        final_probabilities /= safe_sum
+        final_probabilities[prob_sum.squeeze() == 0] = 1.0 / n_orig_classes
 
         return final_probabilities
 
