@@ -7,6 +7,8 @@ from a common base test suite.
 
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 import pytest
 from sklearn.metrics import accuracy_score
@@ -47,7 +49,7 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
         """Provides a ManyClassClassifier instance with a TabPFN base."""
         return ManyClassClassifier(
             estimator=DecisionTreeClassifier(random_state=42),
-            alphabet_size=2,
+            alphabet_size=10,
             n_estimators_redundancy=2,
             random_state=42,
         )
@@ -59,8 +61,7 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
         """
         n_classes = 15  # More than default alphabet_size of 10
         n_features = 4
-        n_samples = n_classes * 5
-
+        n_samples = n_classes * 20
         X, y = get_classification_data(
             num_classes=n_classes, num_features=n_features, num_samples=n_samples
         )
@@ -94,7 +95,7 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
         re-initialize ManyClassClassifier inside the loop with specific verbose settings.
         """
         logging.info("Testing ManyClassClassifier with a large number of classes:")
-        for num_classes in [2, 4, 7, 19]:  # Reduced range for test speed
+        for num_classes in [2, 10, 24, 81]:  # Reduced range for test speed
             logging.info(f"  Testing with num_classes = {num_classes}")
             X, y = get_classification_data(
                 num_classes=num_classes,
