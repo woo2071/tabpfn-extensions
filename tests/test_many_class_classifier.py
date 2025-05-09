@@ -61,7 +61,7 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
         n_features = 4
         n_samples = n_classes * 5
 
-        X, y = get_classifcation_data(
+        X, y = get_classification_data(
             num_classes=n_classes, num_features=n_features, num_samples=n_samples
         )
         X_train, X_test, y_train, y_test = train_test_split(
@@ -96,7 +96,7 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
         print("\nTesting ManyClassClassifier with a large number of classes:")
         for num_classes in [2, 4, 7, 19]:  # Reduced range for test speed
             print(f"  Testing with num_classes = {num_classes}")
-            X, y = get_classifcation_data(
+            X, y = get_classification_data(
                 num_classes=num_classes,
                 num_features=10,
                 num_samples=2 * num_classes,
