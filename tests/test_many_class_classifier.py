@@ -136,3 +136,7 @@ class TestManyClassClassifier(BaseClassifierTests):  # Inherit from BaseClassifi
     @pytest.mark.skip(reason="Disabled due to backend=tabpfn_client failures.")
     def test_with_pandas(self, estimator, pandas_classification_data):
         pass
+
+    @pytest.mark.skip(reason="Disabled due to DecisionTreeTabPFN not supporting missing values.")
+    def test_with_missing_values(self, estimator, dataset_generator):
+        pass
