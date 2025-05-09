@@ -73,7 +73,7 @@ from __future__ import annotations
 import itertools
 import math
 import warnings
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import numpy as np
 import tqdm  # For pairwise combinations
@@ -476,9 +476,16 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
                 stacklevel=2,
             )
 
-    def _more_tags(self):
-        """Declare compatibility tags for the ManyClassClassifier wrapper."""
-        return {"allow_nan": True}
+    def _more_tags(self) -> dict[str, Any]:
+        return {
+            "allow_nan": True,
+        }
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "classifier"
+        return tags
 
     @property
     def codebook_statistics_(self):

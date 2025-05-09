@@ -236,7 +236,6 @@ class DecisionTreeTabPFNBase(BaseDecisionTree, BaseEstimator):
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
         tags.input_tags.allow_nan = True
-        tags.estimator_type = "regressor"
         if self.task_type == "multiclass":
             tags.estimator_type = "classifier"
         else:
