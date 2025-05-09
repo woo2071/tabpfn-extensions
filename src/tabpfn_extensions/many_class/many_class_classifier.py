@@ -226,6 +226,7 @@ class ManyClassClassifier(BaseEstimator, ClassifierMixin):
         return (
             max(min_estimators_theory, min_needed_for_potential_coverage)
             * self.n_estimators_redundancy
+            * 2
         )
 
     def _generate_codebook(
