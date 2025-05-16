@@ -97,6 +97,7 @@ class MetricType(str, Enum):
 
 class TunedTabPFNBase(BaseEstimator):
     """Base class for tuned TabPFN models with proper categorical handling."""
+    task_type = None
 
     def __init__(
         self,
@@ -436,9 +437,25 @@ class TunedTabPFNBase(BaseEstimator):
                  # self.best_model_ will remain an unfitted default model.
                  # Downstream predict/predict_proba will fail if not fitted.
 
+    def _more_tags(self) -> dict[str, Any]:
+        return {
+            "allow_nan": True,
+        }
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        tags.estimator_type = "regressor"
+        if self.task_type == "multiclass":
+            tags.estimator_type = "classifier"
+        else:
+            tags.estimator_type = "regressor"
+        return tags
+
 
 class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
     """TabPFN Classifier with hyperparameter tuning and proper categorical handling."""
+    task_type = "multiclass"
 
     def fit(
         self,
@@ -531,20 +548,9 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
 
         return self.best_model_.predict_proba(X_transformed)
 
-    def _more_tags(self) -> dict[str, Any]:
-        return {
-            "allow_nan": True,
-        }
-
-    def __sklearn_tags__(self):
-        tags = super().__sklearn_tags__()
-        tags.input_tags.allow_nan = True
-        tags.estimator_type = "classifier"
-        return tags
-
-
 class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
     """TabPFN Regressor with hyperparameter tuning and proper categorical handling."""
+    task_type = "regression"
 
     def fit(
         self,
@@ -570,7 +576,7 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
 
         self.n_features_in_ = X.shape[1]
         self._setup_data_encoders(X, categorical_feature_indices)
-        self._optimize(X, y, "regression")
+        self._optimize(X, y, self.task_type)
         self.is_fitted_ = True
         return self
 
@@ -602,14 +608,3 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
              raise ValueError("The underlying best_model_ is not properly fitted.")
 
         return self.best_model_.predict(X_transformed)
-
-    def _more_tags(self) -> dict[str, Any]:
-        return {
-            "allow_nan": True,
-        }
-
-    def __sklearn_tags__(self):
-        tags = super().__sklearn_tags__()
-        tags.input_tags.allow_nan = True
-        tags.estimator_type = "regressor"
-        return tags
