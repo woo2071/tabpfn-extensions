@@ -59,7 +59,7 @@ from sklearn.metrics import (
 from sklearn.utils import check_random_state
 
 from tabpfn_extensions.hpo.search_space import get_param_grid_hyperopt
-from tabpfn_extensions.misc.sklearn_compat import check_array, check_X_y
+from tabpfn_extensions.misc.sklearn_compat import check_array, check_X_y, validate_data
 
 # Import TabPFN models from extensions (which handles backend compatibility)
 try:
@@ -135,9 +135,6 @@ class TunedTabPFNBase(BaseEstimator):
         torch.manual_seed(rng.randint(0, 2**31 - 1))
         np.random.seed(rng.randint(0, 2**31 - 1))
 
-        # Check for TestData object and extract raw data
-        X_data = X.data if hasattr(X, "data") else X
-
         # Check if stratification is possible
         use_stratification = False
         if task_type == "multiclass":
@@ -155,7 +152,7 @@ class TunedTabPFNBase(BaseEstimator):
         # Split data for validation with error handling
         try:
             X_train, X_val, y_train, y_val = train_test_split(
-                X_data,
+                X,
                 y,
                 test_size=self.n_validation_size,
                 random_state=rng.randint(0, 2**31 - 1),
@@ -168,7 +165,7 @@ class TunedTabPFNBase(BaseEstimator):
                 "This may happen with very imbalanced data or small sample sizes.",
             )
             X_train, X_val, y_train, y_val = train_test_split(
-                X_data,
+                X,
                 y,
                 test_size=self.n_validation_size,
                 random_state=rng.randint(0, 2**31 - 1),
@@ -369,7 +366,7 @@ class TunedTabPFNBase(BaseEstimator):
             # Attempt to fit the default model with the full (transformed) training data used for optimization setup
             # This uses X_transformed which was the input to _optimize after categorical encoding
             try:
-                 self.best_model_.fit(X_data, y)
+                 self.best_model_.fit(X, y)
             except Exception as e:
                  warnings.warn(f"Failed to fit default model: {e!s}", stacklevel=2)
                  # self.best_model_ will remain an unfitted default model.
@@ -403,12 +400,11 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
     ) -> TunedTabPFNClassifier:
 
         # Validate input
-        X, y = check_X_y(
+        X, y = validate_data(
+            self,
             X,
             y,
-            ensure_all_finite="allow-nan",
-            dtype=object,
-            accept_sparse=False,
+            ensure_all_finite=False,  # scikit-learn sets self.n_features_in_ automatically
         )
 
         # Store dimensions
@@ -445,14 +441,17 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
                 "Call 'fit' with appropriate arguments before using this estimator.",
             )
 
-        X_data = X.data if hasattr(X, "data") else X
-        X_data = check_array(X_data, ensure_all_finite="allow-nan", dtype=object)
+        X = validate_data(
+            self,
+            X,
+            ensure_all_finite=False,  # scikit-learn sets self.n_features_in_ automatically
+        )
 
         # Check if best_model_ itself is fitted (e.g. if default model fitting failed)
         if not hasattr(self.best_model_, "classes_") and not hasattr(self.best_model_, "_get_tags") and not getattr(self.best_model_,'is_fitted_', True ): # Heuristic check
              raise ValueError("The underlying best_model_ is not properly fitted.")
 
-        return self._label_encoder.inverse_transform(self.best_model_.predict(X_data))
+        return self._label_encoder.inverse_transform(self.best_model_.predict(X))
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         if not self.__sklearn_is_fitted__():
@@ -461,14 +460,13 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
                 "Call 'fit' with appropriate arguments before using this estimator.",
             )
 
-        X_data = X.data if hasattr(X, "data") else X
-        X_data = check_array(X_data, ensure_all_finite="allow-nan", dtype=object)
+        X = check_array(X, ensure_all_finite="allow-nan", dtype=object)
 
         # Check if best_model_ itself is fitted
         if not hasattr(self.best_model_, "classes_") and not hasattr(self.best_model_, "_get_tags") and not getattr(self.best_model_,'is_fitted_', True ): # Heuristic check
              raise ValueError("The underlying best_model_ is not properly fitted.")
 
-        return self.best_model_.predict_proba(X_data)
+        return self.best_model_.predict_proba(X)
 
 class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
     """TabPFN Regressor with hyperparameter tuning and proper categorical handling."""
@@ -479,13 +477,11 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
         X: np.ndarray,
         y: np.ndarray
     ) -> TunedTabPFNRegressor:
-        X, y = check_X_y(
+        X, y = validate_data(
+            self,
             X,
             y,
-            ensure_all_finite="allow-nan",
-            dtype=object,
-            accept_sparse=False,
-            y_numeric=True # Ensure y is numeric for regressor
+            ensure_all_finite=False,  # scikit-learn sets self.n_features_in_ automatically
         )
 
         self.n_features_in_ = X.shape[1]
@@ -508,12 +504,15 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
                 "Call 'fit' with appropriate arguments before using this estimator.",
             )
 
-        X_data = X.data if hasattr(X, "data") else X
-        X_data = check_array(X_data, ensure_all_finite="allow-nan", dtype=object)
+        X = validate_data(
+            self,
+            X,
+            ensure_all_finite=False,  # scikit-learn sets self.n_features_in_ automatically
+        )
         
         # Check if best_model_ itself is fitted
         # Regressors might not have 'classes_', so check for a common fit attribute or tag.
         if not hasattr(self.best_model_, "_get_tags") and not getattr(self.best_model_,'is_fitted_', True ): # Heuristic check for scikit-learn like estimators
              raise ValueError("The underlying best_model_ is not properly fitted.")
 
-        return self.best_model_.predict(X_data)
+        return self.best_model_.predict(X)
