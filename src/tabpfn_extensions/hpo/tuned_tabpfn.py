@@ -153,22 +153,6 @@ class TunedTabPFNBase(BaseEstimator):
                 "No categorical features specified or detected. Using all features as numeric.",
             )
 
-        # Create categorical feature encoder
-        self._cat_encoder = ColumnTransformer(
-            transformers=[
-                (
-                    "categorical",
-                    OrdinalEncoder(
-                        handle_unknown="use_encoded_value",
-                        unknown_value=-1,
-                    ),
-                    self._categorical_indices,
-                ),
-            ],
-            remainder="passthrough",
-            sparse_threshold=0,
-        )
-
     def _optimize(self, X: np.ndarray, y: np.ndarray, task_type: str):
         """Optimize hyperparameters using hyperopt with proper data handling."""
         rng = check_random_state(self.random_state)
@@ -184,9 +168,6 @@ class TunedTabPFNBase(BaseEstimator):
 
         # Check for TestData object and extract raw data
         X_data = X.data if hasattr(X, "data") else X
-
-        # Fit transformers
-        X_transformed = self._cat_encoder.fit_transform(X_data)
 
         # Check if stratification is possible
         use_stratification = False
@@ -205,7 +186,7 @@ class TunedTabPFNBase(BaseEstimator):
         # Split data for validation with error handling
         try:
             X_train, X_val, y_train, y_val = train_test_split(
-                X_transformed,
+                X_data,
                 y,
                 test_size=self.n_validation_size,
                 random_state=rng.randint(0, 2**31 - 1),
@@ -218,7 +199,7 @@ class TunedTabPFNBase(BaseEstimator):
                 "This may happen with very imbalanced data or small sample sizes.",
             )
             X_train, X_val, y_train, y_val = train_test_split(
-                X_transformed,
+                X_data,
                 y,
                 test_size=self.n_validation_size,
                 random_state=rng.randint(0, 2**31 - 1),
@@ -537,16 +518,12 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
 
         X_data = X.data if hasattr(X, "data") else X
         X_data = check_array(X_data, ensure_all_finite="allow-nan", dtype=object)
-        X_transformed = self._cat_encoder.transform(X_data)
-        X_transformed = check_array(
-            X_transformed, ensure_all_finite="allow-nan", dtype="numeric"
-        )
 
         # Check if best_model_ itself is fitted
         if not hasattr(self.best_model_, "classes_") and not hasattr(self.best_model_, "_get_tags") and not getattr(self.best_model_,'is_fitted_', True ): # Heuristic check
              raise ValueError("The underlying best_model_ is not properly fitted.")
 
-        return self.best_model_.predict_proba(X_transformed)
+        return self.best_model_.predict_proba(X_data)
 
 class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
     """TabPFN Regressor with hyperparameter tuning and proper categorical handling."""
@@ -597,14 +574,10 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
 
         X_data = X.data if hasattr(X, "data") else X
         X_data = check_array(X_data, ensure_all_finite="allow-nan", dtype=object)
-        X_transformed = self._cat_encoder.transform(X_data)
-        X_transformed = check_array(
-            X_transformed, ensure_all_finite="allow-nan", dtype="numeric"
-        )
         
         # Check if best_model_ itself is fitted
         # Regressors might not have 'classes_', so check for a common fit attribute or tag.
         if not hasattr(self.best_model_, "_get_tags") and not getattr(self.best_model_,'is_fitted_', True ): # Heuristic check for scikit-learn like estimators
              raise ValueError("The underlying best_model_ is not properly fitted.")
 
-        return self.best_model_.predict(X_transformed)
+        return self.best_model_.predict(X_data)
