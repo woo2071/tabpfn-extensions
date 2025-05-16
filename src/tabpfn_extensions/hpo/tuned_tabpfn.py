@@ -14,6 +14,7 @@ Key features:
 - Compatible with both TabPFN and TabPFN-client backends
 - Implements scikit-learn's estimator interface for easy integration
 - Built-in validation strategies for reliable performance estimation
+- Configurable search algorithms (TPE, Random Search) and warm-start capabilities.
 
 Example usage:
     ```python
@@ -44,11 +45,17 @@ from typing import Any, Callable
 
 import numpy as np
 import torch
-from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
+from hyperopt import STATUS_OK, Trials, fmin, hp, tpe, rand
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
+from sklearn.metrics import (
+                        mean_absolute_error,
+                        mean_squared_error,
+                        r2_score,
+                        roc_auc_score, f1_score
+                    )
 from sklearn.utils import check_random_state
 
 from tabpfn_extensions.hpo.search_space import get_param_grid_hyperopt
@@ -102,18 +109,22 @@ class TunedTabPFNBase(BaseEstimator):
         verbose: bool = True,
         search_space: dict[str, Any] | None = None,
         objective_fn: Callable[[Any, np.ndarray, np.ndarray], float] | None = None,
+        search_algorithm_type: str = "tpe",
+        existing_trials: Trials | None = None,
     ):
-        self.n_trials = n_trials  # Set n_trials from the parameter
+        self.n_trials = n_trials
         self.n_validation_size = n_validation_size
-        self.metric = MetricType(metric)  # Validate metric type
+        self.metric = MetricType(metric)
         self.device = device
         self.random_state = random_state
         self.categorical_feature_indices = (
-            categorical_feature_indices  # Don't modify the parameter
+            categorical_feature_indices
         )
         self.verbose = verbose
         self.search_space = search_space
         self.objective_fn = objective_fn
+        self.search_algorithm_type = search_algorithm_type
+        self.existing_trials = existing_trials
 
     def _setup_data_encoders(
         self,
@@ -217,18 +228,16 @@ class TunedTabPFNBase(BaseEstimator):
         if hasattr(self, "search_space") and self.search_space is not None:
             # For test with simple search space (just a dict with lists of values)
             custom_space = {}
-            for k, v in self.search_space.items():
-                if isinstance(v, list):
-                    custom_space[k] = hp.choice(k, v)
-                elif isinstance(v, (int, float, bool, str)) or v is None:
-                    # Handle simple values directly
-                    custom_space[k] = v
+            for k, v_item in self.search_space.items():
+                if isinstance(v_item, list):
+                    custom_space[k] = hp.choice(k, v_item)
+                elif isinstance(v_item, (int, float, bool, str)) or v_item is None:
+                    custom_space[k] = v_item
                 else:
-                    # Try to handle hyperopt objects directly
-                    custom_space[k] = v
-            search_space = custom_space
+                    custom_space[k] = v_item
+            current_search_space = custom_space
         else:
-            search_space = get_param_grid_hyperopt(
+            current_search_space = get_param_grid_hyperopt(
                 "multiclass" if task_type in ["binary", "multiclass"] else "regression",
             )
 
@@ -261,11 +270,6 @@ class TunedTabPFNBase(BaseEstimator):
                 logger.info(
                     f"Original categorical features {original_categorical_indices} already encoded",
                 )
-
-            # Handle special parameters
-            n_ensemble_repeats = model_params.pop("n_ensemble_repeats", None)
-            if n_ensemble_repeats is not None:
-                model_params["n_estimators"] = n_ensemble_repeats
 
             # Handle model type selection
             model_type = model_params.pop("model_type", "single")
@@ -312,50 +316,34 @@ class TunedTabPFNBase(BaseEstimator):
 
                 model.fit(X_train, y_train)
 
-                # Use custom objective function if provided
+                score = None
                 if hasattr(self, "objective_fn") and self.objective_fn is not None:
+                    # Use custom objective function if provided
                     # Custom objective should return a negative score (for minimization)
                     score = -self.objective_fn(model, X_val, y_val)
-                # Evaluate based on metric
                 elif task_type in ["binary", "multiclass"]:
                     if self.metric == MetricType.ACCURACY:
                         score = model.score(X_val, y_val)
                     elif self.metric in [MetricType.ROC_AUC]:
-                        from sklearn.metrics import roc_auc_score
-
                         y_pred = model.predict_proba(X_val)
                         score = roc_auc_score(y_val, y_pred, multi_class="ovr")
                     elif self.metric == MetricType.F1:
-                        from sklearn.metrics import f1_score
-
                         y_pred = model.predict(X_val)
                         score = f1_score(y_val, y_pred, average="weighted")
-                else:
+                else: # Regression
                     y_pred = model.predict(X_val)
-                    from sklearn.metrics import (
-                        mean_absolute_error,
-                        mean_squared_error,
-                        r2_score,
-                    )
-
-                    # Initialize score variable
-                    score = None
-
-                    if self.metric in [MetricType.RMSE, MetricType.MSE]:
-                        score = -mean_squared_error(
-                            y_val,
-                            y_pred,
-                            squared=self.metric == MetricType.MSE,
-                        )
+                    if self.metric == MetricType.RMSE:
+                        score = -mean_squared_error(y_val, y_pred, squared=False) # Negative RMSE
+                    elif self.metric == MetricType.MSE:
+                        score = -mean_squared_error(y_val, y_pred, squared=True) # Negative MSE
                     elif self.metric == MetricType.MAE:
-                        score = -mean_absolute_error(y_val, y_pred)
-                    else:
-                        # Default to R2 for any other metric or if not specified
+                        score = -mean_absolute_error(y_val, y_pred) # Negative MAE
+                    else: # Default to R2 for regression if metric not MAE/MSE/RMSE
                         score = r2_score(y_val, y_pred)
 
                 # Ensure score is not None before negating
                 loss_value = -score if score is not None else float("inf")
-                return {"loss": loss_value, "status": STATUS_OK, "model": model}
+                return {"loss": loss_value, "status": STATUS_OK, "model": model, "params": params}
 
             except (
                 ValueError,
@@ -366,60 +354,87 @@ class TunedTabPFNBase(BaseEstimator):
             ) as e:
                 if self.verbose:
                     logger.warning(f"Trial failed with error: {e!s}")
-                return {"loss": float("inf"), "status": STATUS_OK}
+                return {"loss": float("inf"), "status": STATUS_OK, "params": params}
 
-        trials = Trials()
-        best = fmin(
+        trials_obj = self.existing_trials if self.existing_trials is not None else Trials()
+
+        if self.search_algorithm_type == "tpe":
+            algo_fn = tpe.suggest
+        elif self.search_algorithm_type == "random":
+            algo_fn = rand.suggest
+        else:
+            raise ValueError(
+                f"Unsupported search_algorithm_type: {self.search_algorithm_type}. "
+                "Choose 'tpe' or 'random'."
+            )
+
+        best_hyperparams = fmin(
             fn=objective,
-            space=search_space,
-            algo=tpe.suggest,
+            space=current_search_space,
+            algo=algo_fn,
             max_evals=self.n_trials,
-            trials=trials,
+            trials=trials_obj,
             verbose=self.verbose,
+            rstate=np.random.default_rng(rng.randint(0, 2**31 -1)) # for algo reproducibility
         )
 
-        # Store results
-        self.best_params_ = best
-        self.best_score_ = -min(trials.losses())
-        self.best_model_ = trials.best_trial["result"].get("model")
+        self.best_params_ = best_hyperparams
+        try:
+            # Ensure losses are numeric for min()
+            valid_losses = [loss for loss in trials_obj.losses() if loss is not None]
+            if not valid_losses: # All trials might have failed or returned None loss
+                 self.best_score_ = -float('inf') # or some other indicator of failure
+            else:
+                self.best_score_ = -min(valid_losses)
+        except TypeError: # Handle cases where losses might not be comparable (e.g. None)
+            self.best_score_ = -float('inf') # Or handle as appropriate
 
-        # If all trials failed, create default model
+        # Retrieve the best model from the best trial's result
+        if trials_obj.best_trial and 'result' in trials_obj.best_trial and \
+           trials_obj.best_trial['result'].get('status') == STATUS_OK:
+            self.best_model_ = trials_obj.best_trial["result"].get("model")
+        else:
+            self.best_model_ = None
+
+
+        # Remove model objects from all trials' results to save memory, keeping params and loss
+        for trial_info in trials_obj.trials:
+            if "result" in trial_info and "model" in trial_info["result"]:
+                del trial_info["result"]["model"]
+            # Ensure 'params' (hyperparameters used) are present, Hyperopt usually stores them in 'misc' -> 'vals'
+            # The 'params' key added in objective function's return is for convenience during inspection if needed
+            # but standard Hyperopt storage is via trial_info['misc']['vals'] for chosen values.
+            # trial_info['result']['params'] would be redundant if 'misc' -> 'vals' is used.
+            # For clarity, we ensure the objective-returned params are kept if they exist.
+            # if 'params' not in trial_info['result'] and 'misc' in trial_info and 'vals' in trial_info['misc']:
+            #    trial_info['result']['params'] = trial_info['misc']['vals']
+
+
+        self.trials_ = trials_obj # Store the modified trials history
+
         if self.best_model_ is None:
             warnings.warn(
-                "All optimization trials failed. Creating default model.",
+                "All optimization trials failed or no valid model was found. Creating default model.",
                 stacklevel=2,
             )
-            # Create a default model without specifying categorical features
-            # since data has already been transformed
+            default_model_params = {
+                "device": self.device,
+                "random_state": rng.randint(0, 2**31 - 1)
+            }
+            # Since data is already transformed, categorical_features_indices is not needed for the default model
             if task_type in ["binary", "multiclass"]:
-                # Check if TabPFN implementation supports categorical_features_indices
-                try:
-                    self.best_model_ = TabPFNClassifier(
-                        device=self.device,
-                        random_state=rng.randint(0, 2**31 - 1),
-                        categorical_features_indices=None,  # Already encoded
-                    )
-                except (TypeError, ValueError):
-                    # If not, just create without that parameter
-                    self.best_model_ = TabPFNClassifier(
-                        device=self.device,
-                        random_state=rng.randint(0, 2**31 - 1),
-                    )
+                self.best_model_ = TabPFNClassifier(**default_model_params)
             else:
-                # Check if TabPFN implementation supports categorical_features_indices
-                try:
-                    self.best_model_ = TabPFNRegressor(
-                        device=self.device,
-                        random_state=rng.randint(0, 2**31 - 1),
-                        categorical_features_indices=None,  # Already encoded
-                    )
-                except (TypeError, ValueError):
-                    # If not, just create without that parameter
-                    self.best_model_ = TabPFNRegressor(
-                        device=self.device,
-                        random_state=rng.randint(0, 2**31 - 1),
-                    )
-            self.best_model_.fit(X_transformed, y)
+                self.best_model_ = TabPFNRegressor(**default_model_params)
+            
+            # Attempt to fit the default model with the full (transformed) training data used for optimization setup
+            # This uses X_transformed which was the input to _optimize after categorical encoding
+            try:
+                 self.best_model_.fit(X_transformed, y)
+            except Exception as e:
+                 warnings.warn(f"Failed to fit default model: {e!s}", stacklevel=2)
+                 # self.best_model_ will remain an unfitted default model.
+                 # Downstream predict/predict_proba will fail if not fitted.
 
 
 class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
@@ -469,56 +484,52 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
         return self
 
     def __sklearn_is_fitted__(self):
-        """Check if the model has been fitted."""
         return (
             hasattr(self, "is_fitted_")
             and self.is_fitted_
             and hasattr(self, "best_model_")
+            and self.best_model_ is not None # Ensure best_model_ is not None
         )
 
     def predict(self, X: np.ndarray) -> np.ndarray:
-        # Simple fit check instead of check_is_fitted to avoid sklearn Tags issue
-        if (
-            not hasattr(self, "is_fitted_")
-            or not self.is_fitted_
-            or not hasattr(self, "best_model_")
-        ):
+        if not self.__sklearn_is_fitted__():
             raise ValueError(
-                "This TunedTabPFNClassifier instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.",
+                "This TunedTabPFNClassifier instance is not fitted yet or fitting failed. "
+                "Call 'fit' with appropriate arguments before using this estimator.",
             )
 
-        # Check if X is a TestData object and extract raw data if needed
         X_data = X.data if hasattr(X, "data") else X
-
         X_data = check_array(X_data, ensure_all_finite="allow-nan", dtype=object)
-        X_data = check_array(
-            self._cat_encoder.transform(X_data),
-            ensure_all_finite="allow-nan",
-            dtype="numeric",
+        X_transformed = self._cat_encoder.transform(X_data)
+        X_transformed = check_array(
+             X_transformed, ensure_all_finite="allow-nan", dtype="numeric"
         )
-        return self._label_encoder.inverse_transform(self.best_model_.predict(X_data))
+        
+        # Check if best_model_ itself is fitted (e.g. if default model fitting failed)
+        if not hasattr(self.best_model_, "classes_") and not hasattr(self.best_model_, "_get_tags") and not getattr(self.best_model_,'is_fitted_', True ): # Heuristic check
+             raise ValueError("The underlying best_model_ is not properly fitted.")
+
+        return self._label_encoder.inverse_transform(self.best_model_.predict(X_transformed))
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
-        # Simple fit check instead of check_is_fitted to avoid sklearn Tags issue
-        if (
-            not hasattr(self, "is_fitted_")
-            or not self.is_fitted_
-            or not hasattr(self, "best_model_")
-        ):
+        if not self.__sklearn_is_fitted__():
             raise ValueError(
-                "This TunedTabPFNClassifier instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.",
+                "This TunedTabPFNClassifier instance is not fitted yet or fitting failed. "
+                "Call 'fit' with appropriate arguments before using this estimator.",
             )
 
-        # Check if X is a TestData object and extract raw data if needed
         X_data = X.data if hasattr(X, "data") else X
-
         X_data = check_array(X_data, ensure_all_finite="allow-nan", dtype=object)
-        X_data = check_array(
-            self._cat_encoder.transform(X_data),
-            ensure_all_finite="allow-nan",
-            dtype="numeric",
+        X_transformed = self._cat_encoder.transform(X_data)
+        X_transformed = check_array(
+            X_transformed, ensure_all_finite="allow-nan", dtype="numeric"
         )
-        return self.best_model_.predict_proba(X_data)
+
+        # Check if best_model_ itself is fitted
+        if not hasattr(self.best_model_, "classes_") and not hasattr(self.best_model_, "_get_tags") and not getattr(self.best_model_,'is_fitted_', True ): # Heuristic check
+             raise ValueError("The underlying best_model_ is not properly fitted.")
+
+        return self.best_model_.predict_proba(X_transformed)
 
     def _more_tags(self) -> dict[str, Any]:
         return {
@@ -541,7 +552,6 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
         y: np.ndarray,
         categorical_feature_indices: list[int] | None = None,
     ) -> TunedTabPFNRegressor:
-        # Check if X is a TestData object with categorical_features
         if hasattr(X, "categorical_features") and not categorical_feature_indices:
             categorical_feature_indices = getattr(X, "categorical_features", [])
             if categorical_feature_indices and self.verbose:
@@ -549,58 +559,49 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
                     f"Using categorical features from TestData: {categorical_feature_indices}",
                 )
 
-        # Validate input
         X, y = check_X_y(
             X,
             y,
             ensure_all_finite="allow-nan",
             dtype=object,
             accept_sparse=False,
+            y_numeric=True # Ensure y is numeric for regressor
         )
 
-        # Store dimensions
         self.n_features_in_ = X.shape[1]
-
-        # Set up encoders
         self._setup_data_encoders(X, categorical_feature_indices)
-
-        # Optimize
         self._optimize(X, y, "regression")
-
-        # Mark as fitted for sklearn
         self.is_fitted_ = True
-
         return self
 
     def __sklearn_is_fitted__(self):
-        """Check if the model has been fitted."""
         return (
             hasattr(self, "is_fitted_")
             and self.is_fitted_
             and hasattr(self, "best_model_")
+            and self.best_model_ is not None # Ensure best_model_ is not None
         )
 
     def predict(self, X: np.ndarray) -> np.ndarray:
-        # Simple fit check instead of check_is_fitted to avoid sklearn Tags issue
-        if (
-            not hasattr(self, "is_fitted_")
-            or not self.is_fitted_
-            or not hasattr(self, "best_model_")
-        ):
+        if not self.__sklearn_is_fitted__():
             raise ValueError(
-                "This TunedTabPFNRegressor instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.",
+                "This TunedTabPFNRegressor instance is not fitted yet or fitting failed. "
+                "Call 'fit' with appropriate arguments before using this estimator.",
             )
 
-        # Check if X is a TestData object and extract raw data if needed
         X_data = X.data if hasattr(X, "data") else X
-
         X_data = check_array(X_data, ensure_all_finite="allow-nan", dtype=object)
-        X_data = check_array(
-            self._cat_encoder.transform(X_data),
-            ensure_all_finite="allow-nan",
-            dtype="numeric",
+        X_transformed = self._cat_encoder.transform(X_data)
+        X_transformed = check_array(
+            X_transformed, ensure_all_finite="allow-nan", dtype="numeric"
         )
-        return self.best_model_.predict(X_data)
+        
+        # Check if best_model_ itself is fitted
+        # Regressors might not have 'classes_', so check for a common fit attribute or tag.
+        if not hasattr(self.best_model_, "_get_tags") and not getattr(self.best_model_,'is_fitted_', True ): # Heuristic check for scikit-learn like estimators
+             raise ValueError("The underlying best_model_ is not properly fitted.")
+
+        return self.best_model_.predict(X_transformed)
 
     def _more_tags(self) -> dict[str, Any]:
         return {

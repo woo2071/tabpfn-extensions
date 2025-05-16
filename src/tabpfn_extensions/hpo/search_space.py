@@ -171,7 +171,7 @@ def get_param_grid_hyperopt(task_type: str) -> dict:
             "model_type",
             ["single", "dt_pfn"],
         ),
-        "n_ensemble_repeats": hp.choice("n_ensemble_repeats", [4]),
+        "n_estimators": hp.choice("n_estimators", [4]),
         "max_depth": hp.choice("max_depth", [2, 3, 4, 5]),  # For Decision Tree TabPFN
         # -- Model HPs
         "average_before_softmax": hp.choice("average_before_softmax", [True, False]),
