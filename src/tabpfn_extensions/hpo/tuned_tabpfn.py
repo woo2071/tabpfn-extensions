@@ -127,32 +127,6 @@ class TunedTabPFNBase(BaseEstimator):
         self.search_algorithm_type = search_algorithm_type
         self.existing_trials = existing_trials
 
-    def _setup_data_encoders(
-        self,
-        X: np.ndarray,
-        categorical_feature_indices: list[int] | None = None,
-    ):
-        """Set up categorical and label encoders."""
-        # Use provided indices or instance attribute, create a working copy
-        indices = (
-            categorical_feature_indices
-            if categorical_feature_indices is not None
-            else self.categorical_feature_indices
-        )
-
-        # Use enhanced infer_categorical_features to detect categorical columns
-        # including text and object columns
-        from tabpfn_extensions.utils import infer_categorical_features
-
-        detected_indices = infer_categorical_features(X, indices)
-
-        self._categorical_indices = detected_indices
-
-        if not self._categorical_indices:
-            logger.info(
-                "No categorical features specified or detected. Using all features as numeric.",
-            )
-
     def _optimize(self, X: np.ndarray, y: np.ndarray, task_type: str):
         """Optimize hyperparameters using hyperopt with proper data handling."""
         rng = check_random_state(self.random_state)
@@ -160,11 +134,6 @@ class TunedTabPFNBase(BaseEstimator):
         # Set random seeds for reproducibility
         torch.manual_seed(rng.randint(0, 2**31 - 1))
         np.random.seed(rng.randint(0, 2**31 - 1))
-
-        # Store original categorical feature indices before transformation
-        original_categorical_indices = (
-            self._categorical_indices.copy() if self._categorical_indices else []
-        )
 
         # Check for TestData object and extract raw data
         X_data = X.data if hasattr(X, "data") else X
@@ -240,18 +209,6 @@ class TunedTabPFNBase(BaseEstimator):
 
             model_params["device"] = get_device(self.device)
             model_params["random_state"] = rng.randint(0, 2**31 - 1)
-
-            # Since we've already transformed the categorical features, don't specify them again
-            # to avoid double-transformation, remove categorical_feature_indices from params
-            if "categorical_feature_indices" in model_params:
-                model_params.pop("categorical_feature_indices")
-            if "categorical_features_indices" in model_params:
-                model_params.pop("categorical_features_indices")
-
-            if self.verbose and original_categorical_indices:
-                logger.info(
-                    f"Original categorical features {original_categorical_indices} already encoded",
-                )
 
             # Handle model type selection
             model_type = model_params.pop("model_type", "single")
@@ -412,7 +369,7 @@ class TunedTabPFNBase(BaseEstimator):
             # Attempt to fit the default model with the full (transformed) training data used for optimization setup
             # This uses X_transformed which was the input to _optimize after categorical encoding
             try:
-                 self.best_model_.fit(X_transformed, y)
+                 self.best_model_.fit(X_data, y)
             except Exception as e:
                  warnings.warn(f"Failed to fit default model: {e!s}", stacklevel=2)
                  # self.best_model_ will remain an unfitted default model.
@@ -444,13 +401,6 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
         y: np.ndarray,
         categorical_feature_indices: list[int] | None = None,
     ) -> TunedTabPFNClassifier:
-        # Check if X is a TestData object with categorical_features
-        if hasattr(X, "categorical_features") and not categorical_feature_indices:
-            categorical_feature_indices = getattr(X, "categorical_features", [])
-            if categorical_feature_indices and self.verbose:
-                logger.info(
-                    f"Using categorical features from TestData: {categorical_feature_indices}",
-                )
 
         # Validate input
         X, y = check_X_y(
@@ -465,7 +415,6 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
         self.n_features_in_ = X.shape[1]
 
         # Set up encoders
-        self._setup_data_encoders(X, categorical_feature_indices)
         self._label_encoder = LabelEncoder()
         y_transformed = self._label_encoder.fit_transform(y)
 
@@ -498,16 +447,12 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
 
         X_data = X.data if hasattr(X, "data") else X
         X_data = check_array(X_data, ensure_all_finite="allow-nan", dtype=object)
-        X_transformed = self._cat_encoder.transform(X_data)
-        X_transformed = check_array(
-             X_transformed, ensure_all_finite="allow-nan", dtype="numeric"
-        )
-        
+
         # Check if best_model_ itself is fitted (e.g. if default model fitting failed)
         if not hasattr(self.best_model_, "classes_") and not hasattr(self.best_model_, "_get_tags") and not getattr(self.best_model_,'is_fitted_', True ): # Heuristic check
              raise ValueError("The underlying best_model_ is not properly fitted.")
 
-        return self._label_encoder.inverse_transform(self.best_model_.predict(X_transformed))
+        return self._label_encoder.inverse_transform(self.best_model_.predict(X_data))
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         if not self.__sklearn_is_fitted__():
@@ -532,16 +477,8 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
     def fit(
         self,
         X: np.ndarray,
-        y: np.ndarray,
-        categorical_feature_indices: list[int] | None = None,
+        y: np.ndarray
     ) -> TunedTabPFNRegressor:
-        if hasattr(X, "categorical_features") and not categorical_feature_indices:
-            categorical_feature_indices = getattr(X, "categorical_features", [])
-            if categorical_feature_indices and self.verbose:
-                logger.info(
-                    f"Using categorical features from TestData: {categorical_feature_indices}",
-                )
-
         X, y = check_X_y(
             X,
             y,
@@ -552,7 +489,6 @@ class TunedTabPFNRegressor(TunedTabPFNBase, RegressorMixin):
         )
 
         self.n_features_in_ = X.shape[1]
-        self._setup_data_encoders(X, categorical_feature_indices)
         self._optimize(X, y, self.task_type)
         self.is_fitted_ = True
         return self
