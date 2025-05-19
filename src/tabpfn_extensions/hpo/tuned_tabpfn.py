@@ -59,7 +59,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_random_state
 
 from tabpfn_extensions.hpo.search_space import get_param_grid_hyperopt
-from tabpfn_extensions.misc.sklearn_compat import check_array, validate_data
+from tabpfn_extensions.misc.sklearn_compat import validate_data
 
 # Import TabPFN models from extensions (which handles backend compatibility)
 try:
@@ -481,7 +481,11 @@ class TunedTabPFNClassifier(TunedTabPFNBase, ClassifierMixin):
                 "Call 'fit' with appropriate arguments before using this estimator.",
             )
 
-        X = check_array(X, ensure_all_finite="allow-nan", dtype=object)
+        X = validate_data(
+            self,
+            X,
+            ensure_all_finite=False,  # scikit-learn sets self.n_features_in_ automatically
+        )
 
         # Check if best_model_ itself is fitted
         if (
