@@ -195,6 +195,14 @@ class TunedTabPFNBase(BaseEstimator):
                 if k.startswith("inference_config/") and (_k := k.split("/")[-1])
             }
 
+            # Print and assert shapes for debugging
+            print(f"[DEBUG] X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+            print(f"[DEBUG] X_val shape: {X_val.shape}, y_val shape: {y_val.shape}")
+            assert len(X_train.shape) == 2, f"X_train shape is {X_train.shape}, should be 2D"
+            assert len(X_val.shape) == 2, f"X_val shape is {X_val.shape}, should be 2D"
+            assert len(y_train.shape) == 1, f"y_train shape is {y_train.shape}, should be 1D"
+            assert len(y_val.shape) == 1, f"y_val shape is {y_val.shape}, should be 1D"
+
             # Clean up params
             model_params = {
                 k: v for k, v in params.items() if not k.startswith("inference_config/")
