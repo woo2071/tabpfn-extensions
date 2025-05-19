@@ -16,8 +16,8 @@ from conftest import (
     FAST_TEST_MODE,
     SMALL_TEST_SIZE,
 )
-from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
 from tabpfn_extensions.embedding import TabPFNEmbedding
+from tabpfn_extensions.utils import TabPFNClassifier, TabPFNRegressor
 
 
 @pytest.mark.local_compatible

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from tabpfn_extensions import TabPFNClassifier, TabPFNRegressor
+from tabpfn_extensions.utils import TabPFNClassifier, TabPFNRegressor
 
 
 class TabPFNEmbedding:
