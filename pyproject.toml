@@ -73,13 +73,13 @@ unsupervised = []
 
 # Meta-package that installs all extensions
 all = [
-    "shap>=0.41.0",
-    "shapiq>=0.4.0",
-    "seaborn>=0.12.2",
+    "shap>=0.41.0,<=0.47.2",
+    "shapiq>=0.4.0,<=1.2.3",
+    "seaborn>=0.12.2,<=0.13.2",
 
-    "kditransform>=0.2.0",
-    "llvmlite>=0.30.0",
-    "hyperopt>=0.2.7",
+    "kditransform==0.2.0",
+    "llvmlite>=0.30.0,<=0.44.0",
+    "hyperopt==0.2.7",
 ]
 
 dev = [
