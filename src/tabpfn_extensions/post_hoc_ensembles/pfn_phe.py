@@ -14,12 +14,12 @@ from sklearn.base import BaseEstimator
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 
-from tabpfn_extensions.utils import TabPFNClassifier, TabPFNRegressor
 from tabpfn_extensions.misc.sklearn_compat import check_array, check_X_y
 from tabpfn_extensions.rf_pfn import (
     RandomForestTabPFNClassifier,
     RandomForestTabPFNRegressor,
 )
+from tabpfn_extensions.utils import TabPFNClassifier, TabPFNRegressor
 
 from .greedy_weighted_ensemble import (
     GreedyWeightedEnsembleClassifier,
