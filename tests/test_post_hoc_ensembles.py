@@ -5,7 +5,10 @@ This file tests the PHE implementations in tabpfn_extensions.post_hoc_ensembles.
 
 from __future__ import annotations
 
+import os
+
 import pytest
+from sklearn.utils.estimator_checks import check_estimator
 
 from conftest import FAST_TEST_MODE
 from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
@@ -13,6 +16,30 @@ from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import (
     AutoTabPFNRegressor,
 )
 from test_base_tabpfn import BaseClassifierTests, BaseRegressorTests
+
+
+def _run_sklearn_estimator_checks(estimator_instance, non_deterministic_indices):
+    """Helper to run scikit-learn's check_estimator with retries."""
+    os.environ["SK_COMPATIBLE_PRECISION"] = "True"
+    nan_test_index = 9
+
+    for i, (name, check) in enumerate(
+        check_estimator(estimator_instance, generate_only=True)
+    ):
+        if i == nan_test_index and "allow_nan" in estimator_instance._get_tags():
+            continue
+
+        n_retries = 5
+        while n_retries > 0:
+            try:
+                check(estimator_instance)
+                break  # Test passed
+            except Exception as e:
+                if i in non_deterministic_indices and n_retries > 1:
+                    n_retries -= 1
+                    continue
+                # Raise the error on the last retry or for deterministic tests
+                raise e
 
 
 @pytest.mark.local_compatible
@@ -24,19 +51,27 @@ class TestAutoTabPFNClassifier(BaseClassifierTests):
     def estimator(self, tabpfn_classifier):
         """Provide a PHE-based TabPFN classifier as the estimator."""
         # For PHE, we can make tests faster by limiting time and using minimal models
-        max_time = 1 if FAST_TEST_MODE else 5  # Very limited time for fast testing
+        # NOTE: If max_time is set too low, AutoGluon will fail to fit any models during
+        # the fit() call. This is especially true when building a TabPFN-only ensemble
+        # and can be hard to debug as it may only fail on certain CI hardware.
+        max_time = 10 if FAST_TEST_MODE else 20  # Very limited time for fast testing
 
         # Minimize the model portfolio for faster testing
-        phe_init_args = {
-            "n_repeats": 2,
-            "n_folds": 2,
-            "max_models": 2,
+        phe_init_args = {"verbosity": 1}
+        phe_fit_args = {
+            "num_bag_folds": 0,  # Disable bagging
+            "num_bag_sets": 1,  # Minimal value for bagging sets
+            "num_stack_levels": 0,  # Disable stacking
+            "fit_weighted_ensemble": False,
+            "ag_args_ensemble": {},
         }
 
         return AutoTabPFNClassifier(
             max_time=max_time,
             random_state=42,
             phe_init_args=phe_init_args,
+            phe_fit_args=phe_fit_args,
+            n_ensemble_models=3,
         )
 
     @pytest.mark.skip(reason="PHE models take too long for this test")
@@ -44,11 +79,15 @@ class TestAutoTabPFNClassifier(BaseClassifierTests):
         """Skip test with various datasets as it takes too long for PHE."""
         pass
 
+    # TODO: Enable this test
     @pytest.mark.skip(
         reason="AutoTabPFN needs additional work to pass all sklearn estimator checks",
     )
     def test_passes_estimator_checks(self, estimator):
-        pass
+        clf_non_deterministic = [30, 31]
+        _run_sklearn_estimator_checks(
+            AutoTabPFNClassifier(device="cuda"), clf_non_deterministic
+        )
 
 
 @pytest.mark.local_compatible
@@ -60,20 +99,27 @@ class TestAutoTabPFNRegressor(BaseRegressorTests):
     def estimator(self, tabpfn_regressor):
         """Provide a PHE-based TabPFN regressor as the estimator."""
         # For PHE, we can make tests faster by limiting time and using minimal models
-        max_time = 1 if FAST_TEST_MODE else 5  # Very limited time for fast testing
+        # NOTE: If max_time is set too low, AutoGluon will fail to fit any models during
+        # the fit() call. This is especially true when building a TabPFN-only ensemble
+        # and can be hard to debug as it may only fail on certain CI hardware.
+        max_time = 10 if FAST_TEST_MODE else 20  # Very limited time for fast testing
 
         # Minimize the model portfolio for faster testing
-
-        phe_init_args = {
-            "n_repeats": 2,
-            "n_folds": 2,
-            "max_models": 2,
+        phe_init_args = {"verbosity": 1}
+        phe_fit_args = {
+            "num_bag_folds": 0,  # Disable bagging
+            "num_bag_sets": 1,  # Minimal value for bagging sets
+            "num_stack_levels": 0,  # Disable stacking
+            "fit_weighted_ensemble": False,
+            "ag_args_ensemble": {},
         }
 
         return AutoTabPFNRegressor(
             max_time=max_time,
             random_state=42,
             phe_init_args=phe_init_args,
+            phe_fit_args=phe_fit_args,
+            n_ensemble_models=3,
         )
 
     @pytest.mark.skip(reason="PHE models take too long for this test")
@@ -81,11 +127,15 @@ class TestAutoTabPFNRegressor(BaseRegressorTests):
         """Skip test with various datasets as it takes too long for PHE."""
         pass
 
+    # TODO: Enable this test
     @pytest.mark.skip(
         reason="AutoTabPFN needs additional work to pass all sklearn estimator checks",
     )
     def test_passes_estimator_checks(self, estimator):
-        pass
+        reg_non_deterministic = [27, 28]
+        _run_sklearn_estimator_checks(
+            AutoTabPFNRegressor(device="cuda"), reg_non_deterministic
+        )
 
     @pytest.mark.skip(
         reason="AutoTabPFNRegressor can't handle text features with float64 dtype requirement",

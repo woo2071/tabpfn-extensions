@@ -10,7 +10,7 @@ dependencies = [
     "pandas>=1.4.0,<3",
     "scikit-learn>=1.2.0,<1.7",
     "scipy>=1.11.1,<2",
-    "tabpfn>=2.0.6",
+    "tabpfn>=2.1.0",
 ]
 
 requires-python = ">=3.9"
@@ -24,7 +24,8 @@ authors = [
     { name = "Shi Bin Hoo" },
     { name = "Robin Tibor Schirrmeister" },
     { name = "Frank Hutter", email = "fh@cs.uni-freiburg.de" },
-    { name = "Eddie Bergman" }
+    { name = "Eddie Bergman" },
+    { name = "Klemens Flöge" },
 ]
 readme = "README.md"
 description = "TabPFN: Foundation model for tabular data"
@@ -59,7 +60,13 @@ interpretability = [
 ]
 post_hoc_ensembles = [
     "llvmlite",
-    "hyperopt>=0.2.7"
+    "hyperopt>=0.2.7",
+    # Pinned to a specific autogluon commit to get access to AutoGluon TabPFN.
+    # TODO: Move to a released version once autogluon 1.4 is available.
+    "autogluon.common @ git+https://github.com/autogluon/autogluon@7f12d1660ae4061f86a705f8c9b6b2ba83d310d5#subdirectory=common",
+    "autogluon.features @ git+https://github.com/autogluon/autogluon@7f12d1660ae4061f86a705f8c9b6b2ba83d310d5#subdirectory=features",
+    "autogluon.core @ git+https://github.com/autogluon/autogluon@7f12d1660ae4061f86a705f8c9b6b2ba83d310d5#subdirectory=core",
+    "autogluon.tabular @ git+https://github.com/autogluon/autogluon@7f12d1660ae4061f86a705f8c9b6b2ba83d310d5#subdirectory=tabular"
 ]
 hpo = [
     "hyperopt>=0.2.7",
@@ -79,6 +86,11 @@ all = [
     "llvmlite>=0.30.0",
     "hyperopt>=0.2.7",
     "setuptools>=67.0.0",
+
+    "autogluon.common @ git+https://github.com/autogluon/autogluon@7f12d1660ae4061f86a705f8c9b6b2ba83d310d5#subdirectory=common",
+    "autogluon.features @ git+https://github.com/autogluon/autogluon@7f12d1660ae4061f86a705f8c9b6b2ba83d310d5#subdirectory=features",
+    "autogluon.core @ git+https://github.com/autogluon/autogluon@7f12d1660ae4061f86a705f8c9b6b2ba83d310d5#subdirectory=core",
+    "autogluon.tabular @ git+https://github.com/autogluon/autogluon@7f12d1660ae4061f86a705f8c9b6b2ba83d310d5#subdirectory=tabular"
 ]
 
 dev = [
