@@ -249,6 +249,7 @@ class AutoTabPFNBase(BaseEstimator):
             presets=self.presets,
             hyperparameters=hyperparameters,
             num_gpus=num_gpus,
+            groups="group",
             **self._get_predictor_fit_args(),
         )
 
